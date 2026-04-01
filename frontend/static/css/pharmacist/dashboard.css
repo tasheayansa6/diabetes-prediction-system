@@ -1,0 +1,51 @@
+/* Pharmacist Module - Dashboard Specific Styles */
+
+.main-content h2 {
+    color: #2F80ED;
+}
+
+.text-muted i {
+    color: #2F80ED;
+}
+
+.stat-card::before {
+    background: linear-gradient(135deg, #2F80ED, #56CCF2);
+}
+
+.stat-card:hover {
+    box-shadow: 0 8px 25px rgba(47, 128, 237, 0.2);
+}
+
+.clickable-card:hover {
+    box-shadow: 0 12px 30px rgba(47, 128, 237, 0.25);
+}
+
+.clickable-card:hover .card-body h3 {
+    color: #2F80ED;
+}
+
+.list-group-item:hover {
+    border-left: 4px solid #2F80ED;
+}
+
+/* Pharmacist-specific card headers */
+.card-header.bg-primary {
+    background: linear-gradient(135deg, #2F80ED, #56CCF2) !important;
+}
+
+.card-header.bg-info {
+    background: #17a2b8 !important;
+}
+
+.card-header.bg-success {
+    background: #28a745 !important;
+}
+
+.card-header.bg-warning {
+    background: #dc3545 !important;
+    color: white !important;
+}
+
+.card-header.bg-warning h5 {
+    color: white !important;
+}

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointments - Doctor | Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+    <style>
+        .status-badge { padding: 0.25em 0.75em; border-radius: 99px; font-size: 0.72rem; font-weight: 700; display: inline-block; }
+        .status-scheduled { background:#dbeafe; color:#1e40af; }
+        .status-completed  { background:#dcfce7; color:#166534; }
+        .status-cancelled  { background:#fee2e2; color:#991b1b; }
+        .status-no-show    { background:#f1f5f9; color:#475569; }
+        .status-pending    { background:#fef9c3; color:#854d0e; }
+        #toast {
+            position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999;
+            padding:0.85rem 1.25rem; border-radius:12px; font-size:0.875rem;
+            font-weight:600; display:flex; align-items:center; gap:0.5rem;
+            box-shadow:0 8px 24px rgba(0,0,0,0.15); transform:translateY(100px);
+            opacity:0; transition:all 0.3s ease; pointer-events:none;
+        }
+        #toast.show { transform:translateY(0); opacity:1; }
+        #toast.success { background:#059669; color:#fff; }
+        #toast.danger  { background:#dc2626; color:#fff; }
+        #toast.warning { background:#d97706; color:#fff; }
+        .action-icon-btn {
+            width:32px; height:32px; border-radius:8px; border:1.5px solid #e2e8f0;
+            background:#fff; cursor:pointer; display:inline-flex; align-items:center;
+            justify-content:center; font-size:0.9rem; transition:all 0.15s;
+        }
+        .action-icon-btn:hover { transform:scale(1.1); }
+        .action-icon-btn.view   { color:#2563eb; border-color:#bfdbfe; }
+        .action-icon-btn.view:hover { background:#eff6ff; }
+        .action-icon-btn.done   { color:#059669; border-color:#bbf7d0; }
+        .action-icon-btn.done:hover { background:#ecfdf5; }
+        .action-icon-btn.cancel { color:#dc2626; border-color:#fecaca; }
+        .action-icon-btn.cancel:hover { background:#fef2f2; }
+        .detail-row { display:flex; gap:0.5rem; margin-bottom:0.75rem; }
+        .detail-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; min-width:90px; }
+        .detail-value { font-size:0.875rem; color:#0f172a; font-weight:600; }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+  <nav class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-right">
+      <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Doctor</span></span>
+      <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </nav>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-person-badge"></i></div>
+        <div class="sidebar-name" id="sidebarDoctorName">Doctor</div>
+        <div class="sidebar-role" id="sidebarDoctorSpec">Loading...</div>
+      </div>
+      <nav>
+        <a href="/templates/doctor/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="/templates/doctor/appointments.html" class="active"><i class="bi bi-calendar-check"></i> Appointments</a>
+        <a href="/templates/doctor/patient_list.html"><i class="bi bi-people"></i> Patient List</a>
+        <a href="/templates/doctor/diagnosis.html"><i class="bi bi-clipboard-pulse"></i> Diagnosis</a>
+        <a href="/templates/doctor/prescribe_medication.html"><i class="bi bi-capsule"></i> Prescribe</a>
+        <a href="/templates/doctor/lab_requests.html"><i class="bi bi-clipboard2-pulse"></i> Lab Requests</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="page-title"><i class="bi bi-calendar-check"></i> Appointments</h1>
+        <span class="text-sm text-muted"><i class="bi bi-calendar3"></i> <span id="currentDate"></span></span>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid-4 mb-6">
+        <div class="stat-card">
+          <div class="stat-label"><i class="bi bi-calendar-day"></i> Today</div>
+          <div class="stat-value" id="countToday">—</div>
+          <div class="stat-sub">Scheduled today</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-label"><i class="bi bi-hourglass-split"></i> Pending</div>
+          <div class="stat-value" id="countPending">—</div>
+          <div class="stat-sub">Awaiting action</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label"><i class="bi bi-check-circle"></i> Completed</div>
+          <div class="stat-value" id="countCompleted">—</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label"><i class="bi bi-x-circle"></i> Cancelled</div>
+          <div class="stat-value" id="countCancelled">—</div>
+          <div class="stat-sub">All time</div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card mb-4" style="padding:1rem;">
+        <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+          <div style="position:relative;flex:1;min-width:180px;">
+            <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;"></i>
+            <input type="text" id="searchInput" class="form-input" style="padding-left:2rem;" placeholder="Search patient name..." oninput="renderTable()">
+          </div>
+          <input type="date" id="dateFilter" class="form-input" style="width:auto;" onchange="renderTable()" title="Filter by date">
+          <select id="statusFilter" class="form-input" style="width:auto;" onchange="renderTable()">
+            <option value="">All Status</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="no-show">No Show</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="clearFilters()"><i class="bi bi-x-circle"></i> Clear</button>
+          <button class="btn btn-primary btn-sm" onclick="loadAppointments()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        </div>
+      </div>
+
+      <!-- Today's Quick View -->
+      <div class="card mb-4" id="todayCard" style="display:none;">
+        <div class="card-header yellow"><i class="bi bi-calendar-day"></i> Today's Appointments</div>
+        <div id="todayList" style="padding:0;"></div>
+      </div>
+
+      <!-- Full Table -->
+      <div class="card">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+          <span><i class="bi bi-table"></i> All Appointments</span>
+          <span id="tableCount" style="font-size:0.8rem;opacity:0.8;"></span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Type</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="apptTableBody">
+              <tr><td colspan="7" style="text-align:center;padding:2rem;color:#94a3b8;">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Detail / Action Modal -->
+<div id="apptModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:18px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <div style="background:linear-gradient(90deg,#1e3a8a,#2563eb);color:#fff;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+      <h5 style="margin:0;font-weight:700;"><i class="bi bi-calendar-check"></i> Appointment Details</h5>
+      <button onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <div style="padding:1.5rem;" id="apptModalBody"></div>
+    <div style="padding:1rem 1.5rem;border-top:1px solid #f1f5f9;display:flex;gap:0.75rem;justify-content:flex-end;" id="apptModalFooter"></div>
+  </div>
+</div>
+
+<!-- Confirm Action Modal -->
+<div id="confirmModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:1001;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:18px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <div id="confirmModalHeader" style="padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+      <h5 style="margin:0;font-weight:700;" id="confirmModalTitle"></h5>
+      <button onclick="closeConfirmModal()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <div style="padding:1rem 1.5rem;" id="confirmModalBody"></div>
+    <div style="padding:1rem 1.5rem;border-top:1px solid #f1f5f9;display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+      <button class="btn" id="confirmModalBtn" onclick="executeConfirm()"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"><span id="toastMsg"></span></div>
+
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/notifications.js"></script>
+<script src="../../static/js/doctor-appointments.js"></script>
+<script>if(typeof initNotifications==='function') initNotifications('doctor');</script>
+</body>
+</html>

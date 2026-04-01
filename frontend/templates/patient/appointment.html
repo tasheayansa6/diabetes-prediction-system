@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+    <style>
+        /* ── Doctor cards ── */
+        .doctor-card {
+            border: 2px solid #e2e8f0; border-radius: 14px; padding: 1rem;
+            cursor: pointer; transition: all 0.2s; background: #fff;
+            display: flex; flex-direction: column; gap: 0.3rem;
+        }
+        .doctor-card:hover { border-color: #3b82f6; box-shadow: 0 4px 16px rgba(59,130,246,0.12); transform: translateY(-2px); }
+        .doctor-card.selected { border-color: #2563eb; background: #eff6ff; box-shadow: 0 4px 16px rgba(37,99,235,0.18); }
+        .doctor-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg,#1e3a8a,#2563eb); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem; margin-bottom: 0.4rem; }
+        .doctor-name { font-weight: 700; font-size: 0.9rem; color: #0f172a; }
+        .doctor-spec { font-size: 0.78rem; color: #3b82f6; font-weight: 600; }
+        .doctor-avail { font-size: 0.72rem; color: #64748b; }
+        .doctor-fee { font-size: 0.75rem; color: #059669; font-weight: 700; }
+        /* ── Time slots ── */
+        .time-slots { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+        .time-slot {
+            padding: 0.4rem 0.85rem; border-radius: 8px; border: 1.5px solid #e2e8f0;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer; background: #fff;
+            color: #475569; transition: all 0.15s;
+        }
+        .time-slot:hover { border-color: #3b82f6; color: #2563eb; background: #eff6ff; }
+        .time-slot.selected { background: #2563eb; color: #fff; border-color: #2563eb; }
+        .time-slot.unavailable { opacity: 0.4; cursor: not-allowed; background: #f1f5f9; }
+        /* ── Summary rows ── */
+        .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.875rem; }
+        .summary-row:last-child { border-bottom: none; }
+        .summary-label { color: #64748b; font-weight: 500; }
+        .summary-value { color: #0f172a; font-weight: 600; text-align: right; }
+        /* ── Appointment cards ── */
+        .appt-card { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+        .appt-card:last-child { border-bottom: none; }
+        .appt-card:hover { background: #f8fafc; }
+        .appt-date-box { min-width: 52px; text-align: center; background: linear-gradient(135deg,#1e3a8a,#2563eb); border-radius: 10px; padding: 0.5rem 0.4rem; color: #fff; }
+        .appt-date-day { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+        .appt-date-month { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+        .appt-info { flex: 1; min-width: 0; }
+        .appt-doctor { font-weight: 700; font-size: 0.9rem; color: #0f172a; }
+        .appt-meta { font-size: 0.78rem; color: #64748b; margin-top: 0.2rem; }
+        .appt-reason { font-size: 0.78rem; color: #94a3b8; margin-top: 0.1rem; }
+        .appt-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; }
+        /* ── Status badges ── */
+        .badge-scheduled { background: #dbeafe; color: #1e40af; padding: 0.25em 0.75em; border-radius: 99px; font-size: 0.72rem; font-weight: 700; }
+        .badge-completed  { background: #dcfce7; color: #166534; padding: 0.25em 0.75em; border-radius: 99px; font-size: 0.72rem; font-weight: 700; }
+        .badge-cancelled  { background: #fee2e2; color: #991b1b; padding: 0.25em 0.75em; border-radius: 99px; font-size: 0.72rem; font-weight: 700; }
+        .badge-pending    { background: #fef9c3; color: #854d0e; padding: 0.25em 0.75em; border-radius: 99px; font-size: 0.72rem; font-weight: 700; }
+        /* ── Tabs ── */
+        .tab-btn { padding: 0.6rem 1.1rem; font-size: 0.875rem; font-weight: 600; border: none; background: none; cursor: pointer; color: #64748b; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+        .tab-btn:hover:not(.active) { color: #3b82f6; }
+        .badge-sm { background: #dbeafe; color: #1e40af; border-radius: 99px; padding: 0.1em 0.5em; font-size: 0.7rem; font-weight: 700; margin-left: 4px; }
+        /* ── Toast ── */
+        #toast {
+            position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
+            padding: 0.85rem 1.25rem; border-radius: 12px; font-size: 0.875rem;
+            font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15); transform: translateY(100px);
+            opacity: 0; transition: all 0.3s ease; pointer-events: none;
+        }
+        #toast.show { transform: translateY(0); opacity: 1; }
+        #toast.success { background: #059669; color: #fff; }
+        #toast.danger  { background: #dc2626; color: #fff; }
+        #toast.warning { background: #d97706; color: #fff; }
+        /* ── Step disabled ── */
+        .step-disabled { opacity: 0.45; pointer-events: none; }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+  <nav class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-right">
+      <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Patient</span></span>
+      <button onclick="logout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </nav>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-person-circle"></i></div>
+        <div class="sidebar-name" id="sidebarName">Patient</div>
+        <div class="sidebar-role">Patient Portal</div>
+      </div>
+      <nav>
+        <a href="/templates/patient/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="/templates/patient/profile.html"><i class="bi bi-person"></i> My Profile</a>
+        <a href="/templates/patient/health_data_form.html"><i class="bi bi-clipboard-pulse"></i> New Prediction</a>
+        <a href="/templates/patient/prediction_history.html"><i class="bi bi-file-medical"></i> My Predictions</a>
+        <a href="/templates/patient/appointment.html" class="active"><i class="bi bi-calendar-check"></i> Appointments</a>
+        <a href="/templates/patient/prescriptions.html"><i class="bi bi-capsule"></i> Prescriptions</a>
+        <a href="/templates/patient/lab_results.html"><i class="bi bi-flask"></i> Lab Results</a>
+        <a href="/templates/payment/payment_history.html"><i class="bi bi-clock-history"></i> Payment History</a>
+        <a href="/templates/payment/payment_page.html"><i class="bi bi-wallet2"></i> Make Payment</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="page-title mb-0"><i class="bi bi-calendar-check"></i> Book Appointment</h2>
+        <span class="text-sm text-muted"><i class="bi bi-calendar3"></i> <span id="currentDate"></span></span>
+      </div>
+
+      <!-- Tabs -->
+      <div style="border-bottom:2px solid #f1f5f9;margin-bottom:1.5rem;display:flex;gap:0.25rem;">
+        <button class="tab-btn active" id="tab-btn-book" onclick="showTab('book')"><i class="bi bi-plus-circle"></i> Book New</button>
+        <button class="tab-btn" id="tab-btn-upcoming" onclick="showTab('upcoming')"><i class="bi bi-calendar-event"></i> Upcoming <span class="badge-sm" id="upcomingCount">0</span></button>
+        <button class="tab-btn" id="tab-btn-history" onclick="showTab('history')"><i class="bi bi-clock-history"></i> History</button>
+      </div>
+
+      <!-- ── BOOK TAB ── -->
+      <div id="tab-book">
+        <div style="display:grid;grid-template-columns:1fr 300px;gap:1.5rem;" class="appt-grid">
+
+          <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+            <!-- Step 1: Doctor -->
+            <div class="card" style="padding:1.25rem;">
+              <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+                <span style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;flex-shrink:0;">1</span>
+                <h5 style="font-weight:700;font-size:1rem;margin:0;">Select a Doctor</h5>
+              </div>
+              <div id="doctorListLoading" style="text-align:center;padding:1.5rem;color:#64748b;">
+                <div style="display:inline-block;width:20px;height:20px;border:2px solid #3b82f6;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;vertical-align:middle;"></div>
+                Loading doctors...
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.75rem;" id="doctorList"></div>
+            </div>
+
+            <!-- Step 2: Date & Time -->
+            <div class="card step-disabled" id="step2Card" style="padding:1.25rem;">
+              <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+                <span style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;flex-shrink:0;">2</span>
+                <h5 style="font-weight:700;font-size:1rem;margin:0;">Select Date &amp; Time</h5>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div>
+                  <label class="form-label">Appointment Date</label>
+                  <input type="date" class="form-input" id="apptDate" onchange="loadTimeSlots()">
+                </div>
+                <div>
+                  <label class="form-label">Available Time Slots</label>
+                  <div class="time-slots" id="timeSlots"><p style="color:#94a3b8;font-size:0.8rem;">Select a date first</p></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Reason -->
+            <div class="card step-disabled" id="step3Card" style="padding:1.25rem;">
+              <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+                <span style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;flex-shrink:0;">3</span>
+                <h5 style="font-weight:700;font-size:1rem;margin:0;">Reason for Visit</h5>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                <div>
+                  <label class="form-label">Visit Type</label>
+                  <select class="form-input" id="visitType">
+                    <option value="">Select reason...</option>
+                    <option value="Follow-up Consultation">Follow-up Consultation</option>
+                    <option value="Prediction Result Review">Prediction Result Review</option>
+                    <option value="New Patient Consultation">New Patient Consultation</option>
+                    <option value="Prescription Renewal">Prescription Renewal</option>
+                    <option value="Lab Results Review">Lab Results Review</option>
+                    <option value="General Check-up">General Check-up</option>
+                  </select>
+                </div>
+                <div style="grid-column:1/-1;">
+                  <label class="form-label">Additional Notes <span style="color:#94a3b8;font-weight:400;">(optional)</span></label>
+                  <textarea class="form-input" id="apptNotes" rows="3" placeholder="Describe your symptoms or concerns..."></textarea>
+                </div>
+                <div>
+                  <button class="btn btn-primary" id="confirmBtn" onclick="submitAppointment()">
+                    <i class="bi bi-calendar-check"></i> Confirm Appointment
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary Panel -->
+          <div class="card" style="padding:1.25rem;height:fit-content;position:sticky;top:80px;">
+            <h6 style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;">
+              <i class="bi bi-info-circle" style="color:#3b82f6;"></i> Booking Summary
+            </h6>
+            <div id="summaryContent">
+              <div style="text-align:center;padding:2rem 1rem;color:#94a3b8;">
+                <i class="bi bi-calendar2-plus" style="font-size:2.5rem;display:block;margin-bottom:0.75rem;"></i>
+                <p style="font-size:0.85rem;">Select a doctor to begin</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── UPCOMING TAB ── -->
+      <div id="tab-upcoming" style="display:none;">
+        <div class="card" style="overflow:hidden;">
+          <div class="card-header"><i class="bi bi-calendar-event"></i> Upcoming Appointments</div>
+          <div id="upcomingList"></div>
+          <div id="upcomingEmpty" style="display:none;text-align:center;padding:3rem 1rem;color:#94a3b8;">
+            <i class="bi bi-calendar-x" style="font-size:3rem;display:block;margin-bottom:0.75rem;"></i>
+            <h5 style="color:#64748b;">No upcoming appointments</h5>
+            <button class="btn btn-primary" style="margin-top:1rem;" onclick="showTab('book')">Book Now</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── HISTORY TAB ── -->
+      <div id="tab-history" style="display:none;">
+        <div class="card" style="overflow:hidden;">
+          <div class="card-header green"><i class="bi bi-clock-history"></i> Appointment History</div>
+          <div id="historyList"></div>
+          <div id="historyEmpty" style="display:none;text-align:center;padding:3rem 1rem;color:#94a3b8;">
+            <i class="bi bi-clock-history" style="font-size:3rem;display:block;margin-bottom:0.75rem;"></i>
+            <h5 style="color:#64748b;">No appointment history</h5>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Cancel Modal -->
+<div id="cancelModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:18px;width:100%;max-width:440px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <div style="background:linear-gradient(90deg,#dc2626,#ef4444);color:#fff;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+      <h5 style="margin:0;font-weight:700;"><i class="bi bi-x-circle"></i> Cancel Appointment</h5>
+      <button onclick="closeCancelModal()" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <div style="padding:1.5rem;">
+      <p style="color:#334155;margin-bottom:1rem;">Are you sure you want to cancel this appointment?</p>
+      <div id="cancelApptDetails" style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:0.85rem;font-size:0.875rem;color:#854d0e;"></div>
+    </div>
+    <div style="padding:1rem 1.5rem;border-top:1px solid #f1f5f9;display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closeCancelModal()">Keep Appointment</button>
+      <button class="btn btn-danger" onclick="confirmCancel()"><i class="bi bi-x-circle"></i> Yes, Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"><span id="toastMsg"></span></div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+@media(max-width:900px){ .appt-grid { grid-template-columns: 1fr !important; } }
+</style>
+
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/notifications.js"></script>
+<script src="../../static/js/patient-appointment.js"></script>
+<script>if(typeof initNotifications==='function') initNotifications('patient');</script>
+</body>
+</html>

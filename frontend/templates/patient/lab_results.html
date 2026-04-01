@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Lab Results - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <div class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-user">
+      <i class="bi bi-person-circle"></i> <span id="navUserName">Patient</span>
+      <button onclick="logout()" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <nav>
+        <a href="/templates/patient/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="/templates/patient/profile.html"><i class="bi bi-person"></i> My Profile</a>
+        <a href="/templates/patient/health_data_form.html"><i class="bi bi-clipboard-pulse"></i> New Prediction</a>
+        <a href="/templates/patient/prediction_history.html"><i class="bi bi-file-medical"></i> My Predictions</a>
+        <a href="/templates/patient/appointment.html"><i class="bi bi-calendar-check"></i> Appointments</a>
+        <a href="/templates/patient/prescriptions.html"><i class="bi bi-capsule"></i> Prescriptions</a>
+        <a href="/templates/patient/lab_results.html" class="active"><i class="bi bi-flask"></i> Lab Results</a>
+        <a href="/templates/payment/payment_history.html"><i class="bi bi-clock-history"></i> Payment History</a>
+        <a href="/templates/payment/payment_page.html"><i class="bi bi-wallet2"></i> Make Payment</a>
+      </nav>
+    </div>
+    <main class="main">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="page-title mb-0"><i class="bi bi-flask"></i> My Lab Results</h2>
+        <span class="text-gray-500 text-sm"><i class="bi bi-calendar"></i> <span id="currentDate"></span></span>
+      </div>
+      <!-- Filter Bar -->
+      <div class="card mb-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-center">
+          <input type="text" class="form-input" id="searchInput" placeholder="Search by test name..." oninput="filterResults()">
+          <select class="form-input" id="statusFilter" onchange="filterResults()">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+            <option value="validated">Validated</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select class="form-input" id="sortFilter" onchange="filterResults()">
+            <option value="date_desc">Newest First</option>
+            <option value="date_asc">Oldest First</option>
+            <option value="name">Test Name</option>
+          </select>
+          <span class="text-gray-500 text-sm text-right" id="resultCount"></span>
+        </div>
+      </div>
+      <div id="resultsList"></div>
+      <div id="emptyState" class="text-center py-12" style="display:none;">
+        <i class="bi bi-flask text-5xl text-gray-300"></i>
+        <h5 class="mt-3 text-gray-500">No lab results found</h5>
+        <p class="text-gray-400 text-sm">Your lab test results ordered by doctors will appear here.</p>
+        <a href="/templates/patient/dashboard.html" class="btn btn-outline mt-3">Back to Dashboard</a>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Lab Result Detail Modal -->
+<div class="modal-overlay" id="labModal" style="display:none;">
+  <div class="modal-box modal-lg">
+    <div class="modal-header"><h5><i class="bi bi-flask me-2"></i>Lab Result Details</h5><button onclick="document.getElementById('labModal').style.display='none'" class="modal-close">&times;</button></div>
+    <div class="modal-body" id="labModalBody"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="document.getElementById('labModal').style.display='none'">Close</button></div>
+  </div>
+</div>
+
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/patient-lab-results.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "version": "v1.0.0",
+    "algorithm": "Logistic Regression",
+    "accuracy": 71.43,
+    "precision": 60.87,
+    "recall": 51.85,
+    "f1Score": 56.0,
+    "trainingSamples": 614,
+    "features": 8,
+    "date": "2026-03-06",
+    "status": "active",
+    "notes": "Retrained with sklearn 1.2.2 / numpy 1.23.5"
+  },
+  {
+    "id": 2,
+    "version": "v1.0.1",
+    "algorithm": "Random Forest",
+    "accuracy": 77.27,
+    "precision": 71.11,
+    "recall": 59.26,
+    "f1Score": 64.65,
+    "trainingSamples": 614,
+    "features": 8,
+    "date": "2026-03-06",
+    "status": "archived",
+    "notes": "Retrained with sklearn 1.2.2 / numpy 1.23.5. Best accuracy."
+  }
+]

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prescription Review - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <div class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-user">
+      <i class="bi bi-person-circle"></i> <span id="navUserName">Pharmacist</span>
+      <button onclick="logout()" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-capsule"></i></div>
+        <div class="sidebar-name" id="sidebarName">Pharmacist</div>
+        <div class="sidebar-role">Pharmacist</div>
+      </div>
+      <nav>
+        <a href="/templates/pharmacist/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="/templates/pharmacist/prescription_review.html" class="active"><i class="bi bi-file-earmark-text"></i> Prescriptions</a>
+        <a href="/templates/pharmacist/check_medication.html"><i class="bi bi-search"></i> Check Medication</a>
+        <a href="/templates/pharmacist/approve_medication.html"><i class="bi bi-check-circle"></i> Approve</a>
+        <a href="/templates/pharmacist/dispense_medication.html"><i class="bi bi-capsule"></i> Dispense</a>
+      </nav>
+    </div>
+    <main class="main">
+      <h2 class="page-title"><i class="bi bi-file-earmark-text"></i> Prescription Review</h2>
+      <!-- Filter Buttons -->
+      <div class="flex gap-2 mb-4">
+        <button class="btn btn-secondary btn-sm active" data-filter="">All</button>
+        <button class="btn btn-sm" style="background:#fef3c7;color:#92400e;" data-filter="pending">Pending</button>
+        <button class="btn btn-sm" style="background:#e0f2fe;color:#0369a1;" data-filter="verified">Verified</button>
+        <button class="btn btn-sm" style="background:#dcfce7;color:#166534;" data-filter="dispensed">Dispensed</button>
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>ID</th><th>Patient</th><th>Medication</th><th>Doctor</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="prescriptionsTable"><tr><td colspan="7" class="text-center text-gray-400">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="text-center mt-4">
+        <a href="/templates/pharmacist/dashboard.html" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+      </div>
+    </main>
+  </div>
+</div>
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/pharmacist-prescription-review.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found | Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="static/vendor/js/tailwind.min.js"></script>
+    <link href="static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <style>
+      body { background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', sans-serif; }
+      @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-20px)} }
+      @keyframes slideUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+      .bounce { animation: bounce 2s ease-in-out infinite; }
+      .slide-up { animation: slideUp 0.6s ease; }
+    </style>
+</head>
+<body>
+  <div class="text-center px-4 max-w-lg w-full">
+    <div class="bg-white rounded-2xl p-10 shadow-2xl slide-up">
+      <i class="bi bi-exclamation-triangle-fill bounce" style="font-size:6rem;color:#00b4d8;"></i>
+      <div class="text-8xl font-black text-blue-700 leading-none mt-4">404</div>
+      <h1 class="text-3xl font-bold text-gray-800 mt-4">Page Not Found</h1>
+      <p class="text-gray-500 mt-3 mb-6">Oops! The page you're looking for doesn't exist or has been moved.</p>
+      <div class="bg-gray-50 rounded-xl p-4 text-left mb-6">
+        <h6 class="text-blue-700 font-bold mb-3"><i class="bi bi-lightbulb"></i> Here's what you can do:</h6>
+        <ul class="space-y-2 text-sm text-gray-600">
+          <li><i class="bi bi-check-circle text-cyan-500 mr-2"></i>Check the URL for typos</li>
+          <li><i class="bi bi-check-circle text-cyan-500 mr-2"></i>Go back to the previous page</li>
+          <li><i class="bi bi-check-circle text-cyan-500 mr-2"></i>Visit our homepage</li>
+          <li><i class="bi bi-check-circle text-cyan-500 mr-2"></i>Make sure you're logged in</li>
+        </ul>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="index.html" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-white" style="background:linear-gradient(135deg,#00b4d8,#0077b6);">
+          <i class="bi bi-house-fill"></i> Go to Homepage
+        </a>
+        <a href="javascript:history.back()" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-white bg-gray-500 hover:bg-gray-600">
+          <i class="bi bi-arrow-left"></i> Go Back
+        </a>
+      </div>
+    </div>
+    <p class="text-white/70 text-sm mt-6"><i class="bi bi-heart-pulse-fill text-cyan-400"></i> Diabetes Prediction System &copy; 2026</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Record Vitals - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <nav class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-right">
+      <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Nurse</span></span>
+      <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </nav>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-heart-pulse"></i></div>
+        <div class="sidebar-name" id="sidebarName">Nurse</div>
+        <div class="sidebar-role">Nursing Staff</div>
+      </div>
+      <nav>
+        <a class="nav-item" href="/templates/nurse/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a class="nav-item" href="/templates/nurse/clinical_measurement.html"><i class="bi bi-clipboard-pulse"></i> Clinical Measurement</a>
+        <a class="nav-item active" href="/templates/nurse/record_vitals.html"><i class="bi bi-heart-pulse"></i> Record Vitals</a>
+        <a class="nav-item" href="/templates/nurse/view_predictions.html"><i class="bi bi-graph-up"></i> View Predictions</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="page-title"><i class="bi bi-heart-pulse"></i> Record Patient Vitals</h2>
+        <span class="text-sm text-muted"><i class="bi bi-info-circle"></i> BP &amp; BMI will auto-fill patient's prediction form</span>
+      </div>
+
+      <!-- Patient Search -->
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-person-search"></i> Select Patient</div>
+        <div class="card-body" style="padding:1rem;">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="form-label">Search Patient</label>
+              <input type="text" class="form-input" id="patientSearch" placeholder="Type name or patient ID...">
+            </div>
+            <div>
+              <label class="form-label">Select Patient <span class="text-red-500">*</span></label>
+              <select class="form-input" id="patient_id" required>
+                <option value="">Loading patients...</option>
+              </select>
+            </div>
+          </div>
+          <!-- Selected patient info -->
+          <div id="patientInfo" style="display:none;" class="mt-3 p-3 rounded" style="background:#eff6ff;">
+            <div class="flex items-center gap-3">
+              <i class="bi bi-person-circle text-blue-500" style="font-size:1.5rem;"></i>
+              <div>
+                <div class="font-semibold" id="selectedPatientName">—</div>
+                <div class="text-xs text-muted" id="selectedPatientId">—</div>
+              </div>
+              <span class="badge badge-blue ms-auto" id="prevVitalsTag" style="display:none;">Previous vitals loaded</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <form id="vitalsForm">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <!-- LEFT: Clinical Vitals -->
+          <div class="card">
+            <div class="card-header"><i class="bi bi-activity"></i> Clinical Vitals</div>
+            <div class="space-y-3" style="padding:1.25rem;">
+              <div>
+                <label class="form-label">Date &amp; Time</label>
+                <input type="datetime-local" class="form-input" id="date_time">
+              </div>
+              <div>
+                <label class="form-label">Temperature (°C)</label>
+                <input type="number" step="0.1" class="form-input" id="temperature" placeholder="Normal: 36.1 – 37.2">
+              </div>
+              <div>
+                <label class="form-label">Heart Rate (bpm)</label>
+                <input type="number" class="form-input" id="heart_rate" placeholder="Normal: 60 – 100">
+              </div>
+              <div>
+                <label class="form-label">Respiratory Rate (breaths/min)</label>
+                <input type="number" class="form-input" id="respiratory_rate" placeholder="Normal: 12 – 20">
+              </div>
+              <div>
+                <label class="form-label">Oxygen Saturation / SpO2 (%)</label>
+                <input type="number" class="form-input" id="oxygen_saturation" placeholder="Normal: 95 – 100">
+              </div>
+              <div>
+                <label class="form-label">Pain Level (0 = none, 10 = worst)</label>
+                <input type="number" min="0" max="10" class="form-input" id="pain_level" placeholder="0 – 10">
+              </div>
+              <div>
+                <label class="form-label">Skin Thickness (mm) <span class="badge badge-green text-xs">Used in ML</span></label>
+                <input type="number" step="0.1" class="form-input" id="skin_thickness" placeholder="Triceps skinfold, e.g. 20 (enter 0 if not measured)">
+                <div style="font-size:.72rem;color:#90a4ae;margin-top:.2rem;">Triceps skinfold thickness. Measure back of upper arm. Enter 0 if not measured.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: BP + BMI (ML-relevant) -->
+          <div class="space-y-4">
+            <div class="card">
+              <div class="card-header" style="background:linear-gradient(90deg,#059669,#10b981);">
+                <i class="bi bi-heart-pulse-fill"></i> Blood Pressure
+                <span class="text-xs opacity-75 ms-2">→ used in ML prediction</span>
+              </div>
+              <div class="space-y-3" style="padding:1.25rem;">
+                <div>
+                  <label class="form-label">Systolic (mmHg) — upper number</label>
+                  <input type="number" class="form-input" id="blood_pressure_systolic" placeholder="Normal: 90 – 120">
+                </div>
+                <div>
+                  <label class="form-label">Diastolic (mmHg) — lower number <span class="badge badge-green text-xs">Used in ML</span> <span class="text-red-500">*</span></label>
+                  <input type="number" class="form-input" id="blood_pressure_diastolic" placeholder="Normal: 60 – 80" oninput="updateBPStatus()" required>
+                  <div style="font-size:.72rem;color:#e53e3e;margin-top:.2rem;">Required — auto-fills patient's prediction form.</div>
+                </div>
+                <div id="bpStatus" style="display:none;" class="alert alert-info text-sm"></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header" style="background:linear-gradient(90deg,#7c3aed,#8b5cf6);">
+                <i class="bi bi-rulers"></i> Height &amp; Weight → BMI
+                <span class="text-xs opacity-75 ms-2">→ used in ML prediction</span>
+              </div>
+              <div class="space-y-3" style="padding:1.25rem;">
+                <div>
+                  <label class="form-label">Height (cm)</label>
+                  <input type="number" step="0.1" class="form-input" id="height" placeholder="e.g. 170" oninput="calcBMI()">
+                </div>
+                <div>
+                  <label class="form-label">Weight (kg)</label>
+                  <input type="number" step="0.1" class="form-input" id="weight" placeholder="e.g. 70" oninput="calcBMI()">
+                </div>
+                <!-- Live BMI result -->
+                <div id="bmiResult" style="display:none;" class="p-3 rounded text-center" style="background:#f5f3ff;">
+                  <div class="text-xs text-muted mb-1">Calculated BMI</div>
+                  <div class="font-bold text-xl" id="bmiValue">—</div>
+                  <div class="text-sm mt-1" id="bmiCategory">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card mt-4">
+          <div class="card-body" style="padding:1rem;">
+            <label class="form-label">Notes / Observations</label>
+            <textarea class="form-input" id="notes" rows="2" placeholder="Any additional clinical observations..."></textarea>
+          </div>
+        </div>
+
+        <!-- ML Summary Banner -->
+        <div class="alert alert-info mt-4 flex items-center gap-3">
+          <i class="bi bi-robot" style="font-size:1.25rem;"></i>
+          <div>
+            <strong>ML Prediction Link:</strong> After saving, the patient's
+            <strong>Blood Pressure (diastolic)</strong> and <strong>BMI</strong>
+            will be automatically pre-filled in their diabetes prediction form.
+            The patient only needs to add Glucose, Insulin, Pregnancies, Skin Thickness, Pedigree and Age.
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-4">
+          <a href="/templates/nurse/dashboard.html" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Cancel</a>
+          <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-check-circle"></i> Save Vitals</button>
+        </div>
+      </form>
+    </main>
+  </div>
+</div>
+
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/nurse-record-vitals.js"></script>
+</body>
+</html>

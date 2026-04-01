@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="static/vendor/js/tailwind.min.js"></script>
+    <link href="static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="static/css/app.css" rel="stylesheet">
+</head>
+<body class="auth-page">
+  <div style="width:100%;max-width:440px;position:relative;z-index:1;">
+    <div class="auth-card">
+
+      <!-- Brand -->
+      <div class="flex items-center justify-center gap-2 mb-6">
+        <i class="bi bi-heart-pulse-fill text-blue-500 text-xl"></i>
+        <span class="font-bold text-gray-800 text-sm">Diabetes Prediction System</span>
+      </div>
+
+      <!-- Icon + Title -->
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-3" style="background:linear-gradient(135deg,#10b981,#059669);">
+          <i class="bi bi-envelope-check-fill text-white text-2xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900">Verify Your Email</h2>
+        <p class="text-gray-500 text-sm mt-1">We've sent a 6-digit code to your email address.</p>
+      </div>
+      <div id="alertContainer" class="mb-4"></div>
+      <form id="verifyEmailForm" onsubmit="handleVerifyEmail(event)" class="space-y-4">
+        <div>
+          <label class="form-label"><i class="bi bi-envelope"></i> Email Address</label>
+          <input type="email" class="form-input" id="email" name="email" placeholder="Enter your email" required readonly>
+        </div>
+        <div>
+          <label class="form-label"><i class="bi bi-shield-check"></i> Verification Code</label>
+          <div class="flex gap-2 justify-center my-2" id="otpBoxes">
+            <input class="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+            <input class="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+            <input class="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+            <span class="flex items-center text-gray-400 font-bold">—</span>
+            <input class="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+            <input class="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+            <input class="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          </div>
+          <input type="hidden" id="verificationCode" name="verificationCode">
+          <small class="text-gray-400 text-xs text-center block">Enter the 6-digit code sent to your email</small>
+        </div>
+        <button type="submit" class="btn btn-primary w-full"><i class="bi bi-check-circle"></i> Verify Email</button>
+        <div class="text-center">
+          <p class="text-gray-500 text-sm mb-1">Didn't receive the code?</p>
+          <button type="button" class="text-blue-600 text-sm hover:underline" onclick="resendCode()" id="resendBtn"><i class="bi bi-arrow-clockwise"></i> Resend Code</button>
+          <p class="text-gray-400 text-xs mt-1" id="resendTimer"></p>
+        </div>
+        <div class="text-center">
+          <a href="login.html" class="text-blue-600 text-sm hover:underline"><i class="bi bi-arrow-left"></i> Back to Login</a>
+        </div>
+      </form>
+    </div>
+  </div>
+  <footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+  <script src="static/js/verify-email.js"></script>
+  <script>
+    const otpInputs = [...document.querySelectorAll('#otpBoxes input')];
+    const hiddenCode = document.getElementById('verificationCode');
+
+    otpInputs.forEach((box, i) => {
+      box.addEventListener('input', e => {
+        box.value = box.value.replace(/\D/g, '');
+        if (box.value) otpInputs[i + 1]?.focus();
+        hiddenCode.value = otpInputs.map(b => b.value).join('');
+      });
+      box.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !box.value) otpInputs[i - 1]?.focus();
+      });
+      box.addEventListener('paste', e => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').substring(0, 6);
+        text.split('').forEach((ch, j) => { if (otpInputs[j]) otpInputs[j].value = ch; });
+        otpInputs[Math.min(text.length, 5)].focus();
+        hiddenCode.value = otpInputs.map(b => b.value).join('');
+      });
+    });
+
+    // focus first box on load
+    document.addEventListener('DOMContentLoaded', () => otpInputs[0].focus());
+  </script>
+</body>
+</html>

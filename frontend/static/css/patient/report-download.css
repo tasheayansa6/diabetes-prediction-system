@@ -1,0 +1,240 @@
+/* Patient Module - Report Download Specific Styles */
+
+.main-content h2 {
+    color: #2563eb;
+}
+
+.text-primary {
+    color: #2563eb !important;
+}
+
+/* Report card styling */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
+    transition: all 0.3s ease;
+    margin-bottom: 2rem;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;
+    color: white !important;
+    border-radius: 16px 16px 0 0 !important;
+    padding: 1.5rem;
+    border: none;
+}
+
+.card-header h4 {
+    margin: 0;
+    font-weight: 700;
+    color: white !important;
+}
+
+.card-header i {
+    margin-right: 0.75rem;
+    font-size: 1.5rem;
+}
+
+.card-body {
+    padding: 2.5rem;
+}
+
+.card-footer {
+    background: #f8fafc;
+    border-radius: 0 0 16px 16px;
+    padding: 1.5rem;
+    border: none;
+}
+
+/* Report sections */
+.row.mb-4 {
+    margin-bottom: 2rem !important;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+h6 {
+    color: #1e3a8a;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Patient information */
+.col-md-6 p {
+    line-height: 1.8;
+    color: #374151;
+}
+
+.col-md-6 strong {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+/* Badge styling */
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.3px;
+}
+
+#riskBadge.bg-success {
+    background: linear-gradient(135deg, #10b981, #34d399) !important;
+}
+
+#riskBadge.bg-warning {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24) !important;
+    color: #1f2937;
+}
+
+#riskBadge.bg-danger {
+    background: linear-gradient(135deg, #ef4444, #f87171) !important;
+}
+
+/* Health metrics table */
+.table {
+    margin-top: 1rem;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table-bordered {
+    border: 2px solid #e5e7eb;
+}
+
+.table td {
+    padding: 1rem 1.25rem;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+}
+
+.table td strong {
+    color: #1e3a8a;
+    font-weight: 600;
+}
+
+/* Prediction result section */
+#reportConfidence {
+    color: #2563eb;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+#reportRecommendation {
+    color: #374151;
+    line-height: 1.8;
+}
+
+/* Button styling */
+.btn-primary {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    border: none;
+    padding: 0.85rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin: 0.5rem;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+.btn-secondary {
+    background: #6b7280;
+    border: none;
+    padding: 0.85rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin: 0.5rem;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+    transform: translateY(-2px);
+}
+
+/* Icon styling */
+.bi-printer,
+.bi-arrow-left {
+    margin-right: 0.5rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .card-footer {
+        padding: 1rem;
+    }
+    
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+        margin: 0.25rem 0;
+    }
+    
+    .text-end {
+        text-align: left !important;
+        margin-top: 1rem;
+    }
+    
+    .table td {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    body {
+        background: white;
+    }
+    
+    .sidebar,
+    .btn-primary,
+    .btn-secondary,
+    footer {
+        display: none !important;
+    }
+    
+    .main-content {
+        padding: 0;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 2px solid #1e3a8a;
+        page-break-inside: avoid;
+    }
+    
+    .card-header {
+        background: #1e3a8a !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .card-footer {
+        display: none;
+    }
+    
+    .table {
+        border: 2px solid #1e3a8a;
+    }
+    
+    .badge {
+        border: 2px solid currentColor;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

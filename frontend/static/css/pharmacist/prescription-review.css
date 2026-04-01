@@ -1,0 +1,195 @@
+/* Pharmacist - Prescription Review Page Specific Styles */
+
+/* Professional pharmacy colors */
+:root {
+    --pharma-primary: #ea580c;
+    --pharma-secondary: #f97316;
+    --pharma-accent: #fb923c;
+    --pharma-dark: #9a3412;
+    --pharma-light: #fed7aa;
+}
+
+/* Search section */
+.input-group {
+    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.input-group .form-control {
+    border: 2px solid #ffedd5;
+    border-right: none;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    background: #fff7ed;
+}
+
+.input-group .form-control:focus {
+    border-color: var(--pharma-primary);
+    box-shadow: none;
+    background: white;
+}
+
+.input-group .btn {
+    border: 2px solid #ffedd5;
+    border-left: none;
+    background: white;
+    color: var(--pharma-primary);
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+}
+
+.input-group .btn:hover {
+    background: linear-gradient(135deg, var(--pharma-primary) 0%, var(--pharma-secondary) 100%);
+    color: white;
+    border-color: var(--pharma-primary);
+}
+
+/* Prescription cards */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(234, 88, 12, 0.1);
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+    border: 2px solid #ffedd5;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(234, 88, 12, 0.2);
+    border-color: var(--pharma-primary);
+}
+
+.card-body {
+    padding: 1.75rem;
+}
+
+.card-body h5 {
+    color: var(--pharma-dark);
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.card-body p {
+    color: #7c2d12;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+.card-body p strong {
+    color: var(--pharma-dark);
+    font-weight: 600;
+}
+
+/* Badge styling */
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.badge.bg-warning {
+    background: linear-gradient(135deg, var(--pharma-primary) 0%, var(--pharma-secondary) 100%) !important;
+    color: white;
+}
+
+.badge.bg-success {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+}
+
+.badge.bg-danger {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
+}
+
+/* Action buttons */
+.btn-primary {
+    background: linear-gradient(135deg, var(--pharma-primary) 0%, var(--pharma-secondary) 100%);
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(234, 88, 12, 0.3);
+}
+
+/* Empty state */
+.text-center.py-5 {
+    padding: 3rem 1rem !important;
+}
+
+.text-center.py-5 i {
+    font-size: 4rem;
+    color: #fed7aa;
+    margin-bottom: 1rem;
+}
+
+.text-center.py-5 p {
+    color: #7c2d12;
+    font-size: 1.1rem;
+}
+
+/* Medication list */
+.card-body ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.card-body ul li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #ffedd5;
+}
+
+.card-body ul li:last-child {
+    border-bottom: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    .card-body h5 {
+        font-size: 1.1rem;
+    }
+
+    .card-body p {
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        padding: 0.55rem 1.25rem;
+        font-size: 0.9rem;
+        width: 100%;
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.5s ease;
+}
+
+.card:nth-child(1) { animation-delay: 0.1s; }
+.card:nth-child(2) { animation-delay: 0.2s; }
+.card:nth-child(3) { animation-delay: 0.3s; }
+.card:nth-child(4) { animation-delay: 0.4s; }

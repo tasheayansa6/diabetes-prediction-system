@@ -1,0 +1,45 @@
+/* Doctor Module - Dashboard Specific Styles */
+
+/* Doctor-specific card headers */
+.card-header.bg-warning {
+    background: #dc3545 !important;
+    color: white !important;
+}
+
+.card-header.bg-warning h5 {
+    color: white !important;
+}
+
+.card-header.bg-success {
+    background: #28a745 !important;
+    color: white !important;
+}
+
+.card-header.bg-success h5 {
+    color: white !important;
+}
+
+.card-header.bg-info {
+    background: #17a2b8 !important;
+    color: white !important;
+}
+
+.card-header.bg-info h5 {
+    color: white !important;
+}
+
+/* Doctor-specific badges */
+.badge.bg-danger {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+}
+
+/* Doctor list items */
+.list-group-item .btn-primary {
+    background: linear-gradient(135deg, #2A7BE4 0%, #20C997 100%);
+    border: none;
+}
+
+.list-group-item .btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(42, 123, 228, 0.3);
+}

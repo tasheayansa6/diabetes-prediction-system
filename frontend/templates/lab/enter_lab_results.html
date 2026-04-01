@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter Lab Results - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <nav class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-right">
+      <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="topUserName">Lab Technician</span></span>
+      <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </nav>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-clipboard2-pulse-fill"></i></div>
+        <div class="sidebar-name" id="userName">Lab Technician</div>
+        <div class="sidebar-role">Lab Portal</div>
+      </div>
+      <nav>
+        <a class="nav-item" href="/templates/lab/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a class="nav-item active" href="/templates/lab/enter_lab_results.html"><i class="bi bi-clipboard-data"></i> Enter Results</a>
+        <a class="nav-item" href="/templates/lab/add_test_type.html"><i class="bi bi-plus-circle"></i> Add Test Type</a>
+        <a class="nav-item" href="/templates/lab/lab_test_service.html"><i class="bi bi-list-check"></i> Test Services</a>
+        <a class="nav-item" href="/templates/lab/lab_report.html"><i class="bi bi-file-earmark-text"></i> Lab Reports</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <h2 class="page-title"><i class="bi bi-clipboard-data"></i> Enter Lab Results</h2>
+      <div id="formAlert" class="mb-4"></div>
+      <!-- Step 1 -->
+      <div class="card mb-4">
+        <div class="card-header"><h5><i class="bi bi-search"></i> Select Pending Test</h5></div>
+        <div class="space-y-3">
+          <div>
+            <label class="form-label">Pending Test Request <span class="text-red-500">*</span></label>
+            <select class="form-input" id="pendingTestSelect"><option value="">Loading pending tests...</option></select>
+            <p class="text-gray-400 text-xs mt-1">Select a test ordered by a doctor to enter results for.</p>
+          </div>
+          <div class="card bg-gray-50 hidden" id="testInfoCard">
+            <h5 class="font-semibold mb-3"><i class="bi bi-person-lines-fill"></i> Test Request Info</h5>
+            <div class="grid grid-cols-3 gap-4 text-sm">
+              <p><strong>Patient:</strong> <span id="infoPatient">—</span></p>
+              <p><strong>Test:</strong> <span id="infoTestName">—</span></p>
+              <p><strong>Priority:</strong> <span id="infoPriority">—</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Step 2 -->
+      <div class="card">
+        <div class="card-header"><h5><i class="bi bi-clipboard-data"></i> Result Details</h5></div>
+        <form id="labResultsForm" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="form-label">Test Date</label><input type="date" class="form-input" id="test_date" name="test_date"></div>
+            <div><label class="form-label">Result Value <span class="text-red-500">*</span></label><input type="text" class="form-input" id="resultValue" placeholder="e.g. 126, High, 5.8%" required></div>
+            <div><label class="form-label">Unit</label><input type="text" class="form-input" id="unit" placeholder="e.g. mg/dL, %"></div>
+            <div><label class="form-label">Normal Range</label><input type="text" class="form-input" id="normalRange" placeholder="e.g. 70-140 mg/dL"></div>
+          </div>
+          <div><label class="form-label">Remarks / Notes</label><textarea class="form-input" id="notes" rows="3" placeholder="Any additional observations..."></textarea></div>
+          <div class="flex justify-end gap-2">
+            <a href="/templates/lab/dashboard.html" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Cancel</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Save Results</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/notifications.js"></script>
+<script src="../../static/js/lab-results.js"></script>
+<script>if(typeof initNotifications==='function') initNotifications('lab_technician');</script>
+</body>
+</html>

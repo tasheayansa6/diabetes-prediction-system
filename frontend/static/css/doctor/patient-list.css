@@ -1,0 +1,199 @@
+/* Doctor - Patient List Page Specific Styles */
+
+/* Search and filter section */
+.input-group {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.input-group .form-control {
+    border: 2px solid #e9ecef;
+    border-right: none;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+}
+
+.input-group .form-control:focus {
+    border-color: #2A7BE4;
+    box-shadow: none;
+}
+
+.input-group .btn {
+    border: 2px solid #e9ecef;
+    border-left: none;
+    background: white;
+    color: #2A7BE4;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+}
+
+.input-group .btn:hover {
+    background: linear-gradient(135deg, #2A7BE4 0%, #20C997 100%);
+    color: white;
+    border-color: #2A7BE4;
+}
+
+/* Filter buttons */
+.btn-group .btn {
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    margin: 0 0.25rem;
+}
+
+.btn-outline-primary {
+    border: 2px solid #2A7BE4;
+    color: #2A7BE4;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary.active {
+    background: linear-gradient(135deg, #2A7BE4 0%, #20C997 100%);
+    border-color: transparent;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(42, 123, 228, 0.3);
+}
+
+/* Patient cards */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.card-body {
+    padding: 1.75rem;
+}
+
+.card-body h5 {
+    color: #2c3e50;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.card-body p {
+    color: #6c757d;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+.card-body p strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Badge styling */
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+}
+
+.badge.bg-danger {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+}
+
+.badge.bg-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+    color: white;
+}
+
+.badge.bg-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+}
+
+/* Action buttons */
+.btn-primary {
+    background: linear-gradient(135deg, #2A7BE4 0%, #20C997 100%);
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(42, 123, 228, 0.3);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.btn-info:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 172, 254, 0.3);
+}
+
+/* Patient info grid */
+.card-body .row {
+    margin-bottom: 0.75rem;
+}
+
+.card-body .row:last-child {
+    margin-bottom: 0;
+}
+
+/* Empty state */
+.text-center.py-5 {
+    padding: 3rem 1rem !important;
+}
+
+.text-center.py-5 i {
+    font-size: 4rem;
+    color: #e9ecef;
+    margin-bottom: 1rem;
+}
+
+.text-center.py-5 p {
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-group .btn {
+        margin: 0.25rem 0;
+        width: 100%;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    .card-body h5 {
+        font-size: 1.1rem;
+    }
+
+    .card-body p {
+        font-size: 0.9rem;
+    }
+}

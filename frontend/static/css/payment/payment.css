@@ -1,0 +1,74 @@
+/* Payment Module - Specific Styles */
+
+/* Payment method selector */
+.payment-method {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.payment-method:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.payment-method.selected {
+    background: rgba(102, 126, 234, 0.1);
+    border: 2px solid #667eea;
+}
+
+/* Print styles for invoice */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+    }
+}
+
+/* Payment card styling */
+.card {
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+}
+
+/* Payment success/failure icons */
+.bi-check-circle-fill,
+.bi-x-circle-fill {
+    animation: scaleIn 0.5s ease;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
+/* Transaction details card */
+.card.bg-light {
+    background: #f8f9fa !important;
+}
+
+/* Payment form inputs */
+.form-control {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    padding: 10px 15px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <div class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-user">
+      <i class="bi bi-person-circle"></i> <span id="navUserName">User</span>
+      <button onclick="logout()" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <nav>
+        <a href="/templates/patient/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="/templates/patient/profile.html"><i class="bi bi-person"></i> My Profile</a>
+        <a href="/templates/patient/health_data_form.html"><i class="bi bi-clipboard-pulse"></i> New Prediction</a>
+        <a href="/templates/patient/prediction_history.html"><i class="bi bi-file-medical"></i> My Predictions</a>
+        <a href="/templates/patient/appointment.html"><i class="bi bi-calendar-check"></i> Appointments</a>
+        <a href="/templates/patient/prescriptions.html"><i class="bi bi-capsule"></i> Prescriptions</a>
+        <a href="/templates/patient/lab_results.html"><i class="bi bi-flask"></i> Lab Results</a>
+        <a href="/templates/payment/payment_history.html"><i class="bi bi-clock-history"></i> Payment History</a>
+        <a href="/templates/payment/payment_page.html" class="active"><i class="bi bi-wallet2"></i> Make Payment</a>
+      </nav>
+    </div>
+    <main class="main">
+      <h2 class="page-title"><i class="bi bi-credit-card"></i> Payment</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Payment Form -->
+        <div class="lg:col-span-2">
+          <div class="card">
+            <div class="card-header"><h5>Payment Information</h5></div>
+            <form id="paymentForm" onsubmit="processPayment(event)" class="space-y-6">
+              <!-- Services -->
+              <div>
+                <label class="form-label font-bold">Select Services</label>
+                <div class="space-y-2">
+                  <label class="flex items-center gap-3 cursor-pointer"><input class="w-4 h-4" type="checkbox" id="service1" value="45.00" data-name="Diabetes Prediction Test" onchange="updateTotal()"><span><i class="bi bi-clipboard-pulse"></i> Diabetes Prediction Test — <span class="svc-price" data-etb="45.00">ETB 45.00</span></span></label>
+                  <label class="flex items-center gap-3 cursor-pointer"><input class="w-4 h-4" type="checkbox" id="service2" value="50.00" data-name="Consultation Fee" onchange="updateTotal()"><span><i class="bi bi-person-badge"></i> Doctor Consultation Fee — <span class="svc-price" data-etb="50.00">ETB 50.00</span></span></label>
+                  <label class="flex items-center gap-3 cursor-pointer"><input class="w-4 h-4" type="checkbox" id="service3" value="75.00" data-name="Lab Test" onchange="updateTotal()"><span><i class="bi bi-flask"></i> Lab Test Service — <span class="svc-price" data-etb="75.00">ETB 75.00</span></span></label>
+                  <label class="flex items-center gap-3 cursor-pointer"><input class="w-4 h-4" type="checkbox" id="service4" value="50.00" data-name="Medication/Prescription" onchange="updateTotal()"><span><i class="bi bi-capsule"></i> Medication/Prescription Fee — <span class="svc-price" data-etb="50.00">ETB 50.00</span></span></label>
+                </div>
+              </div>
+              <!-- Payment Methods -->
+              <div>
+                <label class="form-label font-bold">Payment Method</label>
+                <p class="text-gray-400 text-xs mb-2">🌍 International</p>
+                <div class="space-y-2">
+                  <!-- Visa -->
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="paymentMethod" id="creditCard" value="credit_card" checked onchange="togglePaymentFields()">
+                    <span class="flex items-center gap-2">
+                      <!-- Visa logo -->
+                      <svg width="50" height="30" viewBox="0 0 50 30" xmlns="http://www.w3.org/2000/svg"><rect width="50" height="30" rx="4" fill="#fff" stroke="#ddd"/><text x="6" y="22" font-size="16" font-weight="900" font-style="italic" fill="#1A1F71" font-family="Arial,sans-serif" letter-spacing="-1">VISA</text></svg>
+                      <!-- Mastercard logo -->
+                      <svg width="40" height="30" viewBox="0 0 40 30" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="30" rx="4" fill="#fff" stroke="#ddd"/><circle cx="15" cy="15" r="9" fill="#EB001B"/><circle cx="25" cy="15" r="9" fill="#F79E1B"/><path d="M20 7.7a9 9 0 0 1 0 14.6A9 9 0 0 1 20 7.7z" fill="#FF5F00"/></svg>
+                      Credit Card (Visa / Mastercard)
+                    </span>
+                  </label>
+                  <!-- Debit Card -->
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="paymentMethod" id="debitCard" value="debit_card" onchange="togglePaymentFields()">
+                    <span class="flex items-center gap-2">
+                      <svg width="50" height="30" viewBox="0 0 50 30" xmlns="http://www.w3.org/2000/svg"><rect width="50" height="30" rx="4" fill="#1A1F71"/><rect x="0" y="10" width="50" height="7" fill="#333"/><rect x="5" y="20" width="14" height="4" rx="1" fill="#FFD700"/><rect x="22" y="20" width="6" height="4" rx="1" fill="#FFD700" opacity=".5"/></svg>
+                      Debit Card
+                    </span>
+                  </label>
+                  <!-- PayPal -->
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="paymentMethod" id="paypalPayment" value="paypal" onchange="togglePaymentFields()">
+                    <span class="flex items-center gap-2">
+                      <svg width="70" height="30" viewBox="0 0 70 30" xmlns="http://www.w3.org/2000/svg"><rect width="70" height="30" rx="4" fill="#fff" stroke="#ddd"/><path d="M10 8h5.5c2.5 0 4 1.2 3.6 3.5-.4 2.5-2.2 3.7-4.5 3.7h-1.3l-.8 4.3H10L10 8z" fill="#009cde"/><path d="M13 8h5.5c2.5 0 4 1.2 3.6 3.5-.4 2.5-2.2 3.7-4.5 3.7h-1.3l-.8 4.3H13L13 8z" fill="#003087" opacity=".6"/><text x="24" y="21" font-size="13" font-weight="bold" font-family="Arial,sans-serif"><tspan fill="#003087">Pay</tspan><tspan fill="#009cde">Pal</tspan></text></svg>
+                      PayPal
+                    </span>
+                  </label>
+                </div>
+                <p class="text-gray-400 text-xs mt-3 mb-2">🇪🇹 Ethiopian</p>
+                <div class="space-y-2">
+                  <!-- Chapa -->
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="paymentMethod" id="chapaPayment" value="chapa" onchange="togglePaymentFields()">
+                    <span class="flex items-center gap-2">
+                      <svg width="80" height="30" viewBox="0 0 80 30" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="30" rx="4" fill="#1DBF73"/><text x="10" y="21" font-size="14" font-weight="900" fill="#fff" font-family="Arial,sans-serif">Chapa</text></svg>
+                      Chapa (Card / Mobile / Bank)
+                    </span>
+                  </label>
+                  <!-- TeleBirr -->
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="paymentMethod" id="telebirr" value="telebirr" onchange="togglePaymentFields()">
+                    <span class="flex items-center gap-2">
+                      <img src="../../static/img/payment/telebirr.jpg" alt="TeleBirr" style="height:30px;width:auto;border-radius:4px;object-fit:contain;background:#fff;padding:2px;">
+                      TeleBirr
+                    </span>
+                  </label>
+                  <!-- CBE Birr -->
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="paymentMethod" id="cbebirr" value="cbe_birr" onchange="togglePaymentFields()">
+                    <span class="flex items-center gap-2">
+                      <img src="../../static/img/payment/cbebirr.jpg" alt="CBE Birr" style="height:30px;width:auto;border-radius:4px;object-fit:contain;background:#fff;padding:2px;">
+                      CBE Birr
+                    </span>
+                  </label>
+                  <!-- M-Birr -->
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="paymentMethod" id="mbirr" value="m_birr" onchange="togglePaymentFields()">
+                    <span class="flex items-center gap-2">
+                      <img src="../../static/img/payment/mbirr.jpg" alt="M-Birr" style="height:30px;width:auto;border-radius:4px;object-fit:contain;background:#fff;padding:2px;">
+                      M-Birr
+                    </span>
+                  </label>
+                  <!-- Ethiopian Bank Transfer -->
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="paymentMethod" id="bankTransfer" value="bank_transfer" onchange="togglePaymentFields()">
+                    <span class="flex items-center gap-2">
+                      <img src="../../static/img/payment/ethiobank.png" alt="Ethiopian Bank" style="height:30px;width:auto;border-radius:4px;object-fit:contain;background:#fff;padding:2px;">
+                      Ethiopian Bank Transfer
+                    </span>
+                  </label>
+                  <!-- Cash -->
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="paymentMethod" id="cashPayment" value="cash" onchange="togglePaymentFields()">
+                    <span class="flex items-center gap-2">
+                      <svg width="80" height="30" viewBox="0 0 80 30" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="80" height="30" rx="4" fill="#198754"/>
+                        <rect x="3" y="7" width="34" height="16" rx="2" fill="#fff" opacity=".15"/>
+                        <rect x="5" y="9" width="30" height="12" rx="1" fill="#fff" opacity=".9"/>
+                        <circle cx="20" cy="15" r="5" fill="#198754"/>
+                        <circle cx="20" cy="15" r="2.5" fill="#fff"/>
+                        <rect x="6" y="13" width="5" height="4" rx="1" fill="#198754" opacity=".3"/>
+                        <rect x="29" y="13" width="5" height="4" rx="1" fill="#198754" opacity=".3"/>
+                        <text x="40" y="20" font-size="10" font-weight="bold" fill="#fff" font-family="Arial,sans-serif">CASH</text>
+                      </svg>
+                      Cash (Pay at Cashier)
+                    </span>
+                  </label>
+                  <!-- Insurance -->
+                  <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" name="paymentMethod" id="insurancePayment" value="insurance" onchange="togglePaymentFields()">
+                    <span class="flex items-center gap-2">
+                      <img src="../../static/img/payment/insurance.png" alt="Health Insurance" style="height:30px;width:auto;border-radius:4px;">
+                      Health Insurance
+                    </span>
+                  </label>
+                </div>
+              </div>
+              <!-- Card Fields -->
+              <div id="cardFields" class="space-y-3">
+                <div><label class="form-label">Cardholder Name</label><input type="text" class="form-input" id="cardName" name="cardName"></div>
+                <div><label class="form-label">Card Number</label><input type="text" class="form-input" id="cardNumber" name="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19"></div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="form-label">Expiry Date</label><input type="text" class="form-input" id="expiryDate" name="expiryDate" placeholder="MM/YY" maxlength="5"></div>
+                  <div><label class="form-label">CVV</label><input type="text" class="form-input" id="cvv" name="cvv" placeholder="123" maxlength="4"></div>
+                </div>
+              </div>
+              <!-- Mobile Banking Fields -->
+              <div id="mobileBankingFields" style="display:none;" class="space-y-3">
+                <div class="alert alert-info" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;">
+                  <strong style="color:#1e3a8a;"><i class="bi bi-phone"></i> Mobile Banking</strong>
+                  <p class="text-sm mt-1 mb-0" style="color:#3b82f6;">Enter your registered mobile number. You will receive a payment prompt on your phone to approve.</p>
+                </div>
+                <div><label class="form-label">Mobile Number</label><input type="text" class="form-input" id="mobileNumber" name="mobileNumber" placeholder="+251 9XX XXX XXX"></div>
+                <div>
+                  <label class="form-label">Mobile Banking Provider</label>
+                  <select class="form-input" id="mobileProvider" name="mobileProvider">
+                    <option value="">Choose Provider</option>
+                    <option value="telebirr">TeleBirr (Ethio Telecom)</option>
+                    <option value="cbe_birr">CBE Birr (Commercial Bank of Ethiopia)</option>
+                    <option value="m_birr">M-Birr</option>
+                    <option value="amole">Amole (Dashen Bank)</option>
+                    <option value="hello_cash">Hello Cash (Cooperative Bank)</option>
+                  </select>
+                </div>
+              </div>
+              <!-- Bank Transfer Fields -->
+              <div id="bankFields" style="display:none;" class="space-y-3">
+                <div class="alert alert-info" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;">
+                  <strong style="color:#1e3a8a;"><i class="bi bi-bank"></i> Ethiopian Bank Transfer</strong>
+                  <p class="text-sm mt-1 mb-0" style="color:#3b82f6;">Select your bank and enter your account number. Transfer will be verified within 1–2 business days.</p>
+                </div>
+                <div>
+                  <label class="form-label">Select Bank</label>
+                  <select class="form-input" id="bankName" name="bankName">
+                    <option value="">Choose Bank</option>
+                    <option value="ethio_bank">Ethio Bank (Ethiopian Bank S.C.)</option>
+                    <option value="cbe">Commercial Bank of Ethiopia (CBE)</option>
+                    <option value="dashen">Dashen Bank</option>
+                    <option value="awash">Awash Bank</option>
+                    <option value="abyssinia">Bank of Abyssinia</option>
+                    <option value="nib">Nib International Bank</option>
+                    <option value="wegagen">Wegagen Bank</option>
+                    <option value="united">United Bank</option>
+                    <option value="oromia">Oromia International Bank</option>
+                    <option value="cooperative">Cooperative Bank of Oromia</option>
+                    <option value="lion">Lion International Bank</option>
+                    <option value="zemen">Zemen Bank</option>
+                    <option value="berhan">Berhan Bank</option>
+                    <option value="bunna">Bunna International Bank</option>
+                  </select>
+                </div>
+                <div><label class="form-label">Account Number</label><input type="text" class="form-input" id="accountNumber" name="accountNumber" placeholder="Enter your account number"></div>
+                <div><label class="form-label">Account Holder Name</label><input type="text" class="form-input" id="accountHolderName" name="accountHolderName" placeholder="Name as on bank account"></div>
+              </div>
+              <!-- PayPal Fields -->
+              <div id="paypalFields" style="display:none;">
+                <div class="alert alert-info mb-3"><strong>Pay with PayPal</strong><p class="text-sm mt-1 mb-0">Enter your PayPal email. You'll be redirected to PayPal to approve the payment securely.</p></div>
+                <div><label class="form-label">PayPal Email Address</label><input type="email" class="form-input" id="paypalEmail" placeholder="your@paypal.com"></div>
+              </div>
+              <!-- Cash Fields -->
+              <div id="cashFields" style="display:none;" class="space-y-3">
+                <div class="alert alert-info"><strong>Cash Payment Instructions</strong><p class="text-sm mt-1 mb-0">After submitting, you will receive a <strong>Reference Number</strong>. Take it to the hospital cashier desk to complete your payment.</p></div>
+                <div><label class="form-label">Full Name</label><input type="text" class="form-input" id="cashPayerName" placeholder="Enter your full name"></div>
+                <div><label class="form-label">Phone Number</label><input type="text" class="form-input" id="cashPhone" placeholder="+251 9XX XXX XXX"></div>
+              </div>
+              <!-- Chapa Fields -->
+              <div id="chapaFields" style="display:none;" class="space-y-3">
+                <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px;">
+                  <strong style="color:#166534;"><i class="bi bi-lightning-charge-fill"></i> Pay with Chapa</strong>
+                  <p class="text-sm mt-1 mb-0" style="color:#15803d;">You will be redirected to Chapa's secure checkout to complete payment using Card, TeleBirr, CBE Birr, or Bank Transfer.</p>
+                </div>
+              </div>
+              <!-- Insurance Fields -->
+              <div id="insuranceFields" style="display:none;" class="space-y-3">
+                <div class="alert alert-success"><strong>Insurance Claim Process</strong><p class="text-sm mt-1 mb-0">Enter your insurance details. A claim will be submitted to your provider for approval (1–3 business days).</p></div>
+                <div>
+                  <label class="form-label">Insurance Provider</label>
+                  <select class="form-input" id="insuranceProvider">
+                    <option value="">Choose Provider</option>
+                    <option value="ethiopian_insurance">Ethiopian Insurance Corporation</option>
+                    <option value="awash_insurance">Awash Insurance</option><option value="nile_insurance">Nile Insurance</option>
+                    <option value="africa_insurance">Africa Insurance</option><option value="united_insurance">United Insurance</option>
+                    <option value="nyala_insurance">Nyala Insurance</option><option value="global_insurance">Global Insurance</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div><label class="form-label">Policy / Member Number</label><input type="text" class="form-input" id="policyNumber" placeholder="Enter your policy number"></div>
+                <div><label class="form-label">Policy Holder Name</label><input type="text" class="form-input" id="insuranceHolderName" placeholder="Name as on insurance card"></div>
+                <div><label class="form-label">Contact Phone</label><input type="text" class="form-input" id="insurancePhone" placeholder="+251 9XX XXX XXX"></div>
+              </div>
+              <div><label class="form-label">Billing Address</label><textarea class="form-input" id="billingAddress" name="billingAddress" rows="3" required></textarea></div>
+              <button type="submit" class="btn btn-primary w-full text-lg" id="submitBtn"><i class="bi bi-lock"></i> <span id="submitBtnText">Pay Securely</span></button>
+            </form>
+          </div>
+        </div>
+        <!-- Order Summary -->
+        <div class="space-y-4">
+          <div class="card">
+            <div class="card-header" style="background:#059669;"><h5>Order Summary</h5></div>
+            <div class="mb-3">
+              <label class="form-label text-sm font-semibold">Display Currency</label>
+              <select class="form-input form-input-sm" id="currencySelect" onchange="changeCurrency()">
+                <optgroup label="Ethiopian"><option value="ETB" selected>🇪🇹 ETB — Ethiopian Birr</option></optgroup>
+                <optgroup label="International">
+                  <option value="USD">🇺🇸 USD — US Dollar</option><option value="EUR">🇪🇺 EUR — Euro</option>
+                  <option value="GBP">🇬🇧 GBP — British Pound</option><option value="AED">🇦🇪 AED — UAE Dirham</option>
+                  <option value="SAR">🇸🇦 SAR — Saudi Riyal</option><option value="CNY">🇨🇳 CNY — Chinese Yuan</option>
+                  <option value="INR">🇮🇳 INR — Indian Rupee</option><option value="CAD">🇨🇦 CAD — Canadian Dollar</option>
+                  <option value="AUD">🇦🇺 AUD — Australian Dollar</option>
+                </optgroup>
+              </select>
+              <p class="text-gray-400 text-xs mt-1" id="rateNote">Prices stored and charged in ETB.</p>
+            </div>
+            <div id="selectedServices"><p class="text-gray-400 text-sm">Select services to see pricing</p></div>
+            <hr class="my-3">
+            <div class="flex justify-between text-sm mb-1"><span>Subtotal</span><strong id="subtotal">ETB 0.00</strong></div>
+            <div class="flex justify-between text-sm mb-1"><span>Tax (8%)</span><strong id="tax">ETB 0.00</strong></div>
+            <hr class="my-3">
+            <div class="flex justify-between"><h5>Total</h5><h5 class="text-green-600" id="total">ETB 0.00</h5></div>
+          </div>
+          <div class="card text-center">
+            <i class="bi bi-shield-check text-4xl text-green-600 mb-2"></i>
+            <p class="text-gray-500 text-sm">Your payment is secure and encrypted</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/payment-page.js"></script>
+</body>
+</html>

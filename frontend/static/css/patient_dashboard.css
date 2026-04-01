@@ -1,0 +1,537 @@
+
+/* ============================================
+   NAVBAR
+   ============================================ */
+.navbar {
+    background-color: #1e3a8a !important;
+    padding: 0.75rem 1.5rem !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+    min-height: 60px !important;
+}
+.navbar .navbar-brand,
+.navbar .navbar-brand:hover,
+.navbar .navbar-brand:focus {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 1.2rem !important;
+    opacity: 1 !important;
+}
+.navbar .navbar-brand i,
+.navbar .navbar-brand svg {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+.navbar .text-white,
+.navbar span.text-white,
+.navbar #navUserName,
+.navbar .bi {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+.navbar .btn-link,
+.navbar .btn-link:hover,
+.navbar .nav-link,
+.navbar .nav-link:hover {
+    color: #ffffff !important;
+    opacity: 1 !important;
+    text-decoration: none !important;
+}
+.navbar .container-fluid {
+    padding: 0 !important;
+    background: transparent !important;
+}
+
+
+/* Professional Patient Dashboard Styles */
+
+/* ============================================
+   LAYOUT & STRUCTURE
+   ============================================ */
+body > .container-fluid {
+    padding: 0;
+    background: #f8f9fa;
+}
+
+.row {
+    margin: 0;
+}
+
+/* ============================================
+   SIDEBAR STYLING
+   ============================================ */
+.sidebar {
+    background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%);
+    min-height: calc(100vh - 56px);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    padding: 2rem 0;
+    position: sticky;
+    top: 56px;
+}
+
+.sidebar .nav {
+    padding: 0 1rem;
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.9);
+    padding: 1rem 1.25rem;
+    margin: 0.5rem 0;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar .nav-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background: linear-gradient(135deg, #2F80ED, #56CCF2);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+}
+
+.sidebar .nav-link:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    transform: translateX(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar .nav-link:hover::before {
+    transform: scaleY(1);
+}
+
+.sidebar .nav-link.active {
+    background: linear-gradient(135deg, #2F80ED, #56CCF2);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(47, 128, 237, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.sidebar .nav-link.active::before {
+    display: none;
+}
+
+.sidebar .nav-link i {
+    width: 28px;
+    margin-right: 0.75rem;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+/* ============================================
+   MAIN CONTENT AREA
+   ============================================ */
+.main-content {
+    padding: 2.5rem;
+    background: #f8f9fa;
+    min-height: calc(100vh - 56px);
+}
+
+.main-content h2 {
+    color: #2F80ED;
+    font-weight: 700;
+    margin-bottom: 0;
+    font-size: 2rem;
+}
+
+.text-muted i {
+    margin-right: 0.5rem;
+    color: #2F80ED;
+}
+
+/* ============================================
+   STATISTICS CARDS
+   ============================================ */
+.stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: none;
+    position: relative;
+    overflow: hidden;
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(135deg, #2F80ED, #56CCF2);
+}
+
+.stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 25px rgba(47, 128, 237, 0.2);
+}
+
+.stat-card .card-body {
+    padding: 1.75rem;
+}
+
+.stat-card h6 {
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 1rem;
+}
+
+.stat-card h3 {
+    color: #2c3e50;
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 0.75rem;
+    line-height: 1;
+}
+
+.stat-card small {
+    color: #6c757d;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.stat-card small i {
+    margin-right: 0.35rem;
+    font-size: 1rem;
+}
+
+.clickable-card {
+    cursor: pointer;
+}
+
+.clickable-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 12px 30px rgba(47, 128, 237, 0.25);
+}
+
+.clickable-card:hover .card-body h3 {
+    transform: scale(1.08);
+    color: #2F80ED;
+}
+
+/* ============================================
+   CARDS & PANELS
+   ============================================ */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+    background: white;
+    animation: fadeInUp 0.6s ease;
+}
+
+.card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+    border-radius: 16px 16px 0 0 !important;
+    border: none;
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+    background: #1e3a8a !important;
+    color: white !important;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    color: white !important;
+}
+
+.card-header h5 i {
+    margin-right: 0.75rem;
+    font-size: 1.3rem;
+    color: white !important;
+}
+
+.card-body {
+    padding: 1.75rem;
+}
+
+.card-header.bg-primary {
+    background: #1e3a8a !important;
+}
+
+.card-header.bg-info {
+    background: #0e7490 !important;
+}
+
+.card-header.bg-success {
+    background: #15803d !important;
+}
+
+.card-header.bg-warning {
+    background: #b45309 !important;
+    color: white !important;
+}
+
+.card-header.bg-warning h5 {
+    color: white !important;
+}
+
+/* ============================================
+   QUICK ACTIONS
+   ============================================ */
+.btn-outline-primary,
+.btn-outline-success,
+.btn-outline-info,
+.btn-outline-warning {
+    border-width: 2px;
+    font-weight: 600;
+    padding: 1.5rem 1rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+}
+
+.btn-outline-primary i,
+.btn-outline-success i,
+.btn-outline-info i,
+.btn-outline-warning i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.btn-outline-primary:hover {
+    background: linear-gradient(135deg, #2F80ED, #56CCF2);
+    border-color: transparent;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(47, 128, 237, 0.3);
+    color: white !important;
+}
+
+.btn-outline-success:hover {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    border-color: transparent;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(17, 153, 142, 0.3);
+    color: white !important;
+}
+
+.btn-outline-info:hover {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-color: transparent;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(79, 172, 254, 0.3);
+    color: white !important;
+}
+
+.btn-outline-warning:hover {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-color: transparent;
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(240, 147, 251, 0.3);
+    color: white !important;
+}
+
+/* ============================================
+   CHARTS
+   ============================================ */
+canvas {
+    max-height: 320px;
+    width: 100% !important;
+}
+
+/* ============================================
+   LIST GROUPS
+   ============================================ */
+.list-group {
+    border-radius: 12px;
+}
+
+.list-group-item {
+    border: none;
+    border-radius: 0 !important;
+    padding: 1.25rem 1.5rem;
+    transition: all 0.3s ease;
+    background: white;
+    border-bottom: 1px solid #f1f3f5 !important;
+}
+
+.list-group-item:first-child {
+    border-radius: 12px 12px 0 0 !important;
+}
+
+.list-group-item:last-child {
+    border-radius: 0 0 12px 12px !important;
+    border-bottom: none !important;
+}
+
+.list-group-item:hover {
+    background: rgba(47, 128, 237, 0.03);
+    transform: translateX(5px);
+    border-left: 4px solid #2F80ED;
+}
+
+.list-group-item h6 {
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    font-size: 1rem;
+}
+
+.list-group-item small {
+    color: #6c757d;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* ============================================
+   BADGES
+   ============================================ */
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+}
+
+.badge.bg-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+}
+
+.badge.bg-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+    color: white;
+}
+
+.badge.bg-danger {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+}
+
+.badge.rounded-pill {
+    border-radius: 50px !important;
+}
+
+/* ============================================
+   HEALTH TIPS SECTION
+   ============================================ */
+.text-center i.display-4 {
+    font-size: 3rem;
+}
+
+.text-center h6 {
+    color: #2c3e50;
+    font-weight: 700;
+    margin-top: 1rem;
+}
+
+.text-center p.small {
+    color: #6c757d;
+    line-height: 1.6;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn-sm {
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-success:not(:hover) {
+    border-width: 2px;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+@media (max-width: 992px) {
+    .sidebar {
+        min-height: auto;
+        position: relative;
+        top: 0;
+    }
+
+    .main-content {
+        padding: 1.5rem;
+    }
+
+    .stat-card h3 {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        padding: 1rem;
+    }
+
+    .main-content h2 {
+        font-size: 1.5rem;
+    }
+
+    .stat-card .card-body {
+        padding: 1.25rem;
+    }
+
+    .stat-card h3 {
+        font-size: 1.75rem;
+    }
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.sidebar .nav-link {
+    animation: slideIn 0.4s ease;
+}
+
+.sidebar .nav-link:nth-child(1) { animation-delay: 0.1s; }
+.sidebar .nav-link:nth-child(2) { animation-delay: 0.2s; }
+.sidebar .nav-link:nth-child(3) { animation-delay: 0.3s; }
+.sidebar .nav-link:nth-child(4) { animation-delay: 0.4s; }
+.sidebar .nav-link:nth-child(5) { animation-delay: 0.5s; }

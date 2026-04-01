@@ -1,0 +1,226 @@
+/* Nurse - Clinical Measurement Page Specific Styles */
+
+/* Professional nursing colors */
+:root {
+    --nurse-primary: #059669;
+    --nurse-secondary: #10b981;
+    --nurse-accent: #34d399;
+    --nurse-dark: #065f46;
+    --nurse-light: #d1fae5;
+}
+
+/* Patient info card */
+.card.bg-light {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+    border: 2px solid #bbf7d0;
+}
+
+.card.bg-light .card-body {
+    padding: 1.5rem;
+}
+
+.card.bg-light h5 {
+    color: var(--nurse-dark);
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.card.bg-light p {
+    color: #14532d;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.card.bg-light p strong {
+    color: var(--nurse-dark);
+    font-weight: 600;
+}
+
+/* Form styling */
+.form-label {
+    color: var(--nurse-dark);
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select,
+textarea.form-control {
+    border: 2px solid #dcfce7;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    background: #f0fdf4;
+}
+
+.form-control:focus,
+.form-select:focus,
+textarea.form-control:focus {
+    border-color: var(--nurse-primary);
+    box-shadow: 0 0 0 0.2rem rgba(5, 150, 105, 0.15);
+    background: white;
+}
+
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Input groups for measurements */
+.input-group {
+    margin-bottom: 1.25rem;
+}
+
+.input-group-text {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border: 2px solid #dcfce7;
+    border-right: none;
+    color: var(--nurse-dark);
+    font-weight: 600;
+    min-width: 180px;
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+/* Measurement sections */
+.mb-4 h6 {
+    color: var(--nurse-dark);
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #bbf7d0;
+}
+
+/* Card styling */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.1);
+    transition: all 0.3s ease;
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--nurse-primary) 0%, var(--nurse-secondary) 100%) !important;
+    color: white !important;
+    border-radius: 16px 16px 0 0 !important;
+    border: none;
+    padding: 1.25rem 1.5rem;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    color: white !important;
+}
+
+.card-header h5 i {
+    margin-right: 0.75rem;
+    font-size: 1.4rem;
+}
+
+.card-body {
+    padding: 2rem;
+    background: white;
+}
+
+/* Submit button */
+.btn-primary {
+    background: linear-gradient(135deg, var(--nurse-primary) 0%, var(--nurse-secondary) 100%);
+    border: none;
+    padding: 0.85rem 2rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(5, 150, 105, 0.3);
+    background: linear-gradient(135deg, var(--nurse-dark) 0%, var(--nurse-primary) 100%);
+}
+
+.btn-primary i {
+    margin-right: 0.5rem;
+}
+
+/* Alert styling */
+.alert {
+    border-radius: 12px;
+    border: none;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+}
+
+.alert-warning i {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card.bg-light .card-body {
+        padding: 1.25rem;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    .form-control,
+    .form-select,
+    textarea.form-control {
+        padding: 0.65rem 0.85rem;
+        font-size: 0.9rem;
+    }
+
+    .input-group-text {
+        min-width: 140px;
+        font-size: 0.85rem;
+    }
+
+    .btn-primary {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+        width: 100%;
+    }
+
+    textarea.form-control {
+        min-height: 80px;
+    }
+
+    .mb-4 h6 {
+        font-size: 0.95rem;
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.5s ease;
+}

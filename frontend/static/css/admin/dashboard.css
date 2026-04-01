@@ -1,0 +1,290 @@
+/* Admin Module - Dashboard Specific Styles */
+/* Force all text to be visible with proper colors */
+
+/* Main content area - ensure background and text are visible */
+.main-content {
+    background: #f8f9fa !important;
+    color: #2c3e50 !important;
+}
+
+/* Page heading */
+.main-content h2 {
+    color: #6366f1 !important;
+    font-weight: 700 !important;
+    position: relative;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem !important;
+}
+
+.main-content h2::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 2px;
+}
+
+/* Date/time text */
+.text-muted {
+    color: #6c757d !important;
+}
+
+.text-muted i {
+    color: #6366f1 !important;
+}
+
+/* Statistics Cards */
+.stat-card {
+    background: white !important;
+}
+
+.stat-card::before {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+}
+
+.stat-card:hover {
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.2) !important;
+}
+
+.stat-card .card-body {
+    background: white !important;
+}
+
+.stat-card h6 {
+    color: #6c757d !important;
+    font-weight: 600 !important;
+}
+
+.stat-card h3 {
+    color: #2c3e50 !important;
+    font-weight: 800 !important;
+}
+
+.stat-card small {
+    color: #6c757d !important;
+}
+
+.clickable-card:hover {
+    box-shadow: 0 12px 30px rgba(99, 102, 241, 0.25) !important;
+}
+
+.clickable-card:hover .card-body h3 {
+    color: #6366f1 !important;
+}
+
+/* Cards */
+.card {
+    background: white !important;
+}
+
+.card-body {
+    background: white !important;
+    color: #2c3e50 !important;
+}
+
+.card-header {
+    color: white !important;
+}
+
+.card-header h5 {
+    color: white !important;
+    margin: 0 !important;
+}
+
+.card-header h5 i {
+    color: white !important;
+}
+
+.card-header.bg-primary,
+.card-header[style*="1e3a8a"] {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+}
+
+.card-header.bg-info {
+    background: #0ea5e9 !important;
+}
+
+.card-header.bg-success {
+    background: #10b981 !important;
+}
+
+.card-header.bg-warning {
+    background: #f59e0b !important;
+}
+
+/* Quick Action Buttons */
+.btn-outline-primary,
+.btn-outline-success,
+.btn-outline-info,
+.btn-outline-warning {
+    background: white !important;
+    color: #2c3e50 !important;
+}
+
+.btn-outline-primary i,
+.btn-outline-success i,
+.btn-outline-info i,
+.btn-outline-warning i {
+    color: inherit !important;
+}
+
+.btn-outline-primary span,
+.btn-outline-success span,
+.btn-outline-info span,
+.btn-outline-warning span {
+    color: #2c3e50 !important;
+}
+
+.btn-outline-primary:hover {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    color: white !important;
+}
+
+.btn-outline-primary:hover i,
+.btn-outline-primary:hover span {
+    color: white !important;
+}
+
+.btn-outline-success:hover {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%) !important;
+    color: white !important;
+}
+
+.btn-outline-success:hover i,
+.btn-outline-success:hover span {
+    color: white !important;
+}
+
+.btn-outline-info:hover {
+    background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%) !important;
+    color: white !important;
+}
+
+.btn-outline-info:hover i,
+.btn-outline-info:hover span {
+    color: white !important;
+}
+
+.btn-outline-warning:hover {
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) !important;
+    color: white !important;
+}
+
+.btn-outline-warning:hover i,
+.btn-outline-warning:hover span {
+    color: white !important;
+}
+
+/* List Groups */
+.list-group-item {
+    background: white !important;
+    color: #2c3e50 !important;
+}
+
+.list-group-item h6 {
+    color: #2c3e50 !important;
+}
+
+.list-group-item small {
+    color: #6c757d !important;
+}
+
+.list-group-item:hover {
+    background: rgba(99, 102, 241, 0.03) !important;
+    border-left: 4px solid #6366f1 !important;
+}
+
+/* Tables */
+.table {
+    background: white !important;
+    color: #2c3e50 !important;
+}
+
+.table thead {
+    background: white !important;
+}
+
+.table tbody {
+    background: white !important;
+}
+
+.table td,
+.table th {
+    color: #2c3e50 !important;
+    background: white !important;
+}
+
+.table td:first-child {
+    font-weight: 600 !important;
+}
+
+.table td strong {
+    color: #6366f1 !important;
+}
+
+/* Badges */
+.badge {
+    color: white !important;
+}
+
+.badge.bg-success {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%) !important;
+}
+
+.badge.bg-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) !important;
+}
+
+.badge.bg-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #f87171 100%) !important;
+}
+
+/* Buttons */
+.btn-sm {
+    color: white !important;
+}
+
+/* Admin-specific action buttons */
+.action-btn {
+    background: white !important;
+    border: 2px solid #e9ecef !important;
+    color: #2c3e50 !important;
+}
+
+.action-btn i {
+    color: #6366f1 !important;
+}
+
+.action-btn span {
+    color: #2c3e50 !important;
+}
+
+.action-btn:hover {
+    border-color: #6366f1 !important;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%) !important;
+}
+
+.action-btn:hover i {
+    color: #8b5cf6 !important;
+}
+
+/* Ensure sidebar is visible */
+.sidebar {
+    background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%) !important;
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.sidebar .nav-link.active {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    color: white !important;
+}
+
+.sidebar .nav-link i {
+    color: inherit !important;
+}

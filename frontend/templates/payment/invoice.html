@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+    <style>@media print{.no-print{display:none!important;}}</style>
+</head>
+<body>
+<div class="app-layout">
+  <div class="topbar no-print">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-user">
+      <i class="bi bi-person-circle"></i> <span id="navUserName">User</span>
+      <button onclick="logout()" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar no-print">
+      <nav>
+        <a href="/templates/patient/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="/templates/patient/profile.html"><i class="bi bi-person"></i> My Profile</a>
+        <a href="/templates/patient/health_data_form.html"><i class="bi bi-clipboard-pulse"></i> New Prediction</a>
+        <a href="/templates/patient/prediction_history.html"><i class="bi bi-file-medical"></i> My Predictions</a>
+        <a href="/templates/patient/appointment.html"><i class="bi bi-calendar-check"></i> Appointments</a>
+        <a href="/templates/patient/prescriptions.html"><i class="bi bi-capsule"></i> Prescriptions</a>
+        <a href="/templates/patient/lab_results.html"><i class="bi bi-flask"></i> Lab Results</a>
+        <a href="/templates/payment/payment_history.html" class="active"><i class="bi bi-clock-history"></i> Payment History</a>
+        <a href="/templates/payment/payment_page.html"><i class="bi bi-wallet2"></i> Make Payment</a>
+      </nav>
+    </div>
+    <main class="main">
+      <div class="max-w-3xl mx-auto pb-8">
+        <!-- Loading state -->
+        <div id="loadingState" class="card p-6 text-center">
+          <i class="bi bi-hourglass-split text-4xl text-blue-500"></i>
+          <p class="mt-2 text-gray-500">Loading invoice...</p>
+        </div>
+
+        <!-- Error state -->
+        <div id="errorState" class="card p-6 text-center" style="display:none;">
+          <i class="bi bi-exclamation-triangle text-4xl text-red-500"></i>
+          <p class="mt-2 text-red-600" id="errorMsg">Failed to load invoice.</p>
+          <a href="/templates/payment/payment_history.html" class="btn btn-secondary mt-3">
+            <i class="bi bi-arrow-left"></i> Back to Payment History
+          </a>
+        </div>
+
+        <!-- Invoice card -->
+        <div class="card" id="invoiceCard" style="display:none;">
+          <div class="p-6">
+            <!-- Header -->
+            <div class="grid grid-cols-2 gap-6 mb-6">
+              <div>
+                <h2 class="text-xl font-bold text-blue-800"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</h2>
+                <p class="text-sm text-gray-600 mt-1">Addis Ababa, Ethiopia<br>Phone: +251 911 000 000</p>
+              </div>
+              <div class="text-right">
+                <h3 class="text-2xl font-bold text-gray-700">INVOICE</h3>
+                <p class="text-sm text-gray-600 mt-1">
+                  <strong>Invoice #:</strong> <span id="invoiceId">-</span><br>
+                  <strong>Date:</strong> <span id="invoiceDate">-</span><br>
+                  <strong>Due Date:</strong> <span id="invoiceDueDate">-</span><br>
+                  <strong>Status:</strong> <span id="invoiceStatus">-</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Bill To -->
+            <div class="mb-6 p-3 rounded" style="background:#eff6ff;">
+              <h5 class="font-semibold mb-1 text-blue-800">Bill To:</h5>
+              <p class="text-sm text-gray-700">
+                <strong id="patientName">-</strong><br>
+                <span id="patientEmail">-</span>
+              </p>
+            </div>
+
+            <!-- Payment Info -->
+            <div class="mb-6 p-3 rounded" style="background:#f8fafc;" id="paymentInfoRow">
+              <h5 class="font-semibold mb-1 text-gray-700">Payment Info:</h5>
+              <p class="text-sm text-gray-600">
+                <strong>Payment ID:</strong> <span id="paymentId">-</span> &nbsp;|&nbsp;
+                <strong>Method:</strong> <span id="paymentMethod">-</span>
+              </p>
+            </div>
+
+            <!-- Items Table -->
+            <div class="table-responsive mb-4">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Description</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-right">Unit Price</th>
+                    <th class="text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody id="invoiceItems"></tbody>
+                <tfoot>
+                  <tr><td colspan="3" class="text-right font-medium">Subtotal:</td><td class="text-right" id="subtotal">ETB 0.00</td></tr>
+                  <tr><td colspan="3" class="text-right font-medium">Tax:</td><td class="text-right" id="tax">ETB 0.00</td></tr>
+                  <tr><td colspan="3" class="text-right font-medium">Discount:</td><td class="text-right" id="discount">ETB 0.00</td></tr>
+                  <tr style="background:#f0fdf4;">
+                    <td colspan="3" class="text-right"><strong>TOTAL:</strong></td>
+                    <td class="text-right"><strong class="text-green-700" id="total">ETB 0.00</strong></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <!-- Actions -->
+            <div class="text-center no-print flex justify-center gap-3 flex-wrap">
+              <button onclick="window.print()" class="btn btn-primary"><i class="bi bi-printer"></i> Print Invoice</button>
+              <button onclick="downloadInvoicePDF()" class="btn btn-secondary"><i class="bi bi-file-earmark-pdf"></i> Download PDF</button>
+              <a href="/templates/payment/payment_history.html" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Back</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<footer class="footer no-print"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/payment-invoice.js"></script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+/* Pharmacist - Dispense Medication Page Specific Styles */
+
+/* Professional pharmacy colors */
+:root {
+    --pharma-primary: #ea580c;
+    --pharma-secondary: #f97316;
+    --pharma-accent: #fb923c;
+    --pharma-dark: #9a3412;
+    --pharma-light: #fed7aa;
+}
+
+/* Prescription info card */
+.card.bg-light {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%) !important;
+    border: 2px solid #fed7aa;
+}
+
+.card.bg-light .card-body {
+    padding: 1.5rem;
+}
+
+.card.bg-light h5 {
+    color: var(--pharma-dark);
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.card.bg-light p {
+    color: #7c2d12;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.card.bg-light p strong {
+    color: var(--pharma-dark);
+    font-weight: 600;
+}
+
+/* Medication dispensing list */
+.card-body ul {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 1.5rem;
+}
+
+.card-body ul li {
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    background: #fff7ed;
+    border: 2px solid #ffedd5;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.card-body ul li:hover {
+    border-color: var(--pharma-primary);
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.1);
+}
+
+.card-body ul li strong {
+    color: var(--pharma-dark);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* Form styling */
+.form-label {
+    color: var(--pharma-dark);
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-control,
+textarea.form-control {
+    border: 2px solid #ffedd5;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    background: #fff7ed;
+}
+
+.form-control:focus,
+textarea.form-control:focus {
+    border-color: var(--pharma-primary);
+    box-shadow: 0 0 0 0.2rem rgba(234, 88, 12, 0.15);
+    background: white;
+}
+
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Checkbox styling */
+.form-check {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    background: #fff7ed;
+    border: 2px solid #ffedd5;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.form-check:hover {
+    border-color: var(--pharma-primary);
+    transform: translateX(5px);
+}
+
+.form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.15rem;
+    border: 2px solid var(--pharma-primary);
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: var(--pharma-primary);
+    border-color: var(--pharma-primary);
+}
+
+.form-check-label {
+    color: #7c2d12;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 0.5rem;
+}
+
+/* Card styling */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(234, 88, 12, 0.1);
+    transition: all 0.3s ease;
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--pharma-primary) 0%, var(--pharma-secondary) 100%) !important;
+    color: white !important;
+    border-radius: 16px 16px 0 0 !important;
+    border: none;
+    padding: 1.25rem 1.5rem;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    color: white !important;
+}
+
+.card-header h5 i {
+    margin-right: 0.75rem;
+    font-size: 1.4rem;
+}
+
+.card-body {
+    padding: 2rem;
+    background: white;
+}
+
+/* Submit button */
+.btn-primary {
+    background: linear-gradient(135deg, var(--pharma-primary) 0%, var(--pharma-secondary) 100%);
+    border: none;
+    padding: 0.85rem 2rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(234, 88, 12, 0.3);
+    background: linear-gradient(135deg, var(--pharma-dark) 0%, var(--pharma-primary) 100%);
+}
+
+.btn-primary i {
+    margin-right: 0.5rem;
+}
+
+/* Alert styling */
+.alert {
+    border-radius: 12px;
+    border: none;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+    border-left: 4px solid #059669;
+}
+
+.alert-success i {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+    color: #059669;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card.bg-light .card-body {
+        padding: 1.25rem;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    .card-body ul li {
+        padding: 0.75rem;
+    }
+
+    .form-control,
+    textarea.form-control {
+        padding: 0.65rem 0.85rem;
+        font-size: 0.9rem;
+    }
+
+    .form-check {
+        padding: 0.65rem 0.85rem;
+    }
+
+    .btn-primary {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+        width: 100%;
+    }
+
+    textarea.form-control {
+        min-height: 80px;
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.5s ease;
+}

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>New Prediction - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+    <style>
+        /* ── Form card ── */
+        .form-card { background:#fff; border-radius:18px; box-shadow:0 2px 16px rgba(0,0,0,.07); overflow:hidden; }
+        .form-card-header {
+            background:linear-gradient(90deg,#1565c0,#1976d2);
+            padding:1.1rem 1.5rem; color:#fff;
+            font-weight:700; font-size:1rem;
+            display:flex; align-items:center; gap:.5rem;
+        }
+        .form-card-body { padding:1.75rem; }
+        .field-hint { font-size:.72rem; color:#90a4ae; margin-top:.25rem; }
+
+        /* Auto-filled field highlight */
+        .field-autofilled {
+            background:#f0fdf4 !important;
+            border-color:#86efac !important;
+            color:#166534 !important;
+            font-weight:600;
+        }
+        .autofill-badge {
+            display:inline-block; font-size:.65rem; font-weight:700;
+            background:#dcfce7; color:#166534; padding:.1rem .45rem;
+            border-radius:8px; margin-left:.4rem; vertical-align:middle;
+        }
+        .lab-badge {
+            background:#dbeafe; color:#1e40af;
+        }
+
+        /* ── Processing overlay ── */
+        #processingOverlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(15,23,42,.6); z-index:9999;
+            align-items:center; justify-content:center;
+        }
+        #processingOverlay.show { display:flex; }
+        .proc-box {
+            background:#fff; border-radius:20px; padding:2.5rem 3rem;
+            text-align:center; max-width:360px; width:90%;
+            box-shadow:0 20px 60px rgba(0,0,0,.25);
+        }
+        .proc-spinner {
+            width:56px; height:56px; border:5px solid #e3f2fd;
+            border-top-color:#1565c0; border-radius:50%;
+            animation:spin .8s linear infinite; margin:0 auto 1.25rem;
+        }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .proc-title { font-size:1.1rem; font-weight:700; color:#1a237e; margin-bottom:.4rem; }
+        .proc-sub   { font-size:.85rem; color:#78909c; }
+        .proc-steps { margin-top:1.25rem; text-align:left; }
+        .proc-step  { display:flex; align-items:center; gap:.6rem; font-size:.8rem; color:#546e7a; padding:.3rem 0; }
+        .proc-step.active { color:#1565c0; font-weight:600; }
+        .proc-step.done   { color:#2e7d32; }
+        .proc-step i { font-size:1rem; width:18px; text-align:center; }
+
+        @keyframes spin-icon { to { transform:rotate(360deg); } }
+        .spin-icon { display:inline-block; animation:spin-icon .8s linear infinite; }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+  <div class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-right">
+      <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Patient</span></span>
+      <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </div>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-person-circle"></i></div>
+        <div class="sidebar-name" id="sidebarName">Patient</div>
+        <div class="sidebar-role">Patient Portal</div>
+      </div>
+      <nav>
+        <a class="nav-item" href="/templates/patient/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a class="nav-item" href="/templates/patient/profile.html"><i class="bi bi-person"></i> My Profile</a>
+        <a class="nav-item active" href="/templates/patient/health_data_form.html"><i class="bi bi-clipboard-pulse"></i> New Prediction</a>
+        <a class="nav-item" href="/templates/patient/prediction_history.html"><i class="bi bi-file-medical"></i> My Predictions</a>
+        <a class="nav-item" href="/templates/patient/appointment.html"><i class="bi bi-calendar-check"></i> Appointments</a>
+        <a class="nav-item" href="/templates/patient/prescriptions.html"><i class="bi bi-capsule"></i> Prescriptions</a>
+        <a class="nav-item" href="/templates/patient/lab_results.html"><i class="bi bi-flask"></i> Lab Results</a>
+        <a class="nav-item" href="/templates/payment/payment_history.html"><i class="bi bi-clock-history"></i> Payment History</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <h2 class="page-title mb-1"><i class="bi bi-clipboard-pulse"></i> Diabetes Risk Prediction</h2>
+      <p class="page-subtitle mb-4">Follow the steps below before filling your health form for an accurate prediction.</p>
+
+      <!-- ── Blocked message (shown when nurse vitals missing) ── -->
+      <div id="blockedMessage" style="display:none;">
+        <div class="blocked-box">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <h4>Nurse Check-up Required First</h4>
+          <p>
+            Your health form is <strong>locked</strong> until the nurse records your vitals.<br>
+            Please visit the nurse station so they can measure your Blood Pressure, Height, Weight, and BMI.
+          </p>
+          <p style="font-size:.8rem;color:#b91c1c;">
+            <i class="bi bi-info-circle"></i>
+            After the nurse saves your vitals, come back to this page — your form will unlock automatically.
+          </p>
+          <a href="/templates/patient/appointment.html" class="btn btn-primary mt-2">
+            <i class="bi bi-calendar-check"></i> Book Appointment
+          </a>
+        </div>
+      </div>
+
+      <!-- ── Health data form (shown after nurse vitals confirmed) ── -->
+      <div id="formSection" style="display:none;">
+        <div class="form-card">
+          <div class="form-card-header">
+            <i class="bi bi-heart-pulse"></i> Enter Your Health Measurements
+          </div>
+          <div class="form-card-body">
+
+            <div id="formAlert" style="display:none;" class="alert alert-danger mb-4"></div>
+
+            <!-- Auto-fill status banner -->
+            <div id="autofillBanner" style="display:none;"
+                 class="alert mb-4" style="background:#f0fdf4;border:1px solid #86efac;color:#166534;">
+              <i class="bi bi-check-circle-fill me-2"></i>
+              <span id="autofillText"></span>
+            </div>
+
+            <form id="healthDataForm">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+
+                <!-- LEFT COLUMN -->
+                <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+                  <!-- Pregnancies -->
+                  <div>
+                    <label class="form-label">Pregnancies <span style="color:#94a3b8;font-weight:400;font-size:.75rem;">(0 if male)</span></label>
+                    <input type="number" class="form-input" id="pregnancies" min="0" max="17" placeholder="0 – 17" value="0">
+                    <div class="field-hint">✍️ Number of times pregnant. Range: 0–17.</div>
+                  </div>
+
+                  <!-- Glucose -->
+                  <div>
+                    <label class="form-label">Glucose Level <span style="color:#94a3b8;font-weight:400;font-size:.75rem;">mg/dL</span>
+                      <span class="autofill-badge lab-badge" id="glucoseBadge" style="display:none;">🔬 From Lab</span>
+                    </label>
+                    <input type="number" class="form-input" id="glucose" min="1" max="300" placeholder="e.g. 120" required>
+                    <div class="field-hint" id="glucoseHint">🔬 Auto-filled from lab test. Normal fasting: 70–99 mg/dL.</div>
+                  </div>
+
+                  <!-- Blood Pressure -->
+                  <div>
+                    <label class="form-label">Blood Pressure <span style="color:#94a3b8;font-weight:400;font-size:.75rem;">mm Hg (diastolic)</span>
+                      <span class="autofill-badge" id="bpBadge" style="display:none;">🩺 From Nurse</span>
+                    </label>
+                    <input type="number" class="form-input" id="bloodPressure" min="1" max="200" placeholder="e.g. 80" required>
+                    <div class="field-hint" id="bpHint">🩺 Auto-filled from nurse vitals. Normal: 60–80 mm Hg.</div>
+                  </div>
+
+                  <!-- Skin Thickness -->
+                  <div>
+                    <label class="form-label">Skin Thickness <span style="color:#94a3b8;font-weight:400;font-size:.75rem;">mm</span>
+                      <span class="autofill-badge" id="skinBadge" style="display:none;">🩺 From Nurse</span>
+                    </label>
+                    <input type="number" class="form-input" id="skinThickness" min="0" max="99" placeholder="e.g. 20 or 0 if unknown">
+                    <div class="field-hint">✍️ Triceps skinfold. Enter 0 if not measured. Range: 0–99 mm.</div>
+                  </div>
+
+                </div>
+
+                <!-- RIGHT COLUMN -->
+                <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+                  <!-- Insulin -->
+                  <div>
+                    <label class="form-label">Insulin Level <span style="color:#94a3b8;font-weight:400;font-size:.75rem;">μU/mL</span>
+                      <span class="autofill-badge lab-badge" id="insulinBadge" style="display:none;">🔬 From Lab</span>
+                    </label>
+                    <input type="number" class="form-input" id="insulin" min="0" max="846" placeholder="e.g. 80 or 0">
+                    <div class="field-hint">🔬 Auto-filled from insulin lab test. Enter 0 if not tested.</div>
+                  </div>
+
+                  <!-- BMI -->
+                  <div>
+                    <label class="form-label">BMI <span style="color:#94a3b8;font-weight:400;font-size:.75rem;">kg/m²</span>
+                      <span class="autofill-badge" id="bmiBadge" style="display:none;">🩺 From Nurse</span>
+                    </label>
+                    <input type="number" step="0.1" class="form-input" id="bmi" min="1" max="80" placeholder="e.g. 28.5" required>
+                    <div class="field-hint">🩺 Auto-filled from nurse vitals (height + weight). Normal: 18.5–24.9.</div>
+                  </div>
+
+                  <!-- Diabetes Pedigree -->
+                  <div>
+                    <label class="form-label">Diabetes Pedigree Function</label>
+                    <input type="number" step="0.001" class="form-input" id="diabetesPedigree" min="0.001" max="3" placeholder="e.g. 0.5" value="0.500">
+                    <div class="field-hint">✍️ Family history score. No history: 0.1–0.2 | One parent: 0.4–0.6 | Both: 0.6–1.0</div>
+                  </div>
+
+                  <!-- Age -->
+                  <div>
+                    <label class="form-label">Age <span style="color:#94a3b8;font-weight:400;font-size:.75rem;">years</span></label>
+                    <input type="number" class="form-input" id="age" min="1" max="120" placeholder="e.g. 35" required>
+                    <div class="field-hint">✍️ Your current age in years.</div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Legend -->
+              <div class="mt-4 p-3" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
+                <div style="font-size:.75rem;font-weight:700;color:#475569;margin-bottom:.4rem;">Field Legend:</div>
+                <div style="font-size:.75rem;color:#64748b;display:flex;flex-wrap:wrap;gap:.75rem;">
+                  <span><span class="autofill-badge">🩺 From Nurse</span> Auto-filled from nurse vitals</span>
+                  <span><span class="autofill-badge lab-badge">🔬 From Lab</span> Auto-filled from lab results</span>
+                  <span>✍️ Fill manually by you</span>
+                </div>
+              </div>
+
+              <div class="alert alert-info mt-4" style="background:#e3f2fd;border:1px solid #90caf9;color:#1565c0;">
+                <i class="bi bi-info-circle-fill"></i>
+                <span>If you haven't paid yet, you'll be redirected to the payment page (ETB 150). After payment, your result will be shown automatically.</span>
+              </div>
+
+              <!-- Buttons at bottom -->
+              <div class="flex justify-end gap-3 mt-5">
+                <button type="button" onclick="clearForm()" class="btn btn-outline">
+                  <i class="bi bi-arrow-counterclockwise"></i> Clear Manual Fields
+                </button>
+                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                  <i class="bi bi-calculator"></i> Get Prediction
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+
+<!-- Processing overlay -->
+<div id="processingOverlay">
+  <div class="proc-box">
+    <div class="proc-spinner"></div>
+    <div class="proc-title">Running AI Analysis</div>
+    <div class="proc-sub">Please wait while we process your data...</div>
+    <div class="proc-steps">
+      <div class="proc-step active" id="ps1"><i class="bi bi-check-circle"></i> Validating health data</div>
+      <div class="proc-step" id="ps2"><i class="bi bi-circle"></i> Running ML model</div>
+      <div class="proc-step" id="ps3"><i class="bi bi-circle"></i> Calculating risk level</div>
+      <div class="proc-step" id="ps4"><i class="bi bi-circle"></i> Saving results</div>
+    </div>
+  </div>
+</div>
+
+<script src="../../static/js/auth.js?v=10"></script>
+<script src="../../static/js/patient-health-form.js?v=10"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show blocked message if nurse vitals missing — handled by JS
+});
+</script>
+</body>
+</html>

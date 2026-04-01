@@ -1,0 +1,37 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Database (never commit real data)
+*.db
+*.db-shm
+*.db-wal
+database/
+
+# Logs
+logs/
+*.log
+
+# Environment secrets
+.env
+
+# ML model binaries (large files)
+*.pkl
+ml_model/saved_models/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tokens / keys
+tok.txt

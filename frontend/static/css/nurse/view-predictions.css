@@ -1,0 +1,187 @@
+/* Nurse - View Predictions Page Specific Styles */
+
+/* Professional nursing colors */
+:root {
+    --nurse-primary: #059669;
+    --nurse-secondary: #10b981;
+    --nurse-accent: #34d399;
+    --nurse-dark: #065f46;
+    --nurse-light: #d1fae5;
+}
+
+/* Search section */
+.input-group {
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.input-group .form-control {
+    border: 2px solid #dcfce7;
+    border-right: none;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    background: #f0fdf4;
+}
+
+.input-group .form-control:focus {
+    border-color: var(--nurse-primary);
+    box-shadow: none;
+    background: white;
+}
+
+.input-group .btn {
+    border: 2px solid #dcfce7;
+    border-left: none;
+    background: white;
+    color: var(--nurse-primary);
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+}
+
+.input-group .btn:hover {
+    background: linear-gradient(135deg, var(--nurse-primary) 0%, var(--nurse-secondary) 100%);
+    color: white;
+    border-color: var(--nurse-primary);
+}
+
+/* Prediction cards */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.1);
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+    border: 2px solid #dcfce7;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(5, 150, 105, 0.2);
+    border-color: var(--nurse-primary);
+}
+
+.card-body {
+    padding: 1.75rem;
+}
+
+.card-body h5 {
+    color: var(--nurse-dark);
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.card-body p {
+    color: #14532d;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+.card-body p strong {
+    color: var(--nurse-dark);
+    font-weight: 600;
+}
+
+/* Badge styling */
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.badge.bg-danger {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%) !important;
+}
+
+.badge.bg-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%) !important;
+    color: white;
+}
+
+.badge.bg-success {
+    background: linear-gradient(135deg, var(--nurse-primary) 0%, var(--nurse-secondary) 100%) !important;
+}
+
+/* Action buttons */
+.btn-info {
+    background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.btn-info:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(8, 145, 178, 0.3);
+}
+
+/* Empty state */
+.text-center.py-5 {
+    padding: 3rem 1rem !important;
+}
+
+.text-center.py-5 i {
+    font-size: 4rem;
+    color: #bbf7d0;
+    margin-bottom: 1rem;
+}
+
+.text-center.py-5 p {
+    color: #14532d;
+    font-size: 1.1rem;
+}
+
+/* Prediction result display */
+.card-body .text-primary {
+    color: var(--nurse-primary) !important;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    .card-body h5 {
+        font-size: 1.1rem;
+    }
+
+    .card-body p {
+        font-size: 0.9rem;
+    }
+
+    .btn-info {
+        padding: 0.55rem 1.25rem;
+        font-size: 0.9rem;
+        width: 100%;
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.5s ease;
+}
+
+.card:nth-child(1) { animation-delay: 0.1s; }
+.card:nth-child(2) { animation-delay: 0.2s; }
+.card:nth-child(3) { animation-delay: 0.3s; }
+.card:nth-child(4) { animation-delay: 0.4s; }

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Predictions - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <nav class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-right">
+      <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Nurse</span></span>
+      <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </nav>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-heart-pulse"></i></div>
+        <div class="sidebar-name" id="sidebarName">Nurse</div>
+        <div class="sidebar-role">Nursing Staff</div>
+      </div>
+      <nav>
+        <a class="nav-item" href="/templates/nurse/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a class="nav-item" href="/templates/nurse/clinical_measurement.html"><i class="bi bi-clipboard-pulse"></i> Clinical Measurement</a>
+        <a class="nav-item" href="/templates/nurse/record_vitals.html"><i class="bi bi-heart-pulse"></i> Record Vitals</a>
+        <a class="nav-item active" href="/templates/nurse/view_predictions.html"><i class="bi bi-graph-up"></i> View Predictions</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <h2 class="page-title mb-4"><i class="bi bi-graph-up"></i> Patient Predictions</h2>
+      <!-- Filters -->
+      <div class="card mb-4">
+        <div class="card-body" style="padding:1rem;">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+            <input type="text" class="form-input" id="searchInput" placeholder="Search by patient name or ID...">
+            <select class="form-input" id="riskFilter">
+              <option value="">All Risk Levels</option>
+              <option value="LOW">Low</option>
+              <option value="MODERATE">Moderate</option>
+              <option value="HIGH">High</option>
+              <option value="VERY_HIGH">Very High</option>
+            </select>
+            <span class="text-muted text-sm" id="resultCount"></span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Patient</th><th>Date</th><th>Risk Level</th>
+                <th>Probability</th><th>Result</th><th>Model</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="predictionsTableBody">
+              <tr><td colspan="7" class="text-center text-muted" style="padding:2rem;">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="text-center mt-4">
+        <a href="/templates/nurse/dashboard.html" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal" style="display:none;">
+  <div class="modal-box modal-lg">
+    <div class="modal-header">
+      <h5><i class="bi bi-graph-up"></i> Prediction Details</h5>
+      <button onclick="document.getElementById('detailModal').style.display='none'" class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body" id="detailModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('detailModal').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/nurse-view-predictions.js"></script>
+</body>
+</html>

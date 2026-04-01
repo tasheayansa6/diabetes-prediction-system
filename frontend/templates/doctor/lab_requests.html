@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Requests - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <nav class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-right">
+      <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Doctor</span></span>
+      <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </nav>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-person-badge"></i></div>
+        <div class="sidebar-name" id="sidebarDoctorName">Doctor</div>
+        <div class="sidebar-role" id="sidebarDoctorSpec">Doctor Portal</div>
+      </div>
+      <nav>
+        <a class="nav-item" href="/templates/doctor/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a class="nav-item" href="/templates/doctor/appointments.html"><i class="bi bi-calendar-check"></i> Appointments</a>
+        <a class="nav-item" href="/templates/doctor/patient_list.html"><i class="bi bi-people"></i> Patient List</a>
+        <a class="nav-item" href="/templates/doctor/diagnosis.html"><i class="bi bi-clipboard-pulse"></i> Diagnosis</a>
+        <a class="nav-item" href="/templates/doctor/prescribe_medication.html"><i class="bi bi-capsule"></i> Prescribe</a>
+        <a class="nav-item active" href="/templates/doctor/lab_requests.html"><i class="bi bi-clipboard2-pulse"></i> Lab Requests</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="page-title mb-0"><i class="bi bi-clipboard2-pulse"></i> Lab Requests</h2>
+        <button class="btn btn-primary" onclick="document.getElementById('newRequestModal').style.display='flex'"><i class="bi bi-plus-circle"></i> New Request</button>
+      </div>
+      <!-- Stats -->
+      <div class="stats-grid mb-4">
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value text-yellow-600" id="statPending">-</div></div>
+        <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value text-green-600" id="statCompleted">-</div></div>
+        <div class="stat-card"><div class="stat-label">Cancelled</div><div class="stat-value text-red-600" id="statCancelled">-</div></div>
+        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="statTotal">-</div></div>
+      </div>
+      <!-- Filter -->
+      <div class="flex gap-3 mb-4">
+        <select id="filterStatus" class="form-input" style="max-width:160px">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button class="btn btn-outline" onclick="loadRequests()"><i class="bi bi-funnel"></i> Filter</button>
+      </div>
+      <div id="loadingSpinner" class="text-center py-4 hidden"><div class="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>
+      <div id="errorAlert" class="alert alert-danger hidden"></div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Request ID</th><th>Patient</th><th>Test Name</th><th>Priority</th><th>Date</th><th>Status</th><th>Results</th><th>Actions</th></tr></thead>
+            <tbody id="labRequestsTableBody"><tr><td colspan="8" class="text-center text-gray-400">Loading...</td></tr></tbody>
+          </table>
+        </div>
+        <div id="paginationInfo" class="text-gray-500 text-sm mt-2"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- New Request Modal -->
+<div class="modal-overlay" id="newRequestModal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header"><h5>New Lab Request</h5><button onclick="document.getElementById('newRequestModal').style.display='none'" class="modal-close">&times;</button></div>
+    <form id="labRequestForm">
+      <div class="modal-body space-y-4">
+        <div id="modalAlert" class="hidden"></div>
+        <div>
+          <label class="form-label">Patient <span class="text-red-500">*</span></label>
+          <select class="form-input" id="modal_patient_id" required><option value="">Loading patients...</option></select>
+        </div>
+        <div>
+          <label class="form-label">Test Name <span class="text-red-500">*</span></label>
+          <select class="form-input" id="test_name" required>
+            <option value="">Select test...</option>
+            <option value="Blood Glucose">Blood Glucose</option>
+            <option value="HbA1c">HbA1c</option>
+            <option value="Lipid Profile">Lipid Profile</option>
+            <option value="Kidney Function">Kidney Function</option>
+            <option value="Complete Blood Count">Complete Blood Count (CBC)</option>
+            <option value="Urine Analysis">Urine Analysis</option>
+            <option value="Liver Function">Liver Function</option>
+            <option value="Thyroid Function">Thyroid Function</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Priority</label>
+          <select class="form-input" id="priority"><option value="normal">Normal</option><option value="urgent">Urgent</option></select>
+        </div>
+        <div><label class="form-label">Notes</label><textarea class="form-input" id="modal_notes" rows="2"></textarea></div>
+        <div class="alert alert-info text-sm"><i class="bi bi-info-circle"></i> Patient must pay <strong>ETB 750.00</strong> for lab test before sample collection.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('newRequestModal').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn"><i class="bi bi-plus-circle"></i> Create Request</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/doctor-lab-requests.js"></script>
+</body>
+</html>

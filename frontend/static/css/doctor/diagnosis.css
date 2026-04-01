@@ -1,0 +1,198 @@
+/* Doctor - Diagnosis Page Specific Styles */
+
+/* Patient info card */
+.card.bg-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    border: 2px solid #dee2e6;
+}
+
+.card.bg-light .card-body {
+    padding: 1.5rem;
+}
+
+.card.bg-light h5 {
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.card.bg-light p {
+    color: #495057;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.card.bg-light p strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Diagnosis form */
+.form-label {
+    color: #2c3e50;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select,
+textarea.form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.form-control:focus,
+.form-select:focus,
+textarea.form-control:focus {
+    border-color: #2A7BE4;
+    box-shadow: 0 0 0 0.2rem rgba(42, 123, 228, 0.15);
+}
+
+textarea.form-control {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* Form sections */
+.mb-3 {
+    margin-bottom: 1.5rem !important;
+}
+
+/* Checkbox styling */
+.form-check {
+    padding: 0.75rem 0;
+    margin-bottom: 0.5rem;
+}
+
+.form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.15rem;
+    border: 2px solid #2A7BE4;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: #2A7BE4;
+    border-color: #2A7BE4;
+}
+
+.form-check-label {
+    color: #495057;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 0.5rem;
+}
+
+/* Submit button */
+.btn-primary {
+    background: linear-gradient(135deg, #2A7BE4 0%, #20C997 100%);
+    border: none;
+    padding: 0.85rem 2rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(42, 123, 228, 0.3);
+}
+
+.btn-primary i {
+    margin-right: 0.5rem;
+}
+
+/* Alert styling */
+.alert {
+    border-radius: 12px;
+    border: none;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #e7f5ff 0%, #d0ebff 100%);
+    color: #0c5460;
+    border-left: 4px solid #4facfe;
+}
+
+.alert-info i {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+/* Card header */
+.card-header {
+    border-radius: 16px 16px 0 0 !important;
+    border: none;
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+}
+
+.card-header h5 i {
+    margin-right: 0.75rem;
+    font-size: 1.4rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card.bg-light .card-body {
+        padding: 1.25rem;
+    }
+
+    .form-control,
+    .form-select,
+    textarea.form-control {
+        padding: 0.65rem 0.85rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+        width: 100%;
+    }
+
+    textarea.form-control {
+        min-height: 100px;
+    }
+}
+
+/* Form validation states */
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #fa709a;
+}
+
+.form-control.is-valid,
+.form-select.is-valid {
+    border-color: #11998e;
+}
+
+.invalid-feedback {
+    color: #fa709a;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.valid-feedback {
+    color: #11998e;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}

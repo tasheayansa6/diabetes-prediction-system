@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nurse Dashboard - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <script src="../../static/js/vendor/chart.min.js"></script>
+    <link rel="stylesheet" href="../../static/css/app.css">
+</head>
+<body>
+<div class="app-layout">
+    <nav class="topbar">
+        <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+        <div class="topbar-right">
+            <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Nurse</span></span>
+            <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+        </div>
+    </nav>
+    <div class="app-body">
+        <aside class="sidebar">
+            <div class="sidebar-profile">
+                <div class="sidebar-avatar"><i class="bi bi-heart-pulse"></i></div>
+                <div class="sidebar-name" id="sidebarName">Nurse</div>
+                <div class="sidebar-role">Nursing Staff</div>
+            </div>
+            <nav>
+                <a class="nav-item active" href="/templates/nurse/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <a class="nav-item" href="/templates/nurse/clinical_measurement.html"><i class="bi bi-clipboard-pulse"></i> Clinical Measurement</a>
+                <a class="nav-item" href="/templates/nurse/record_vitals.html"><i class="bi bi-heart-pulse"></i> Record Vitals</a>
+                <a class="nav-item" href="/templates/nurse/view_predictions.html"><i class="bi bi-graph-up"></i> View Predictions</a>
+            </nav>
+        </aside>
+        <main class="main">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="page-title"><i class="bi bi-heart-pulse"></i> Nurse Dashboard</h1>
+                    <p class="page-subtitle">Patient care and vitals management</p>
+                </div>
+                <span class="text-sm text-muted"><i class="bi bi-calendar3"></i> <span id="currentDate"></span></span>
+            </div>
+            <div class="grid-4 mb-6">
+                <div class="stat-card"><div class="stat-label"><i class="bi bi-people"></i> Patients Seen Today</div><div class="stat-value" id="statPatientsSeen">--</div><div class="stat-sub">Today</div></div>
+                <div class="stat-card yellow"><div class="stat-label"><i class="bi bi-calendar-check"></i> Today's Appointments</div><div class="stat-value" id="statAppointments">--</div><div class="stat-sub">Scheduled</div></div>
+                <div class="stat-card red"><div class="stat-label"><i class="bi bi-hourglass-split"></i> Patients Waiting</div><div class="stat-value" id="statWaiting">--</div><div class="stat-sub">Current queue</div></div>
+                <div class="stat-card green"><div class="stat-label"><i class="bi bi-people-fill"></i> Total Patients</div><div class="stat-value" id="statTotal">--</div><div class="stat-sub">All time</div></div>
+            </div>
+            <div class="card mb-6">
+                <div class="card-header"><i class="bi bi-lightning-charge"></i> Quick Actions</div>
+                <div class="card-body">
+                    <div class="grid-3">
+                        <a href="/templates/nurse/clinical_measurement.html" class="action-btn blue"><i class="bi bi-clipboard-pulse"></i> Clinical Measurement</a>
+                        <a href="/templates/nurse/record_vitals.html" class="action-btn green"><i class="bi bi-heart-pulse"></i> Record Vitals</a>
+                        <a href="/templates/nurse/view_predictions.html" class="action-btn cyan"><i class="bi bi-graph-up"></i> View Predictions</a>
+                    </div>
+                </div>
+            </div>
+            <div class="grid-2 mb-6">
+                <div class="card"><div class="card-header"><i class="bi bi-graph-up"></i> Monthly Activity</div><div class="card-body"><canvas id="activityChart"></canvas></div></div>
+                <div class="card"><div class="card-header cyan"><i class="bi bi-pie-chart"></i> Vital Signs Trends</div><div class="card-body"><canvas id="vitalsChart"></canvas></div></div>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><i class="bi bi-clock-history"></i> Recent Measurements</div>
+                    <div class="card-body" style="padding:0;"><div id="recentMeasurementsList"><div class="list-item" style="justify-content:center;color:#64748b;">Loading...</div></div></div>
+                </div>
+                <div class="card">
+                    <div class="card-header green"><i class="bi bi-heart-pulse-fill"></i> Recent Vitals</div>
+                    <div class="card-body" style="padding:0;"><div id="recentVitalsList"><div class="list-item" style="justify-content:center;color:#64748b;">Loading...</div></div></div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &nbsp;|&nbsp; &copy; 2026 All rights reserved.</p></footer>
+</div>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/notifications.js"></script>
+<script src="../../static/js/nurse-dashboard.js"></script>
+<script>if(typeof initNotifications==='function') initNotifications('nurse');</script>
+</body>
+</html>

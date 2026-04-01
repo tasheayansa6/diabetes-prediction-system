@@ -1,0 +1,136 @@
+/* Patient Module - Profile Page Specific Styles */
+
+.main-content h2 {
+    color: #2563eb;
+}
+
+.text-primary {
+    color: #2563eb !important;
+}
+
+/* Profile card styling */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+}
+
+.card:hover {
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.15);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+    color: white !important;
+    border-radius: 16px 16px 0 0 !important;
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+}
+
+.card-header h5 {
+    margin: 0;
+    color: white !important;
+}
+
+.card-header.bg-warning {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24) !important;
+    color: #1f2937 !important;
+}
+
+.card-header.bg-warning h5 {
+    color: #1f2937 !important;
+}
+
+/* Profile icon styling */
+.bi-person-circle {
+    color: #2563eb;
+}
+
+/* Form styling */
+.form-label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select {
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+}
+
+/* Button styling */
+.btn-primary {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-secondary {
+    background: #6b7280;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+    transform: translateY(-2px);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    color: #1f2937;
+    transition: all 0.3s ease;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #d97706, #f59e0b);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    color: #1f2937;
+}
+
+/* Profile info styling */
+.text-muted {
+    color: #6b7280 !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1.25rem;
+    }
+    
+    .btn-primary,
+    .btn-secondary,
+    .btn-warning {
+        padding: 0.65rem 1.25rem;
+        font-size: 0.9rem;
+    }
+}

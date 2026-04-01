@@ -1,0 +1,51 @@
+/* Patient Module - Dashboard Specific Styles */
+
+.main-content h2 {
+    color: #2563eb;
+}
+
+.text-muted i {
+    color: #2563eb;
+}
+
+.stat-card::before {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+
+.stat-card:hover {
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.2);
+}
+
+.clickable-card:hover {
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+}
+
+.clickable-card:hover .card-body h3 {
+    color: #2563eb;
+}
+
+.list-group-item:hover {
+    border-left: 4px solid #2563eb;
+}
+
+/* Patient-specific card headers */
+.card-header.bg-primary {
+    background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+}
+
+.card-header.bg-info {
+    background: #0ea5e9 !important;
+}
+
+.card-header.bg-success {
+    background: #10b981 !important;
+}
+
+.card-header.bg-warning {
+    background: #f59e0b !important;
+    color: white !important;
+}
+
+.card-header.bg-warning h5 {
+    color: white !important;
+}

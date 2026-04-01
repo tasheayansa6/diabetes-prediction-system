@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical Measurement - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <nav class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-right">
+      <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Nurse</span></span>
+      <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </nav>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-heart-pulse"></i></div>
+        <div class="sidebar-name" id="sidebarName">Nurse</div>
+        <div class="sidebar-role">Nursing Staff</div>
+      </div>
+      <nav>
+        <a class="nav-item" href="/templates/nurse/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a class="nav-item active" href="/templates/nurse/clinical_measurement.html"><i class="bi bi-clipboard-pulse"></i> Clinical Measurement</a>
+        <a class="nav-item" href="/templates/nurse/record_vitals.html"><i class="bi bi-heart-pulse"></i> Record Vitals</a>
+        <a class="nav-item" href="/templates/nurse/view_predictions.html"><i class="bi bi-graph-up"></i> View Predictions</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <h2 class="page-title mb-4"><i class="bi bi-clipboard-pulse"></i> Clinical Measurement</h2>
+      <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+      <div class="card" style="max-width:680px;">
+        <div class="card-header"><i class="bi bi-clipboard-pulse"></i> Record Single Measurement</div>
+        <form id="clinicalMeasurementForm" class="space-y-4" style="padding:1.5rem;">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="form-label">Select Patient</label>
+              <select class="form-input" id="patient_id" name="patient_id" required>
+                <option value="">Loading patients...</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Measurement Type</label>
+              <select class="form-input" id="measurement_type" name="measurement_type" required>
+                <option value="">Select type...</option>
+                <option value="temperature">Temperature (°C)</option>
+                <option value="heart_rate">Heart Rate (bpm)</option>
+                <option value="respiratory_rate">Respiratory Rate (breaths/min)</option>
+                <option value="blood_pressure_systolic">Blood Pressure Systolic (mmHg)</option>
+                <option value="blood_pressure_diastolic">Blood Pressure Diastolic (mmHg)</option>
+                <option value="oxygen_saturation">Oxygen Saturation (%)</option>
+                <option value="height">Height (cm)</option>
+                <option value="weight">Weight (kg)</option>
+                <option value="pain_level">Pain Level (0-10)</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Value</label>
+              <input type="number" step="0.01" class="form-input" id="value" name="value" required>
+            </div>
+            <div>
+              <label class="form-label">Unit</label>
+              <input type="text" class="form-input" id="unit" name="unit" placeholder="Auto-filled" readonly style="background:#f8fafc;">
+            </div>
+          </div>
+          <div>
+            <label class="form-label">Notes <span class="text-muted text-xs">(optional)</span></label>
+            <textarea class="form-input" id="notes" name="notes" rows="3" placeholder="Any additional observations..."></textarea>
+          </div>
+          <div class="flex justify-end gap-2">
+            <a href="/templates/nurse/dashboard.html" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Cancel</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Save Measurement</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/nurse-clinical-measurement.js"></script>
+</body>
+</html>

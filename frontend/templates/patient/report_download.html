@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Report - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .main { padding: 0 !important; }
+            .card { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+  <!-- Topbar -->
+  <div class="topbar no-print">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-user">
+      <i class="bi bi-person-circle"></i> <span id="navUserName">Patient</span>
+      <button onclick="logout()" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <!-- Sidebar -->
+    <div class="sidebar no-print">
+      <nav>
+        <a href="/templates/patient/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="/templates/patient/profile.html"><i class="bi bi-person"></i> My Profile</a>
+        <a href="/templates/patient/health_data_form.html"><i class="bi bi-clipboard-pulse"></i> New Prediction</a>
+        <a href="/templates/patient/prediction_history.html" class="active"><i class="bi bi-file-medical"></i> My Predictions</a>
+        <a href="/templates/patient/appointment.html"><i class="bi bi-calendar-check"></i> Appointments</a>
+        <a href="/templates/patient/prescriptions.html"><i class="bi bi-capsule"></i> Prescriptions</a>
+        <a href="/templates/patient/lab_results.html"><i class="bi bi-flask"></i> Lab Results</a>
+        <a href="/templates/payment/payment_history.html"><i class="bi bi-clock-history"></i> Payment History</a>
+        <a href="/templates/payment/payment_page.html"><i class="bi bi-wallet2"></i> Make Payment</a>
+      </nav>
+    </div>
+
+    <!-- Main content -->
+    <main class="main">
+      <div class="max-w-3xl mx-auto pb-8">
+        <div class="card">
+          <div class="card-header">
+            <h4><i class="bi bi-file-earmark-medical"></i> Diabetes Risk Assessment Report</h4>
+          </div>
+          <div class="p-6">
+            <!-- Patient Info + Report Details -->
+            <div class="grid grid-cols-2 gap-6 mb-6">
+              <div>
+                <h6 class="font-semibold mb-2">Patient Information</h6>
+                <p class="text-sm text-gray-600">
+                  <strong>Name:</strong> <span id="patientName">—</span><br>
+                  <strong>Patient ID:</strong> <span id="patientId">—</span><br>
+                  <strong>Age:</strong> <span id="patientAge">—</span> years
+                </p>
+              </div>
+              <div class="text-right">
+                <h6 class="font-semibold mb-2">Report Details</h6>
+                <p class="text-sm text-gray-600">
+                  <strong>Report ID:</strong> <span id="reportId">—</span><br>
+                  <strong>Date:</strong> <span id="reportDate">—</span><br>
+                  <strong>Risk Level:</strong> <span class="badge" id="riskBadge">—</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Health Metrics -->
+            <h6 class="font-semibold mb-3">Health Metrics</h6>
+            <table class="table mb-6">
+              <tr>
+                <td class="font-medium">Glucose Level:</td><td id="reportGlucose">—</td>
+                <td class="font-medium">Blood Pressure:</td><td id="reportBloodPressure">—</td>
+              </tr>
+              <tr>
+                <td class="font-medium">BMI:</td><td id="reportBmi">—</td>
+                <td class="font-medium">Insulin:</td><td id="reportInsulin">—</td>
+              </tr>
+              <tr>
+                <td class="font-medium">Skin Thickness:</td><td id="reportSkinThickness">—</td>
+                <td class="font-medium">Diabetes Pedigree:</td><td id="reportDiabetesPedigree">—</td>
+              </tr>
+            </table>
+
+            <!-- Prediction Result -->
+            <h6 class="font-semibold mb-2">Prediction Result</h6>
+            <p class="text-sm"><strong>Confidence Level:</strong> <span id="reportConfidence">—</span>%</p>
+            <p class="text-sm"><strong>Recommendation:</strong> <span id="reportRecommendation">—</span></p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="card-footer text-center no-print flex justify-center gap-3 flex-wrap">
+            <button onclick="downloadPDF()" class="btn btn-primary"><i class="bi bi-file-earmark-pdf"></i> Download PDF</button>
+            <button onclick="window.print()" class="btn btn-secondary"><i class="bi bi-printer"></i> Print</button>
+            <a href="/templates/patient/prediction_history.html" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Back</a>
+          </div>
+
+          <!-- Full Report Button (shown after data loads) -->
+          <div class="card-footer text-center no-print" id="fullReportBar" style="display:none; border-top:1px solid #e2e8f0;">
+            <button onclick="downloadFullReport()" class="btn btn-secondary">
+              <i class="bi bi-file-earmark-medical"></i> Download Full Health Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div><!-- end app-body -->
+
+  <footer class="footer no-print">
+    <p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p>
+  </footer>
+</div><!-- end app-layout -->
+
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/patient-report-download.js"></script>
+<script>
+function downloadPDF() {
+    document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+    window.print();
+    document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
+}
+
+function downloadFullReport() {
+    const token = localStorage.getItem('token');
+    if (!token) { alert('Please login first.'); return; }
+    fetch('/api/patient/report/pdf', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    }).then(r => {
+        if (!r.ok) throw new Error('Failed to generate report');
+        return r.blob();
+    }).then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'health_report.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+    }).catch(e => alert('Could not generate PDF: ' + e.message));
+}
+</script>
+</body>
+</html>

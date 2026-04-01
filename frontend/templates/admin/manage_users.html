@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <div class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-right">
+      <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Administrator</span></span>
+      <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </div>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-shield-check"></i></div>
+        <div class="sidebar-name" id="navUserName">Admin Panel</div>
+        <div class="sidebar-role">System Administrator</div>
+      </div>
+      <nav>
+        <a class="nav-item" href="/templates/admin/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a class="nav-item active" href="/templates/admin/manage_users.html"><i class="bi bi-people"></i> Manage Users</a>
+        <a class="nav-item" href="/templates/admin/manage_roles.html"><i class="bi bi-person-badge"></i> Manage Roles</a>
+        <a class="nav-item" href="/templates/admin/manage_models.html"><i class="bi bi-cpu"></i> ML Models</a>
+        <a class="nav-item" href="/templates/admin/manage_payments.html"><i class="bi bi-cash-coin"></i> Payments &amp; Refunds</a>
+        <a class="nav-item" href="/templates/admin/system_reports.html"><i class="bi bi-file-earmark-bar-graph"></i> Reports</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="page-title mb-0"><i class="bi bi-people"></i> Manage Users</h2>
+        <button class="btn btn-primary" onclick="document.getElementById('addUserModal').style.display='flex'"><i class="bi bi-person-plus"></i> Add New User</button>
+      </div>
+      <div class="card">
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="usersTable"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="text-center mt-4">
+        <a href="/templates/admin/dashboard.html" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="addUserModal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header"><h5>Add New User</h5><button onclick="document.getElementById('addUserModal').style.display='none'" class="modal-close">&times;</button></div>
+    <div class="modal-body">
+      <form id="addUserForm" onsubmit="addUser(event)" class="space-y-4">
+        <div><label class="form-label">Full Name</label><input type="text" class="form-input" id="name" required></div>
+        <div><label class="form-label">Email</label><input type="email" class="form-input" id="email" required></div>
+        <div>
+          <label class="form-label">Role</label>
+          <select class="form-input" id="role" required>
+            <option value="">Select role...</option>
+            <option value="patient">Patient</option>
+            <option value="doctor">Doctor</option>
+            <option value="nurse">Nurse</option>
+            <option value="lab_technician">Lab Technician</option>
+            <option value="pharmacist">Pharmacist</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </div>
+        <div><label class="form-label">Password</label><input type="password" class="form-input" id="password" required></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('addUserModal').style.display='none'">Cancel</button>
+      <button class="btn btn-primary" onclick="document.getElementById('addUserForm').requestSubmit()">Add User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="editUserModal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header"><h5>Edit User</h5><button onclick="document.getElementById('editUserModal').style.display='none'" class="modal-close">&times;</button></div>
+    <div class="modal-body space-y-4">
+      <input type="hidden" id="editUserId">
+      <div><label class="form-label">Username</label><input type="text" class="form-input" id="editUsername" readonly></div>
+      <div><label class="form-label">Email</label><input type="email" class="form-input" id="editEmail" readonly></div>
+      <div>
+        <label class="form-label">Role</label>
+        <select class="form-input" id="editRole">
+          <option value="patient">Patient</option><option value="doctor">Doctor</option>
+          <option value="nurse">Nurse</option><option value="lab_technician">Lab Technician</option>
+          <option value="pharmacist">Pharmacist</option><option value="admin">Administrator</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Status</label>
+        <select class="form-input" id="editStatus"><option value="true">Active</option><option value="false">Inactive</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('editUserModal').style.display='none'">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditUser()"><i class="bi bi-check-circle"></i> Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/admin-manage-users.js"></script>
+</body>
+</html>

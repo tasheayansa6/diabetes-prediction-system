@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment History - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <div class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-user">
+      <i class="bi bi-person-circle"></i> <span id="navUserName">User</span>
+      <button onclick="logout()" class="btn-logout"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <nav>
+        <a href="/templates/patient/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="/templates/patient/profile.html"><i class="bi bi-person"></i> My Profile</a>
+        <a href="/templates/patient/health_data_form.html"><i class="bi bi-clipboard-pulse"></i> New Prediction</a>
+        <a href="/templates/patient/prediction_history.html"><i class="bi bi-file-medical"></i> My Predictions</a>
+        <a href="/templates/patient/appointment.html"><i class="bi bi-calendar-check"></i> Appointments</a>
+        <a href="/templates/patient/prescriptions.html"><i class="bi bi-capsule"></i> Prescriptions</a>
+        <a href="/templates/patient/lab_results.html"><i class="bi bi-flask"></i> Lab Results</a>
+        <a href="/templates/payment/payment_history.html" class="active"><i class="bi bi-clock-history"></i> Payment History</a>
+        <a href="/templates/payment/payment_page.html"><i class="bi bi-wallet2"></i> Make Payment</a>
+      </nav>
+    </div>
+    <main class="main">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="page-title mb-0"><i class="bi bi-credit-card"></i> Payment History</h2>
+        <button class="btn btn-secondary btn-sm" onclick="exportHistory()"><i class="bi bi-download"></i> Export</button>
+      </div>
+      <!-- Summary Cards -->
+      <div class="stats-grid mb-4">
+        <div class="stat-card"><div class="stat-label">Total Spent</div><div class="stat-value text-green-600" id="totalSpent">$0.00</div></div>
+        <div class="stat-card"><div class="stat-label">Total Transactions</div><div class="stat-value" id="totalTransactions">0</div></div>
+        <div class="stat-card"><div class="stat-label">Last Payment</div><div class="stat-value text-sm" id="lastPayment">-</div></div>
+      </div>
+      <!-- Filters -->
+      <div class="card mb-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+          <div><label class="form-label">Date From</label><input type="date" class="form-input" id="dateFrom"></div>
+          <div><label class="form-label">Date To</label><input type="date" class="form-input" id="dateTo"></div>
+          <div>
+            <label class="form-label">Status</label>
+            <select class="form-input" id="statusFilter">
+              <option value="">All</option>
+              <option value="completed">Completed</option>
+              <option value="refunded">Refunded</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+          <div><button class="btn btn-primary w-full" onclick="applyFilters()"><i class="bi bi-funnel"></i> Apply Filters</button></div>
+        </div>
+      </div>
+      <!-- Table -->
+      <div class="card">
+        <div class="card-header"><h5>Transaction History</h5></div>
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Transaction ID</th><th>Date</th><th>Description</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="paymentHistoryTable">
+              <tr><td colspan="6" class="text-center py-8 text-gray-400"><i class="bi bi-hourglass-split text-3xl"></i><p class="mt-2">Loading payment history...</p></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/payment-history.js"></script>
+</body>
+</html>

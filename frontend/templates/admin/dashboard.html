@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="../../static/css/app.css">
+    <style>
+        /* ════════════════════════════════════════
+           DARK THEME — admin dashboard only
+        ════════════════════════════════════════ */
+
+        /* Page background */
+        body { background: #0f172a; color: #e2e8f0; }
+
+        /* Page title / subtitle */
+        .page-title  { color: #f1f5f9; }
+        .page-subtitle, .text-muted { color: #94a3b8 !important; }
+
+        /* ── Scrollbar dark ── */
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; }
+
+        /* ── Main area ── */
+        .main { background: #0f172a; }
+
+        /* ── Stat cards ── */
+        .stat-card {
+            background: #1e293b;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            border: 1px solid #334155;
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.4); }
+        .stat-label { color: #94a3b8; }
+        .stat-value { color: #f1f5f9; }
+        .stat-sub   { color: #64748b; }
+
+        /* ── Stat icon ── */
+        .stat-icon {
+            width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; color: #fff;
+        }
+        .stat-icon.blue   { background: linear-gradient(135deg,#3b82f6,#1d4ed8); }
+        .stat-icon.green  { background: linear-gradient(135deg,#10b981,#059669); }
+        .stat-icon.cyan   { background: linear-gradient(135deg,#38bdf8,#0284c7); }
+        .stat-icon.yellow { background: linear-gradient(135deg,#f59e0b,#d97706); }
+        .stat-icon.purple { background: linear-gradient(135deg,#8b5cf6,#7c3aed); }
+        .stat-icon.red    { background: linear-gradient(135deg,#ef4444,#dc2626); }
+        .stat-icon.orange { background: linear-gradient(135deg,#f97316,#ea580c); }
+        .stat-info { flex: 1; }
+
+        /* ── Cards ── */
+        .card {
+            background: #1e293b;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            border: 1px solid #334155;
+        }
+        .card:hover { box-shadow: 0 6px 28px rgba(0,0,0,0.4); }
+        .card-body { background: #1e293b; }
+
+        /* ── Table ── */
+        .tbl { width: 100%; border-collapse: collapse; }
+        .tbl thead th {
+            background: #0f172a;
+            padding: 12px 16px;
+            text-align: left;
+            color: #94a3b8;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #334155;
+        }
+        .tbl td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #334155;
+            color: #cbd5e1;
+            vertical-align: middle;
+        }
+        .tbl tbody tr:hover { background: #263348; }
+        .tbl tbody tr:last-child td { border-bottom: none; }
+
+        /* ── Role badges — solid colors ── */
+        .role-patient    { background: #38bdf8; color: #0c1a2e; }
+        .role-doctor     { background: #22c55e; color: #052e16; }
+        .role-nurse      { background: #facc15; color: #1c1003; }
+        .role-lab        { background: #a78bfa; color: #1e0a3c; }
+        .role-pharmacist { background: #f472b6; color: #2d0a1e; }
+        .role-admin      { background: #f43f5e; color: #1f0009; }
+
+        /* ── Status badges — solid ── */
+        .status-active   { background: #22c55e; color: #052e16; padding: 4px 10px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; display:inline-flex; align-items:center; gap:0.3rem; }
+        .status-inactive { background: #f43f5e; color: #1f0009; padding: 4px 10px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; display:inline-flex; align-items:center; gap:0.3rem; }
+
+        /* Override app.css badge-green / badge-red for dark mode */
+        .badge-green { background: #22c55e; color: #052e16; }
+        .badge-red   { background: #f43f5e; color: #1f0009; }
+        .badge-blue  { background: #38bdf8; color: #0c1a2e; }
+
+        /* ── Mini stat rows (system status) ── */
+        .mini-stat {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.75rem 1.1rem; border-bottom: 1px solid #334155;
+        }
+        .mini-stat:last-child { border-bottom: none; }
+        .mini-stat-label { font-size: 0.82rem; color: #94a3b8; display: flex; align-items: center; gap: 0.5rem; }
+
+        /* ── Status dot ── */
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+            display: inline-block; margin-right: 0.4rem;
+        }
+        .status-dot.online  { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.25); }
+        .status-dot.offline { background: #f43f5e; box-shadow: 0 0 0 3px rgba(244,63,94,0.25); }
+
+        /* ── Activity list ── */
+        .activity-list { list-style: none; }
+        .activity-item {
+            display: flex; align-items: flex-start; gap: 0.75rem;
+            padding: 0.75rem 1.1rem; border-bottom: 1px solid #334155;
+        }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-icon {
+            width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; background: #1e3a5f; color: #38bdf8;
+        }
+        .activity-details { flex: 1; min-width: 0; }
+        .activity-details strong { font-size: 0.85rem; color: #e2e8f0; }
+        .activity-details em { font-style: normal; color: #38bdf8; font-weight: 600; }
+        .activity-time { display: block; font-size: 0.72rem; color: #64748b; margin-top: 0.15rem; }
+
+        /* ── Chart container ── */
+        .chart-wrap { position: relative; height: 240px; }
+
+        /* ── Info panes ── */
+        .info-pane {
+            border-radius: 12px; padding: 1.25rem 1.25rem 1rem;
+            color: #fff; display: flex; flex-direction: column; gap: 0.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative; overflow: hidden;
+        }
+        .info-pane::before {
+            content: ''; position: absolute; top: -20px; right: -20px;
+            width: 90px; height: 90px; border-radius: 50%;
+            background: rgba(255,255,255,0.07);
+        }
+        .info-pane:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(0,0,0,0.45); }
+        .info-pane-icon { font-size: 1.75rem; opacity: 0.9; }
+        .info-pane-body { flex: 1; }
+        .info-pane-title { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; opacity: 0.75; }
+        .info-pane-val { font-size: 1.45rem; font-weight: 800; line-height: 1.2; margin: 0.2rem 0; }
+        .info-pane-sub { font-size: 0.74rem; opacity: 0.7; }
+        .info-pane-link {
+            display: inline-flex; align-items: center; gap: 0.3rem;
+            font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.8);
+            text-decoration: none; margin-top: 0.25rem;
+            border-top: 1px solid rgba(255,255,255,0.18); padding-top: 0.6rem;
+        }
+        .info-pane-link:hover { color: #fff; }
+
+        /* ── Footer dark ── */
+        .footer { background: #0a1120; border-top: 1px solid #1e293b; }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+
+    <!-- ── Topbar ── -->
+    <nav class="topbar">
+        <a href="/" class="topbar-brand">
+            <i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System
+        </a>
+        <div class="topbar-right">
+            <span class="topbar-user">
+                <i class="bi bi-person-circle"></i>
+                <span id="navUserName">Administrator</span>
+            </span>
+            <button onclick="handleLogout()" class="topbar-btn">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </button>
+        </div>
+    </nav>
+
+    <div class="app-body">
+
+        <!-- ── Sidebar ── -->
+        <aside class="sidebar">
+            <div class="sidebar-profile">
+                <div class="sidebar-avatar"><i class="bi bi-shield-check"></i></div>
+                <div class="sidebar-name">Admin Panel</div>
+                <div class="sidebar-role">System Administrator</div>
+            </div>
+            <nav>
+                <a class="nav-item active" href="/templates/admin/dashboard.html">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a class="nav-item" href="/templates/admin/manage_users.html">
+                    <i class="bi bi-people"></i> Manage Users
+                </a>
+                <a class="nav-item" href="/templates/admin/manage_roles.html">
+                    <i class="bi bi-person-badge"></i> Manage Roles
+                </a>
+                <a class="nav-item" href="/templates/admin/manage_models.html">
+                    <i class="bi bi-cpu"></i> ML Models
+                </a>
+                <a class="nav-item" href="/templates/admin/manage_payments.html">
+                    <i class="bi bi-cash-coin"></i> Payments &amp; Refunds
+                </a>
+                <a class="nav-item" href="/templates/admin/system_reports.html">
+                    <i class="bi bi-file-earmark-bar-graph"></i> Reports
+                </a>
+            </nav>
+        </aside>
+
+        <!-- ── Main ── -->
+        <main class="main">
+
+            <!-- Page header -->
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="page-title"><i class="bi bi-grid-1x2-fill"></i> Admin Dashboard</h1>
+                    <p class="page-subtitle">System overview and management</p>
+                </div>
+                <span class="text-sm text-muted">
+                    <i class="bi bi-calendar3"></i> <span id="currentDate"></span>
+                </span>
+            </div>
+
+            <!-- ── Row 1: 4 stat cards ── -->
+            <div class="grid-4 mb-4">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Total Users</div>
+                        <div class="stat-value" id="totalUsersStat">—</div>
+                        <div class="stat-sub">All registered accounts</div>
+                    </div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-icon green"><i class="bi bi-hospital"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Patients</div>
+                        <div class="stat-value" id="totalPatientsStat">—</div>
+                        <div class="stat-sub">Registered patients</div>
+                    </div>
+                </div>
+                <div class="stat-card" style="border-left-color:#38bdf8;">
+                    <div class="stat-icon cyan"><i class="bi bi-graph-up"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">ML Predictions</div>
+                        <div class="stat-value" id="totalPredictionsStat">—</div>
+                        <div class="stat-sub">Total predictions made</div>
+                    </div>
+                </div>
+                <div class="stat-card yellow">
+                    <div class="stat-icon yellow"><i class="bi bi-percent"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Avg Risk Score</div>
+                        <div class="stat-value" id="averageRiskStat">—</div>
+                        <div class="stat-sub">Average prediction risk</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Row 2: 4 stat cards ── -->
+            <div class="grid-4 mb-6">
+                <div class="stat-card green">
+                    <div class="stat-icon green"><i class="bi bi-person-plus"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">New Today</div>
+                        <div class="stat-value" id="todayRegistrations">—</div>
+                        <div class="stat-sub">Registrations today</div>
+                    </div>
+                </div>
+                <div class="stat-card yellow">
+                    <div class="stat-icon orange"><i class="bi bi-activity"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Today Predictions</div>
+                        <div class="stat-value" id="todayPredictions">—</div>
+                        <div class="stat-sub">Predictions today</div>
+                    </div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-icon purple"><i class="bi bi-person-badge"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Doctors</div>
+                        <div class="stat-value" id="totalDoctorsStat">—</div>
+                        <div class="stat-sub">Registered doctors</div>
+                    </div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-icon red"><i class="bi bi-shield-exclamation"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">High Risk</div>
+                        <div class="stat-value" id="highRiskStat">—</div>
+                        <div class="stat-sub">High / Very High risk</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Charts row ── -->
+            <div class="grid-2 mb-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-pie-chart-fill"></i> User Role Distribution
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-wrap">
+                            <canvas id="systemUsageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header cyan">
+                        <i class="bi bi-bar-chart-fill"></i> ML Risk Distribution
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-wrap">
+                            <canvas id="riskTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── ML Model + Quick Info Panels ── -->
+            <div class="grid-4 mb-6">
+                <div class="info-pane" style="background:linear-gradient(135deg,#1e3a8a,#2563eb);">
+                    <div class="info-pane-icon"><i class="bi bi-cpu-fill"></i></div>
+                    <div class="info-pane-body">
+                        <div class="info-pane-title">Active ML Model</div>
+                        <div class="info-pane-val" id="activeModelName">Loading...</div>
+                        <div class="info-pane-sub" id="activeModelSub">Fetching metrics...</div>
+                    </div>
+                    <a href="/templates/admin/manage_models.html" class="info-pane-link">Manage <i class="bi bi-arrow-right"></i></a>
+                </div>
+                <div class="info-pane" style="background:linear-gradient(135deg,#059669,#10b981);">
+                    <div class="info-pane-icon"><i class="bi bi-cash-stack"></i></div>
+                    <div class="info-pane-body">
+                        <div class="info-pane-title">Payments</div>
+                        <div class="info-pane-val" id="totalPaymentsStat">—</div>
+                        <div class="info-pane-sub">Total transactions</div>
+                    </div>
+                    <a href="/templates/admin/manage_payments.html" class="info-pane-link">View <i class="bi bi-arrow-right"></i></a>
+                </div>
+                <div class="info-pane" style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);">
+                    <div class="info-pane-icon"><i class="bi bi-calendar-check"></i></div>
+                    <div class="info-pane-body">
+                        <div class="info-pane-title">Appointments</div>
+                        <div class="info-pane-val" id="totalAppointmentsStat">—</div>
+                        <div class="info-pane-sub">Scheduled today</div>
+                    </div>
+                    <a href="#" class="info-pane-link">View <i class="bi bi-arrow-right"></i></a>
+                </div>
+                <div class="info-pane" style="background:linear-gradient(135deg,#d97706,#f59e0b);">
+                    <div class="info-pane-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>
+                    <div class="info-pane-body">
+                        <div class="info-pane-title">Reports</div>
+                        <div class="info-pane-val">System</div>
+                        <div class="info-pane-sub">Audit logs &amp; analytics</div>
+                    </div>
+                    <a href="/templates/admin/system_reports.html" class="info-pane-link">Open <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+
+            <!-- ── System Status + Recent Activity ── -->
+            <div class="grid-2 mb-6">
+                <div class="card">
+                    <div class="card-header green">
+                        <i class="bi bi-check-circle-fill"></i> System Status
+                    </div>
+                    <div class="card-body" style="padding:0;">
+                        <div class="mini-stat">
+                            <span class="mini-stat-label">
+                                <span class="status-dot online" id="dbDot"></span>
+                                <i class="bi bi-database"></i> Database (SQLite)
+                            </span>
+                            <span class="badge badge-green" id="dbStatus">Checking…</span>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-stat-label">
+                                <span class="status-dot online"></span>
+                                <i class="bi bi-cpu"></i> ML Model: <span id="mlModelName">Loading...</span>
+                            </span>
+                            <span class="badge badge-green" id="mlStatus">Active</span>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-stat-label">
+                                <span class="status-dot online"></span>
+                                <i class="bi bi-cloud-check"></i> Flask API
+                            </span>
+                            <span class="badge badge-green">Running</span>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-stat-label">
+                                <span class="status-dot online"></span>
+                                <i class="bi bi-shield-check"></i> JWT Auth
+                            </span>
+                            <span class="badge badge-green">Active</span>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-stat-label">
+                                <span class="status-dot online"></span>
+                                <i class="bi bi-lock-fill"></i> CSRF Protection
+                            </span>
+                            <span class="badge badge-green">Enabled</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header cyan">
+                        <i class="bi bi-clock-history"></i> Recent Registrations
+                    </div>
+                    <div class="card-body" style="padding:0;">
+                        <div id="recentActivity">
+                            <p class="text-muted p-3" style="padding:1rem;">Loading…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Recent Users Table ── -->
+            <div class="card mb-6">
+                <div class="card-header">
+                    <i class="bi bi-people-fill"></i> Recently Registered Users
+                    <span class="badge badge-blue" style="margin-left:auto;" id="userCountBadge"></span>
+                </div>
+                <div class="card-body" style="padding:0; overflow-x:auto;">
+                    <table class="tbl">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Registered</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentUsersTable">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted" style="padding:1.5rem;">
+                                    <i class="bi bi-hourglass-split"></i> Loading…
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &nbsp;|&nbsp; &copy; 2026 All rights reserved.</p>
+    </footer>
+</div>
+
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/admin-dashboard.js"></script>
+</body>
+</html>

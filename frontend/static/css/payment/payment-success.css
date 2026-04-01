@@ -1,0 +1,162 @@
+/* Payment Module - Payment Success Specific Styles */
+
+body {
+    background: #f8f9fa;
+}
+
+.container {
+    max-width: 1200px;
+}
+
+/* Success card styling */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 30px rgba(16, 185, 129, 0.15);
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.6s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-body {
+    padding: 3rem 2rem;
+}
+
+/* Success icon */
+.bi-check-circle-fill {
+    color: #10b981;
+    animation: scaleIn 0.5s ease;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
+.display-1 {
+    font-size: 6rem;
+}
+
+/* Success heading */
+h2.text-success {
+    color: #059669 !important;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.lead {
+    color: #6b7280;
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+/* Transaction details card */
+.card.bg-light {
+    background: #f0fdf4 !important;
+    border-radius: 12px;
+    border: 2px solid #d1fae5;
+    box-shadow: none;
+}
+
+.card.bg-light .card-body {
+    padding: 1.5rem;
+}
+
+.card.bg-light h5 {
+    color: #047857;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.card.bg-light hr {
+    border-top: 2px solid #a7f3d0;
+    margin: 1rem 0;
+}
+
+.d-flex.justify-content-between {
+    margin-bottom: 0.75rem;
+}
+
+.d-flex.justify-content-between span {
+    color: #6b7280;
+    font-size: 1rem;
+}
+
+.d-flex.justify-content-between strong {
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+/* Button styling */
+.btn-primary {
+    background: linear-gradient(135deg, #059669, #10b981);
+    border: none;
+    padding: 0.85rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin: 0.5rem;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #047857, #059669);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.3);
+}
+
+.btn-secondary {
+    background: #6b7280;
+    border: none;
+    padding: 0.85rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin: 0.5rem;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+    transform: translateY(-2px);
+}
+
+/* Icon styling */
+.bi-download,
+.bi-house {
+    margin-right: 0.5rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .display-1 {
+        font-size: 4rem;
+    }
+    
+    .card-body {
+        padding: 2rem 1.5rem;
+    }
+    
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+        margin: 0.25rem 0;
+    }
+    
+    h2 {
+        font-size: 1.75rem;
+    }
+}

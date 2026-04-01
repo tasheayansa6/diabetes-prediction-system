@@ -1,0 +1,175 @@
+/* Admin - Manage Roles Page Specific Styles */
+
+/* Role cards grid */
+.row {
+    margin-bottom: 1.5rem;
+}
+
+/* Role card styling */
+.card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Card headers with different colors */
+.card-header {
+    border-radius: 16px 16px 0 0 !important;
+    border: none;
+    padding: 1.25rem 1.5rem;
+    font-weight: 600;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+}
+
+.card-header h5 i {
+    margin-right: 0.75rem;
+    font-size: 1.4rem;
+}
+
+/* Specific role card header colors */
+.card-header.text-white {
+    background: linear-gradient(135deg, #2A7BE4 0%, #20C997 100%) !important;
+}
+
+.card-header.bg-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+}
+
+.card-header.bg-info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+}
+
+.card-header.bg-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+    color: white !important;
+}
+
+.card-header.bg-danger {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+}
+
+.card-header.bg-dark {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+}
+
+/* Card body */
+.card-body {
+    padding: 1.75rem;
+}
+
+.card-body h6 {
+    color: #2c3e50;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+/* Checkbox styling */
+.form-check {
+    padding: 0.75rem 0;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    padding-left: 2.5rem;
+}
+
+.form-check:hover {
+    background: rgba(42, 123, 228, 0.03);
+    padding-left: 2.75rem;
+}
+
+.form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.15rem;
+    border: 2px solid #2A7BE4;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: #2A7BE4;
+    border-color: #2A7BE4;
+}
+
+.form-check-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.form-check-label {
+    color: #495057;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+}
+
+.form-check-input:checked + .form-check-label {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Permission list styling */
+.form-check:last-child {
+    margin-bottom: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-header h5 {
+        font-size: 1rem;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    .form-check {
+        padding: 0.5rem 0;
+        padding-left: 2.25rem;
+    }
+
+    .form-check-label {
+        font-size: 0.9rem;
+    }
+}
+
+/* Animation for cards */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeInUp 0.5s ease;
+}
+
+.card:nth-child(1) { animation-delay: 0.1s; }
+.card:nth-child(2) { animation-delay: 0.2s; }
+.card:nth-child(3) { animation-delay: 0.3s; }
+.card:nth-child(4) { animation-delay: 0.4s; }
+.card:nth-child(5) { animation-delay: 0.5s; }
+.card:nth-child(6) { animation-delay: 0.6s; }

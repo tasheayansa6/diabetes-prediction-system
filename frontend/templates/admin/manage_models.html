@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage ML Models - Diabetes Prediction System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <script src="../../static/vendor/js/tailwind.min.js"></script>
+    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="../../static/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-layout">
+  <div class="topbar">
+    <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
+    <div class="topbar-right">
+      <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Administrator</span></span>
+      <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </div>
+  <div class="app-body">
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="sidebar-avatar"><i class="bi bi-shield-check"></i></div>
+        <div class="sidebar-name">Admin Panel</div>
+        <div class="sidebar-role">System Administrator</div>
+      </div>
+      <nav>
+        <a class="nav-item" href="/templates/admin/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a class="nav-item" href="/templates/admin/manage_users.html"><i class="bi bi-people"></i> Manage Users</a>
+        <a class="nav-item" href="/templates/admin/manage_roles.html"><i class="bi bi-person-badge"></i> Manage Roles</a>
+        <a class="nav-item active" href="/templates/admin/manage_models.html"><i class="bi bi-cpu"></i> ML Models</a>
+        <a class="nav-item" href="/templates/admin/manage_payments.html"><i class="bi bi-cash-coin"></i> Payments &amp; Refunds</a>
+        <a class="nav-item" href="/templates/admin/system_reports.html"><i class="bi bi-file-earmark-bar-graph"></i> Reports</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <h2 class="page-title"><i class="bi bi-cpu"></i> Machine Learning Models</h2>
+      <!-- Stats -->
+      <div class="stats-grid mb-4">
+        <div class="stat-card text-center"><i class="bi bi-graph-up-arrow text-3xl text-green-600 mb-2"></i><div class="stat-value" id="statAccuracy">--</div><div class="stat-label">Current Accuracy</div></div>
+        <div class="stat-card text-center"><i class="bi bi-clock-history text-3xl text-blue-500 mb-2"></i><div class="stat-value" id="statVersion">--</div><div class="stat-label">Active Model Version</div></div>
+        <div class="stat-card text-center"><i class="bi bi-calendar-check text-3xl text-yellow-500 mb-2"></i><div class="stat-value" id="statDate">--</div><div class="stat-label">Last Updated</div></div>
+      </div>
+      <!-- Metrics -->
+      <div class="card mb-4">
+        <div class="card-header"><h5><i class="bi bi-bar-chart"></i> Active Model Performance Metrics</h5></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h6 class="font-semibold mb-3">Classification Metrics:</h6>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between border-b pb-2"><span>Accuracy:</span><strong id="metricAccuracy">--</strong></div>
+              <div class="flex justify-between border-b pb-2"><span>Precision:</span><strong id="metricPrecision">--</strong></div>
+              <div class="flex justify-between border-b pb-2"><span>Recall:</span><strong id="metricRecall">--</strong></div>
+              <div class="flex justify-between"><span>F1-Score:</span><strong id="metricF1">--</strong></div>
+            </div>
+          </div>
+          <div>
+            <h6 class="font-semibold mb-3">Model Information:</h6>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between border-b pb-2"><span>Algorithm:</span><strong id="metricAlgorithm">--</strong></div>
+              <div class="flex justify-between border-b pb-2"><span>Training Samples:</span><strong id="metricSamples">--</strong></div>
+              <div class="flex justify-between border-b pb-2"><span>Features:</span><strong id="metricFeatures">--</strong></div>
+              <div class="flex justify-between"><span>Status:</span><span class="badge badge-success">Active</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Version History -->
+      <div class="card mb-4">
+        <div class="card-header" style="background:#059669;"><h5><i class="bi bi-clock-history"></i> Model Version History</h5></div>
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Version</th><th>Date</th><th>Algorithm</th><th>Accuracy</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="modelTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Upload -->
+      <div class="card mb-4">
+        <div class="card-header" style="background:#d97706;color:#fff;"><h5><i class="bi bi-upload"></i> Upload New Model</h5></div>
+        <form id="uploadModelForm" onsubmit="uploadModel(event)" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2"><label class="form-label">Model File (.pkl or .h5)</label><input type="file" class="form-input" id="modelFile" accept=".pkl,.h5"></div>
+            <div><label class="form-label">Version</label><input type="text" class="form-input" id="version" placeholder="e.g., v2.4.0"></div>
+            <div>
+              <label class="form-label">Algorithm</label>
+              <select class="form-input" id="algorithm">
+                <option value="Random Forest">Random Forest</option>
+                <option value="Gradient Boosting">Gradient Boosting</option>
+                <option value="XGBoost">XGBoost</option>
+                <option value="Logistic Regression">Logistic Regression</option>
+                <option value="SVM">SVM</option>
+                <option value="Neural Network">Neural Network</option>
+              </select>
+            </div>
+            <div><label class="form-label">Accuracy (%)</label><input type="number" class="form-input" id="accuracy" placeholder="e.g., 94.5" min="0" max="100" step="0.1"></div>
+            <div><label class="form-label">Precision (%)</label><input type="number" class="form-input" id="precision" placeholder="e.g., 92.3" min="0" max="100" step="0.1"></div>
+            <div><label class="form-label">Recall (%)</label><input type="number" class="form-input" id="recall" placeholder="e.g., 91.8" min="0" max="100" step="0.1"></div>
+            <div><label class="form-label">F1-Score (%)</label><input type="number" class="form-input" id="f1Score" placeholder="e.g., 92.0" min="0" max="100" step="0.1"></div>
+          </div>
+          <div><label class="form-label">Release Notes</label><textarea class="form-input" id="notes" rows="2" placeholder="Describe changes in this version..."></textarea></div>
+          <div class="flex items-center gap-2"><input type="checkbox" id="setActive" class="w-4 h-4"><label for="setActive" class="text-sm">Set as active model immediately</label></div>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Upload Model</button>
+        </form>
+      </div>
+      <div class="text-center mb-4">
+        <a href="/templates/admin/dashboard.html" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- View Modal -->
+<div class="modal-overlay" id="viewModal" style="display:none;">
+  <div class="modal-box modal-lg">
+    <div class="modal-header"><h5 id="viewModalTitle">Model Details</h5><button onclick="document.getElementById('viewModal').style.display='none'" class="modal-close">&times;</button></div>
+    <div class="modal-body" id="viewModalBody"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="document.getElementById('viewModal').style.display='none'">Close</button></div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal" style="display:none;">
+  <div class="modal-box modal-lg">
+    <div class="modal-header"><h5>Edit Model</h5><button onclick="document.getElementById('editModal').style.display='none'" class="modal-close">&times;</button></div>
+    <div class="modal-body space-y-4">
+      <input type="hidden" id="editModelId">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div><label class="form-label">Version</label><input type="text" class="form-input" id="editVersion"></div>
+        <div>
+          <label class="form-label">Algorithm</label>
+          <select class="form-input" id="editAlgorithm">
+            <option value="Random Forest">Random Forest</option><option value="Gradient Boosting">Gradient Boosting</option>
+            <option value="XGBoost">XGBoost</option><option value="Logistic Regression">Logistic Regression</option>
+            <option value="SVM">SVM</option><option value="Neural Network">Neural Network</option>
+          </select>
+        </div>
+        <div><label class="form-label">Date</label><input type="date" class="form-input" id="editDate"></div>
+        <div><label class="form-label">Accuracy (%)</label><input type="number" class="form-input" id="editAccuracy" min="0" max="100" step="0.1"></div>
+        <div><label class="form-label">Precision (%)</label><input type="number" class="form-input" id="editPrecision" min="0" max="100" step="0.1"></div>
+        <div><label class="form-label">Recall (%)</label><input type="number" class="form-input" id="editRecall" min="0" max="100" step="0.1"></div>
+        <div><label class="form-label">F1-Score (%)</label><input type="number" class="form-input" id="editF1" min="0" max="100" step="0.1"></div>
+        <div><label class="form-label">Training Samples</label><input type="number" class="form-input" id="editSamples" min="0"></div>
+        <div><label class="form-label">Features</label><input type="number" class="form-input" id="editFeatures" min="1"></div>
+      </div>
+      <div><label class="form-label">Notes</label><textarea class="form-input" id="editNotes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('editModal').style.display='none'">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditModel()"><i class="bi bi-check-circle"></i> Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<script src="../../static/js/auth.js"></script>
+<script src="../../static/js/admin-manage-models.js"></script>
+</body>
+</html>

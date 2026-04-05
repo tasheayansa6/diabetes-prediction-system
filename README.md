@@ -48,7 +48,8 @@ The Diabetes Prediction System is a comprehensive healthcare management platform
 ### Frontend
 - **HTML5/CSS3** - Structure and styling
 - **JavaScript (ES6+)** - Client-side logic
-- **Bootstrap 5** - Responsive design
+- **Tailwind CSS** - Responsive design
+- **Bootstrap Icons** - Icon library
 - **Chart.js** - Data visualization
 
 ### Development Tools

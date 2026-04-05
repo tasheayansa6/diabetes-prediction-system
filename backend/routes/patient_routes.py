@@ -917,19 +917,36 @@ def create_appointment(current_user):
         except Exception:
             pass  # Don't fail the booking if email fails
 
-        # Notify doctor in-app
+        # Notify doctor in-app + notify patient with confirmation
         try:
             from backend.models.notification import Notification
             patient_user = patient_user if 'patient_user' in dir() else User.query.get(current_user['id'])
-            notif = Notification(
+            doctor_user  = doctor_user  if 'doctor_user'  in dir() else User.query.get(data['doctor_id'])
+            patient_name = patient_user.username if patient_user else 'A patient'
+            doctor_name  = doctor_user.username  if doctor_user  else 'your doctor'
+
+            # Notify doctor
+            db.session.add(Notification(
                 user_id=data['doctor_id'],
                 title='New Appointment Booked',
-                message=f'{patient_user.username if patient_user else "A patient"} booked an appointment on {appointment_date} at {data.get("appointment_time", "TBD")}. Reason: {data["reason"]}',
+                message=f'{patient_name} booked an appointment on {appointment_date} at {data.get("appointment_time", "TBD")}. Reason: {data["reason"]}',
                 type='appointment',
+                category='general',
                 is_read=False,
                 created_at=datetime.utcnow()
-            )
-            db.session.add(notif)
+            ))
+
+            # Notify patient with confirmation
+            db.session.add(Notification(
+                user_id=current_user['id'],
+                title='Appointment Confirmed',
+                message=f'Your appointment with Dr. {doctor_name} on {appointment_date} at {data.get("appointment_time", "TBD")} has been booked successfully. Reason: {data["reason"]}',
+                type='appointment',
+                category='general',
+                is_read=False,
+                created_at=datetime.utcnow()
+            ))
+
             db.session.commit()
         except Exception:
             pass

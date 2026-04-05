@@ -8,7 +8,12 @@ from .prediction_service import PredictionService
 from .diagnosis_service import DiagnosisService
 from .prescription_service import PrescriptionService
 from .lab_service import LabService
-from .payment_service import PaymentService
+from .payment_service import calculate_total, generate_payment_id, generate_invoice_id
+
+class PaymentService:
+    def calculate_total(self, *a, **kw): return calculate_total(*a, **kw)
+    def generate_payment_id(self): return generate_payment_id()
+    def generate_invoice_id(self): return generate_invoice_id()
 from .report_service import generate_patient_pdf, generate_payment_receipt_pdf
 
 # Compatibility shim — keeps existing imports working

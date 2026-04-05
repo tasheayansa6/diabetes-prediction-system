@@ -17,14 +17,22 @@ def setup_cors(app):
     return app
 
 def setup_cors_manually(app):
-  
-    
     @app.after_request
     def after_request(response):
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers['Access-Control-Allow-Origin']      = '*'
+        response.headers['Access-Control-Allow-Headers']     = 'Content-Type,Authorization,X-Requested-With'
+        response.headers['Access-Control-Allow-Methods']     = 'GET,PUT,POST,DELETE,OPTIONS,PATCH'
+        response.headers['Access-Control-Max-Age']           = '3600'
         return response
-    
+
+    @app.before_request
+    def handle_options():
+        from flask import request, Response
+        if request.method == 'OPTIONS':
+            res = Response()
+            res.headers['Access-Control-Allow-Origin']  = '*'
+            res.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Requested-With'
+            res.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS,PATCH'
+            res.headers['Access-Control-Max-Age']       = '3600'
+            return res
     return app

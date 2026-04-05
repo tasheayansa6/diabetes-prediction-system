@@ -26,6 +26,13 @@ async function loadLabResults() {
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
         allResults = data.lab_results || [];
+
+        // Summary strip
+        document.getElementById('sumTotal').textContent     = allResults.length;
+        document.getElementById('sumPending').textContent   = allResults.filter(r => r.status === 'pending').length;
+        document.getElementById('sumCompleted').textContent = allResults.filter(r => r.status === 'completed').length;
+        document.getElementById('sumValidated').textContent = allResults.filter(r => r.status === 'validated').length;
+
     } catch (e) {
         allResults = [];
         document.getElementById('resultsList').innerHTML =
@@ -48,39 +55,32 @@ function renderResults(list) {
 
     container.innerHTML = list.map(r => {
         const cfg = STATUS_CONFIG[r.status] || { badge: 'bg-secondary', label: r.status, icon: 'bi-question-circle' };
-        const date = r.created_at ? r.created_at.split('T')[0] : '—';
+        const statusCls = r.status || 'pending';
+        const date = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
         const hasResult = r.status === 'completed' || r.status === 'validated';
+        const iconMap = { pending:'bi-clock-fill', in_progress:'bi-hourglass-split', completed:'bi-check-circle-fill', validated:'bi-patch-check-fill', cancelled:'bi-x-circle-fill' };
 
         return `
-        <div class="card mb-3">
-            <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-md-5">
-                        <div class="d-flex align-items-center gap-3">
-                            <i class="bi bi-flask fs-2 text-primary"></i>
-                            <div>
-                                <h5 class="mb-0">${esc(r.test_name)}</h5>
-                                <p class="mb-0 text-muted small"><i class="bi bi-tag me-1"></i>${esc(r.test_category || r.test_type || '—')}</p>
-                                <p class="mb-0 text-muted small"><i class="bi bi-calendar me-1"></i>Ordered: ${esc(date)}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        ${hasResult && r.results ? `<p class="mb-1 small"><strong>Result:</strong> ${esc(r.results)} ${esc(r.unit || '')}</p>` : ''}
-                        ${hasResult && r.normal_range ? `<p class="mb-1 small"><strong>Normal Range:</strong> ${esc(r.normal_range)}</p>` : ''}
-                        ${r.doctor_name ? `<p class="mb-0 text-muted small"><i class="bi bi-person-badge me-1"></i>${esc(r.doctor_name)}</p>` : ''}
-                    </div>
-                    <div class="col-md-2 text-center">
-                        <span class="badge ${cfg.badge} px-3 py-2">
-                            <i class="bi ${cfg.icon} me-1"></i>${cfg.label}
-                        </span>
-                    </div>
-                    <div class="col-md-2 text-end">
-                        <button class="btn btn-sm btn-outline-primary" onclick="viewResult(${r.id})">
-                            <i class="bi bi-eye"></i> Details
-                        </button>
-                    </div>
+        <div class="lab-card ${statusCls}">
+            <div class="lab-icon ${statusCls}">
+                <i class="bi ${iconMap[statusCls] || 'bi-flask'}"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;font-size:.95rem;color:#1a237e;margin-bottom:.25rem;">${esc(r.test_name)}
+                    <span class="status-pill pill-${statusCls}" style="margin-left:.5rem;">${cfg.label}</span>
                 </div>
+                <div style="font-size:.78rem;color:#90a4ae;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+                    ${r.test_category ? `<span><i class="bi bi-tag"></i> ${esc(r.test_category)}</span>` : ''}
+                    <span><i class="bi bi-calendar3"></i> ${esc(date)}</span>
+                    ${r.doctor_name ? `<span><i class="bi bi-person-badge"></i> Dr. ${esc(r.doctor_name)}</span>` : ''}
+                    ${hasResult && r.normal_range ? `<span><i class="bi bi-bar-chart"></i> Normal: ${esc(r.normal_range)} ${esc(r.unit||'')}</span>` : ''}
+                </div>
+            </div>
+            ${hasResult && r.results ? `<div class="result-value">${esc(r.results)}<div style="font-size:.65rem;color:#90a4ae;font-weight:400;">${esc(r.unit||'')}</div></div>` : ''}
+            <div>
+                <button class="btn btn-sm btn-primary" onclick="viewResult(${r.id})">
+                    <i class="bi bi-eye"></i> Details
+                </button>
             </div>
         </div>`;
     }).join('');
@@ -168,6 +168,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const user = checkAuth('patient');
     if (!user) return;
     document.getElementById('navUserName').textContent = user.name || user.username;
+    const sb = document.getElementById('sidebarName');
+    if (sb) sb.textContent = user.name || user.username;
     document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });

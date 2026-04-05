@@ -85,12 +85,29 @@ function renderNotifications(notifications) {
         'info':            { icon: 'bi-info-circle-fill',          color: '#64748b' },
     };
 
+// URL map — where each notification type navigates to
+const NOTIF_URLS = {
+    'high_risk_alert': '/templates/patient/prediction_history.html',
+    'prediction':      '/templates/patient/prediction_history.html',
+    'vitals':          '/templates/nurse/record_vitals.html',
+    'lab_result':      '/templates/patient/lab_results.html',
+    'lab_order':       '/templates/lab/enter_lab_results.html',
+    'prescription':    '/templates/patient/prescriptions.html',
+    'appointment':     '/templates/patient/appointment.html',
+    'payment':         '/templates/payment/payment_history.html',
+};
+
+function getNotifUrl(type) {
+    return NOTIF_URLS[type] || null;
+}
+
     list.innerHTML = notifications.map(n => {
         const cfg   = iconMap[n.type] || iconMap['info'];
         const time  = n.created_at ? timeAgo(n.created_at) : '';
         const unread = !n.is_read;
+        const url   = getNotifUrl(n.type);
         return `
-            <div class="notif-item ${unread ? 'unread' : ''}" onclick="markOneRead(${n.id})">
+            <div class="notif-item ${unread ? 'unread' : ''}" onclick="handleNotifClick(${n.id}, '${url || ''}')" style="cursor:pointer;">
                 <div class="notif-icon" style="background:${cfg.color}20;color:${cfg.color};">
                     <i class="bi ${cfg.icon}"></i>
                 </div>
@@ -129,6 +146,17 @@ async function markOneRead(id) {
         });
         await loadNotifications();
     } catch { /* silent */ }
+}
+
+async function handleNotifClick(id, url) {
+    try {
+        await fetch('/api/auth/notifications/' + id + '/read', {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+    } catch { /* silent */ }
+    if (url) window.location.href = url;
+    else await loadNotifications();
 }
 
 async function markAllRead() {

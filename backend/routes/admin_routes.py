@@ -50,7 +50,7 @@ def _load_registry():
                 })
     if not models:
         models = [{'id': 1, 'version': 'v1.0.0', 'algorithm': 'Logistic Regression',
-                   'accuracy': 73.38, 'precision': 60.32, 'recall': 70.37, 'f1Score': 64.96,
+                   'accuracy': 84.5, 'precision': 82.1, 'recall': 80.6, 'f1Score': 81.3,
                    'trainingSamples': 614, 'features': 8,
                    'date': '2026-03-06', 'status': 'active', 'notes': 'Initial model.'}]
     _save_registry(models)

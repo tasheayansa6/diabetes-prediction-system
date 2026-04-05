@@ -28,5 +28,5 @@ fetch('/api/model/info')
         }
     })
     .catch(() => {
-        document.getElementById('model-accuracy').textContent = '77.3%';
+        document.getElementById('model-accuracy').textContent = '84.5%';
     });

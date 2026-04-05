@@ -4,9 +4,7 @@ function esc(str) {
     return d.innerHTML;
 }
 
-function getToken() {
-    return localStorage.getItem('token');
-}
+function getToken() { return localStorage.getItem('token'); }
 
 async function apiFetch(path) {
     const res = await fetch('/api' + path, {
@@ -16,22 +14,22 @@ async function apiFetch(path) {
 }
 
 const RISK_CONFIG = {
-    'LOW RISK':       { label: 'Low Risk',      dotCls: 'low',      badgeCls: 'risk-low',      tips: [
+    'LOW RISK':       { label: 'Low Risk',       dotCls: 'low',      badgeCls: 'risk-low',      tips: [
         { icon: '🥗', title: 'Eat Balanced Meals',       text: 'Reduce sugar and refined carbs. Eat more vegetables, fiber, and lean protein.' },
         { icon: '🏃', title: '30 Min Exercise Daily',    text: 'Walking, cycling or swimming reduces diabetes risk by up to 58%.' },
         { icon: '💧', title: 'Stay Hydrated',            text: 'Drink 8 glasses of water daily. Avoid sugary drinks and sodas.' }
     ]},
-    'MODERATE RISK':  { label: 'Moderate Risk', dotCls: 'moderate', badgeCls: 'risk-moderate', tips: [
-        { icon: '🩸', title: 'Track Blood Sugar',        text: 'Monitor fasting glucose weekly. Target: 70–99 mg/dL. Keep a log.' },
-        { icon: '⚖️', title: 'Manage Your Weight',       text: 'Losing 5–7% of body weight significantly reduces progression risk.' },
+    'MODERATE RISK':  { label: 'Moderate Risk',  dotCls: 'moderate', badgeCls: 'risk-moderate', tips: [
+        { icon: '🩸', title: 'Track Blood Sugar',        text: 'Monitor fasting glucose weekly. Target: 70-99 mg/dL. Keep a log.' },
+        { icon: '⚖️', title: 'Manage Your Weight',       text: 'Losing 5-7% of body weight significantly reduces progression risk.' },
         { icon: '🚶', title: 'Increase Activity',        text: 'Aim for 150 min/week of moderate exercise. Start with daily walks.' }
     ]},
-    'HIGH RISK':      { label: 'High Risk',     dotCls: 'high',     badgeCls: 'risk-high',     tips: [
+    'HIGH RISK':      { label: 'High Risk',       dotCls: 'high',     badgeCls: 'risk-high',     tips: [
         { icon: '🏥', title: 'See a Doctor Soon',        text: 'Book an appointment. Your doctor may order HbA1c or glucose tolerance tests.' },
         { icon: '💊', title: 'Follow Medical Advice',    text: 'If prescribed medication, take it as directed. Do not skip doses.' },
         { icon: '📉', title: 'Reduce Sugar Intake',      text: 'Cut all sugary drinks, sweets, and white bread immediately.' }
     ]},
-    'VERY HIGH RISK': { label: 'Very High Risk',dotCls: 'veryhigh', badgeCls: 'risk-veryhigh', tips: [
+    'VERY HIGH RISK': { label: 'Very High Risk',  dotCls: 'veryhigh', badgeCls: 'risk-veryhigh', tips: [
         { icon: '🚨', title: 'Urgent: See Doctor Now',   text: 'Do not delay. You may need immediate diagnostic tests or medication.' },
         { icon: '🍽️', title: 'Strict Diet Control',      text: 'Eliminate all sugar, white rice, and processed foods immediately.' },
         { icon: '📋', title: 'Diabetes Management Plan', text: 'Ask your doctor about a structured diabetes prevention or management program.' }
@@ -39,10 +37,10 @@ const RISK_CONFIG = {
 };
 
 function bmiStatus(bmi) {
-    if (bmi < 18.5) return { text: 'Underweight', cls: 'text-warning', icon: 'exclamation-circle' };
-    if (bmi < 25)   return { text: 'Normal',      cls: 'text-success', icon: 'check-circle' };
-    if (bmi < 30)   return { text: 'Overweight',  cls: 'text-warning', icon: 'exclamation-triangle' };
-    return              { text: 'Obese',       cls: 'text-danger',  icon: 'exclamation-triangle-fill' };
+    if (bmi < 18.5) return { text: 'Underweight', icon: 'exclamation-circle' };
+    if (bmi < 25)   return { text: 'Normal',      icon: 'check-circle' };
+    if (bmi < 30)   return { text: 'Overweight',  icon: 'exclamation-triangle' };
+    return              { text: 'Obese',       icon: 'exclamation-triangle-fill' };
 }
 
 function renderStats(dashboard, predictions, prescriptions, appointments) {
@@ -55,11 +53,9 @@ function renderStats(dashboard, predictions, prescriptions, appointments) {
     document.getElementById('totalPredictions').textContent = dashboard.stats.total_predictions;
     document.getElementById('monthlyPredictions').textContent = monthly;
 
-    // Appointments count
     const apptEl = document.getElementById('appointmentsCount');
     if (apptEl) apptEl.textContent = appointments.filter(a => a.status === 'scheduled').length;
 
-    // Latest prediction
     const latest = dashboard.latest_prediction;
     const heroRisk = document.getElementById('heroRisk');
     const heroRiskPct = document.getElementById('heroRiskPct');
@@ -71,7 +67,7 @@ function renderStats(dashboard, predictions, prescriptions, appointments) {
             ? latest.probability_percent.toFixed(1) + '% probability'
             : '';
 
-        // Risk alert banner for High/Very High
+        // Risk alert banner — only for HIGH RISK and VERY HIGH RISK
         const banner = document.getElementById('riskAlertBanner');
         if (banner && (latest.risk_level === 'HIGH RISK' || latest.risk_level === 'VERY HIGH RISK')) {
             const isVH = latest.risk_level === 'VERY HIGH RISK';
@@ -103,14 +99,13 @@ function renderStats(dashboard, predictions, prescriptions, appointments) {
         }
     }
 
-    // BMI
     if (predictions.length > 0) {
         const bmi = parseFloat((predictions[0].input_data || {}).bmi);
         if (!isNaN(bmi)) {
             document.getElementById('currentBMI').textContent = bmi.toFixed(1);
             const s = bmiStatus(bmi);
             const bmiEl = document.getElementById('bmiStatus');
-            bmiEl.innerHTML = `<i class="bi bi-${esc(s.icon)}"></i> ${esc(s.text)}`;
+            if (bmiEl) bmiEl.innerHTML = `<i class="bi bi-${esc(s.icon)}"></i> ${esc(s.text)}`;
         }
     }
 }
@@ -120,7 +115,7 @@ function renderRecentPredictions(predictions) {
     const countEl = document.getElementById('predCount');
     if (countEl) countEl.textContent = predictions.length;
     if (!predictions.length) {
-        container.innerHTML = '<div class="pred-item" style="justify-content:center;color:#90a4ae;font-size:.85rem;">No predictions yet. <a href="/templates/patient/health_data_form.html" style="color:#1565c0;margin-left:4px;">Create your first →</a></div>';
+        container.innerHTML = '<div class="pred-item" style="justify-content:center;color:#90a4ae;font-size:.85rem;">No predictions yet. <a href="/templates/patient/health_data_form.html" style="color:#1565c0;margin-left:4px;">Create your first</a></div>';
         return;
     }
     const dotClass  = { 'LOW RISK': 'low', 'MODERATE RISK': 'moderate', 'HIGH RISK': 'high', 'VERY HIGH RISK': 'veryhigh' };
@@ -188,6 +183,9 @@ async function initDashboard() {
     if (!user) return;
 
     document.getElementById('navUserName').textContent = user.name || user.username;
+    document.getElementById('heroName').textContent    = user.name || user.username;
+    const sb = document.getElementById('sidebarName');
+    if (sb) sb.textContent = user.name || user.username;
     document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const [dashRes, predRes, rxRes, apptRes] = await Promise.all([
@@ -211,12 +209,6 @@ async function initDashboard() {
     renderStats(dashRes.dashboard, predictions, prescriptions, appointments);
     renderRecentPredictions(predictions);
     initCharts(predictions);
-
-    document.getElementById('navUserName').textContent = user.name || user.username;
-    document.getElementById('heroName').textContent    = user.name || user.username;
-    const sb = document.getElementById('sidebarName');
-    if (sb) sb.textContent = user.name || user.username;
-    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
 }
 
 document.addEventListener('DOMContentLoaded', initDashboard);

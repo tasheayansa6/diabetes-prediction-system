@@ -94,9 +94,7 @@ def get_my_latest_vitals(current_user):
             if last_hr and last_hr.blood_pressure:
                 bp_diastolic = last_hr.blood_pressure
                 bp_source = 'previous_record'
-            else:
-                bp_diastolic = 72  # safe clinical default
-                bp_source = 'default'
+            # No default fallback — let JS handle missing BP
 
         return jsonify({
             'success': True,

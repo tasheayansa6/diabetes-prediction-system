@@ -149,6 +149,15 @@ async function checkNurseVitals() {
             const badge = document.getElementById('bmiBadge');
             if (badge) badge.style.display = 'inline';
             filled.push('BMI: ' + v.bmi);
+        } else if (v.height && v.weight) {
+            // Calculate BMI client-side from height + weight
+            const h = v.height / 100;
+            const calcBmi = Math.round((v.weight / (h * h)) * 100) / 100;
+            const el = document.getElementById('bmi');
+            if (el) { el.value = calcBmi; el.readOnly = true; el.classList.add('field-autofilled'); }
+            const badge = document.getElementById('bmiBadge');
+            if (badge) badge.style.display = 'inline';
+            filled.push('BMI: ' + calcBmi + ' (calculated)');
         }
         if (v.skin_thickness != null) {
             const el = document.getElementById('skinThickness');
@@ -158,8 +167,8 @@ async function checkNurseVitals() {
             filled.push('Skin Thickness: ' + v.skin_thickness + ' mm');
         }
 
-        // Unlock form if at least BMI was recorded (BP may be missing on old records)
-        const hasBMI = v.bmi != null;
+        // Unlock form if at least one vital field was filled
+        const hasBMI = document.getElementById('bmi')?.readOnly;
         const hasBP  = v.blood_pressure_diastolic != null;
 
         if (!hasBMI && !hasBP) {
@@ -168,16 +177,7 @@ async function checkNurseVitals() {
             return false;
         }
 
-        if (!hasBP) {
-            // BMI present but BP missing — unlock form, let patient enter BP manually
-            updateStepUI('step1', 'done',
-                '\uD83E\uDE7A Auto-filled from DB: ' + filled.join(' | ') +
-                ' | Blood Pressure: enter manually below.');
-            Steps.nurseVitals = true;
-            return true;
-        }
-
-        updateStepUI('step1', 'done', '\uD83E\uDE7A Auto-filled from DB: ' + filled.join(' | '));
+        updateStepUI('step1', 'done', '\uD83E\uDE7A Auto-filled from DB: ' + (filled.length ? filled.join(' | ') : 'vitals recorded'));
         Steps.nurseVitals = true;
         return true;
 
@@ -223,6 +223,9 @@ async function checkLabResults() {
 
         if (!glucoseTest) {
             updateStepUI('step4', 'missing', 'No recent glucose lab result found. Enter glucose manually below.');
+            // Default insulin to 0 since no lab test exists
+            const insulinEl = document.getElementById('insulin');
+            if (insulinEl && !insulinEl.readOnly) insulinEl.value = '0';
             Steps.labResults = false;
             return false;
         }
@@ -336,9 +339,15 @@ function evaluateFormAccess() {
             if (hint) hint.innerHTML = '✍️ No recent lab result found. Enter your latest fasting glucose reading manually.';
         }
     } else {
-        if (formSection) formSection.style.display = 'none';
-        if (blockedMsg)  blockedMsg.style.display  = 'block';
-        if (submitBtn)   submitBtn.disabled = true;
+        // No nurse vitals at all — still show form, all fields editable
+        if (formSection) formSection.style.display = 'block';
+        if (blockedMsg)  blockedMsg.style.display  = 'none';
+        if (submitBtn)   submitBtn.disabled = false;
+        // Default insulin to 0
+        const insulinEl = document.getElementById('insulin');
+        if (insulinEl && !insulinEl.readOnly) insulinEl.value = '0';
+        const glucoseHint = document.getElementById('glucoseHint');
+        if (glucoseHint) glucoseHint.innerHTML = '✍️ Enter your latest fasting glucose reading manually.';
     }
 }
 

@@ -24,7 +24,7 @@ def train_improved_model():
     for col in zero_not_valid:
         if col in df.columns:
             df[col] = df[col].replace(0, np.nan)
-            df[col].fillna(df[col].median(), inplace=True)
+            df[col] = df[col].fillna(df[col].median())
     
     # Prepare features and target
     X = df.drop('Outcome', axis=1)

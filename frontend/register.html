@@ -213,7 +213,7 @@
                 <li><span class="fi"><i class="bi bi-check2"></i></span> Multi-role healthcare platform</li>
                 <li><span class="fi"><i class="bi bi-check2"></i></span> Secure health records management</li>
                 <li><span class="fi"><i class="bi bi-check2"></i></span> Lab tests &amp; prescription tracking</li>
-                <li><span class="fi"><i class="bi bi-check2"></i></span> 77.3% prediction accuracy</li>
+                <li><span class="fi"><i class="bi bi-check2"></i></span> <span id="modelAccuracy">84.7%</span> prediction accuracy</li>
             </ul>
         </div>
     </div>
@@ -333,5 +333,11 @@
 
 <script src="static/vendor/js/flowbite.min.js"></script>
 <script src="static/js/register.js"></script>
+<script>
+  fetch('/api/model/info').then(r=>r.json()).then(d=>{
+    const el=document.getElementById('modelAccuracy');
+    if(el&&d.accuracy) el.textContent=Math.round(d.accuracy*100*10)/10+'% prediction accuracy';
+  }).catch(()=>{});
+</script>
 </body>
 </html>

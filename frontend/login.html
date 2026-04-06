@@ -57,7 +57,7 @@
         <h2>Welcome<br>Back 👋</h2>
         <p>Sign in to access your personalized health dashboard and AI-powered diabetes insights.</p>
         <div class="stat-row">
-          <div class="stat-box"><div class="num">77.3%</div><div class="lbl">Accuracy</div></div>
+          <div class="stat-box"><div class="num" id="modelAccuracy">84.7%</div><div class="lbl">Accuracy</div></div>
           <div class="stat-box"><div class="num">10K+</div><div class="lbl">Patients</div></div>
           <div class="stat-box"><div class="num">24/7</div><div class="lbl">Available</div></div>
         </div>
@@ -129,5 +129,11 @@
 
   </div>
   <script src="static/js/login.js"></script>
+  <script>
+    fetch('/api/model/info').then(r=>r.json()).then(d=>{
+      const el=document.getElementById('modelAccuracy');
+      if(el&&d.accuracy) el.textContent=Math.round(d.accuracy*100*10)/10+'%';
+    }).catch(()=>{});
+  </script>
 </body>
 </html>

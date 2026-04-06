@@ -203,23 +203,26 @@ async function checkLabResults() {
             return false;
         }
 
-        const sevenDaysAgo = Date.now() - (7 * 24 * 3600000);
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 3600000);
+        const isDone = r => ['completed', 'validated'].includes(r.status) && r.results;
 
         const glucoseTest = data.lab_results.find(r =>
-            r.status === 'completed' && r.results &&
-            new Date(r.created_at).getTime() > sevenDaysAgo &&
+            isDone(r) &&
+            new Date(r.created_at).getTime() > thirtyDaysAgo &&
             (r.test_name.toLowerCase().includes('glucose') ||
              r.test_name.toLowerCase().includes('blood sugar') ||
-             r.test_name.toLowerCase().includes('fasting'))
+             r.test_name.toLowerCase().includes('fasting') ||
+             r.test_name.toLowerCase().includes('hba1c') ||
+             r.test_name.toLowerCase().includes('sugar'))
         );
         const insulinTest = data.lab_results.find(r =>
-            r.status === 'completed' && r.results &&
-            new Date(r.created_at).getTime() > sevenDaysAgo &&
+            isDone(r) &&
+            new Date(r.created_at).getTime() > thirtyDaysAgo &&
             r.test_name.toLowerCase().includes('insulin')
         );
 
         if (!glucoseTest) {
-            updateStepUI('step4', 'missing');
+            updateStepUI('step4', 'missing', 'No recent glucose lab result found. Enter glucose manually below.');
             Steps.labResults = false;
             return false;
         }
@@ -325,12 +328,13 @@ function evaluateFormAccess() {
         if (formSection) formSection.style.display = 'block';
         if (blockedMsg)  blockedMsg.style.display  = 'none';
         if (submitBtn)   submitBtn.disabled = false;
-        showAlert(
-            '<i class="bi bi-exclamation-triangle-fill me-2"></i>' +
-            '<strong>Lab results not found.</strong> Ask your doctor to order a Fasting Glucose test. ' +
-            'You can still proceed by entering Glucose manually if you have a recent reading.',
-            'warning'
-        );
+        // Glucose and insulin remain editable — patient fills manually
+        const glucoseEl  = document.getElementById('glucose');
+        const insulinEl  = document.getElementById('insulin');
+        if (glucoseEl && !glucoseEl.readOnly) {
+            const hint = document.getElementById('glucoseHint');
+            if (hint) hint.innerHTML = '✍️ No recent lab result found. Enter your latest fasting glucose reading manually.';
+        }
     } else {
         if (formSection) formSection.style.display = 'none';
         if (blockedMsg)  blockedMsg.style.display  = 'block';

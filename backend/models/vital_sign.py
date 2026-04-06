@@ -26,6 +26,7 @@ class VitalSign(db.Model):
     height = db.Column(db.Float, nullable=True)  # in cm
     weight = db.Column(db.Float, nullable=True)  # in kg
     bmi = db.Column(db.Float, nullable=True)
+    skin_thickness = db.Column(db.Float, nullable=True)  # triceps skinfold in mm
     pain_level = db.Column(db.Integer, nullable=True)  # 0-10 scale
     
     # Additional Info
@@ -50,6 +51,7 @@ class VitalSign(db.Model):
             'height': self.height,
             'weight': self.weight,
             'bmi': self.bmi,
+            'skin_thickness': self.skin_thickness,
             'pain_level': self.pain_level,
             'notes': self.notes,
             'recorded_at': self.recorded_at.isoformat() if self.recorded_at else None,

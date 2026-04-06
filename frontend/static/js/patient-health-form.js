@@ -5,6 +5,25 @@ function authHeaders() {
     return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() };
 }
 
+// Robustly parse a lab result value — handles plain numbers, JSON objects, and strings
+function parseLabValue(raw) {
+    if (raw == null) return NaN;
+    if (typeof raw === 'number') return raw;
+    if (typeof raw === 'object') {
+        const v = raw.value ?? raw.result ?? raw.glucose ?? raw.insulin ?? Object.values(raw)[0];
+        return parseFloat(v);
+    }
+    // Try JSON string first
+    try {
+        const obj = JSON.parse(raw);
+        if (typeof obj === 'number') return obj;
+        const v = obj.value ?? obj.result ?? obj.glucose ?? obj.insulin ?? Object.values(obj)[0];
+        return parseFloat(v);
+    } catch { /* not JSON */ }
+    // Plain numeric string
+    return parseFloat(raw);
+}
+
 const Steps = { nurseVitals: false, labResults: false };
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -131,6 +150,13 @@ async function checkNurseVitals() {
             if (badge) badge.style.display = 'inline';
             filled.push('BMI: ' + v.bmi);
         }
+        if (v.skin_thickness != null) {
+            const el = document.getElementById('skinThickness');
+            if (el) { el.value = v.skin_thickness; el.readOnly = true; el.classList.add('field-autofilled'); }
+            const badge = document.getElementById('skinBadge');
+            if (badge) badge.style.display = 'inline';
+            filled.push('Skin Thickness: ' + v.skin_thickness + ' mm');
+        }
 
         // Unlock form if at least BMI was recorded (BP may be missing on old records)
         const hasBMI = v.bmi != null;
@@ -200,7 +226,7 @@ async function checkLabResults() {
 
         const filled = [];
 
-        const glucoseVal = parseFloat(glucoseTest.results);
+        const glucoseVal = parseLabValue(glucoseTest.results);
         if (!isNaN(glucoseVal)) {
             const el = document.getElementById('glucose');
             if (el) { el.value = glucoseVal; el.readOnly = true; el.classList.add('field-autofilled'); }
@@ -209,7 +235,7 @@ async function checkLabResults() {
             filled.push('Glucose: ' + glucoseVal + ' mg/dL');
         }
         if (insulinTest) {
-            const insulinVal = parseFloat(insulinTest.results);
+            const insulinVal = parseLabValue(insulinTest.results);
             if (!isNaN(insulinVal)) {
                 const el = document.getElementById('insulin');
                 if (el) { el.value = insulinVal; el.readOnly = true; el.classList.add('field-autofilled'); }
@@ -273,6 +299,7 @@ function showAutofillBanner() {
     const autofilled = [];
     if (document.getElementById('bloodPressure')?.readOnly) autofilled.push('Diastolic BP (from nurse) 🩺');
     if (document.getElementById('bmi')?.readOnly)           autofilled.push('BMI 🩺');
+    if (document.getElementById('skinThickness')?.readOnly) autofilled.push('Skin Thickness 🩺');
     if (document.getElementById('glucose')?.readOnly)       autofilled.push('Glucose 🔬');
     if (document.getElementById('insulin')?.readOnly)       autofilled.push('Insulin 🔬');
     if (autofilled.length) {

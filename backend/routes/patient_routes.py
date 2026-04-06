@@ -105,9 +105,9 @@ def get_my_latest_vitals(current_user):
                 'blood_pressure_systolic':  vital.blood_pressure_systolic,
                 'bp_source':                bp_source,
                 'bmi':                      vital.bmi,
+                'skin_thickness':           vital.skin_thickness,
                 'height':                   vital.height,
                 'weight':                   vital.weight,
-                'skin_thickness':           None,
                 'recorded_at':              vital.recorded_at.isoformat() if vital.recorded_at else None
             }
         }), 200

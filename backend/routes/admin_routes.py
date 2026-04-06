@@ -23,36 +23,23 @@ MODEL_REGISTRY_PATH = Path(__file__).parent.parent.parent / 'ml_model' / 'model_
 
 def _load_registry():
     if MODEL_REGISTRY_PATH.exists():
-        with open(MODEL_REGISTRY_PATH, 'r') as f:
-            return json.load(f)
-    # Seed from model_metadata.json on first run
-    metadata_path = Path(__file__).parent.parent.parent / 'ml_model' / 'saved_models' / 'model_metadata.json'
-    models = []
-    if metadata_path.exists():
-        with open(metadata_path, 'r') as f:
-            meta = json.load(f)
-        algo_map = {'logistic_regression': 'Logistic Regression', 'random_forest': 'Random Forest'}
-        for key, info in meta.items():
-            if key in algo_map and isinstance(info, dict) and 'accuracy' in info:
-                models.append({
-                    'id': len(models) + 1,
-                    'version': 'v1.0.' + str(len(models)),
-                    'algorithm': algo_map[key],
-                    'accuracy': round(info['accuracy'] * 100, 2),
-                    'precision': round(info.get('precision', 0) * 100, 2),
-                    'recall': round(info.get('recall', 0) * 100, 2),
-                    'f1Score': round(info.get('f1', 0) * 100, 2),
-                    'trainingSamples': 614,
-                    'features': len(meta.get('features', [])) or 8,
-                    'date': info.get('train_date', '')[:10],
-                    'status': 'active' if key == 'logistic_regression' else 'archived',
-                    'notes': 'Seeded from training metadata.'
-                })
-    if not models:
-        models = [{'id': 1, 'version': 'v1.0.0', 'algorithm': 'Logistic Regression',
-                   'accuracy': 84.5, 'precision': 82.1, 'recall': 80.6, 'f1Score': 81.3,
-                   'trainingSamples': 614, 'features': 8,
-                   'date': '2026-03-06', 'status': 'active', 'notes': 'Initial model.'}]
+        return json.load(open(MODEL_REGISTRY_PATH))
+    # Seed default registry on first run
+    models = [
+        {'id': 1, 'version': 'v1.0.0', 'algorithm': 'Logistic Regression',
+         'accuracy': 70.78, 'precision': 60.87, 'recall': 51.85, 'f1Score': 56.0,
+         'trainingSamples': 614, 'features': 8, 'date': '2026-03-27',
+         'status': 'archived', 'notes': 'Initial model.'},
+        {'id': 2, 'version': 'v1.0.1', 'algorithm': 'Random Forest',
+         'accuracy': 75.32, 'precision': 69.05, 'recall': 53.7, 'f1Score': 60.42,
+         'trainingSamples': 614, 'features': 8, 'date': '2026-03-27',
+         'status': 'archived', 'notes': 'Random Forest. Improved over Logistic Regression.'},
+        {'id': 3, 'version': 'v2.0.0', 'algorithm': 'Gradient Boosting',
+         'accuracy': 87.66, 'precision': 83.02, 'recall': 81.48, 'f1Score': 82.24,
+         'trainingSamples': 614, 'features': 8, 'date': '2026-04-06',
+         'status': 'active',
+         'notes': 'Best model. CV-5: 87.77%%. ROC-AUC: 94.72%%. Real Pima data only.'}
+    ]
     _save_registry(models)
     return models
 

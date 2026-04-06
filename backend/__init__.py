@@ -98,17 +98,43 @@ def create_app(config_name="development"):
     def model_info():
         import json as _json
         from pathlib import Path
-        # root_path is the backend/ folder; go up one level to project root
         project_root = Path(app.root_path).parent
         metadata_path = project_root / 'ml_model' / 'saved_models' / 'model_metadata.json'
+        registry_path = project_root / 'ml_model' / 'model_registry.json'
         try:
-            with open(metadata_path, 'r') as f:
-                metadata = _json.load(f)
-            best_accuracy = max(
-                v['accuracy'] for k, v in metadata.items()
-                if isinstance(v, dict) and 'accuracy' in v
+            # Get active model from registry
+            if registry_path.exists():
+                registry = _json.load(open(registry_path))
+                active = next((m for m in registry if m.get('status') == 'active'), registry[-1])
+                return jsonify({
+                    "success":   True,
+                    "accuracy":  active['accuracy'] / 100,
+                    "precision": active.get('precision', 0) / 100,
+                    "recall":    active.get('recall', 0) / 100,
+                    "f1":        active.get('f1Score', 0) / 100,
+                    "algorithm": active.get('algorithm', 'Gradient Boosting'),
+                    "version":   active.get('version', 'v2.0.0'),
+                    "samples":   active.get('trainingSamples', 614),
+                    "features":  active.get('features', 8),
+                    "date":      active.get('date', '')
+                }), 200
+            # Fallback to metadata
+            metadata = _json.load(open(metadata_path))
+            best = max(
+                ((k, v) for k, v in metadata.items() if isinstance(v, dict) and 'accuracy' in v),
+                key=lambda x: x[1]['accuracy']
             )
-            return jsonify({"success": True, "accuracy": best_accuracy}), 200
+            v = best[1]
+            return jsonify({
+                "success":  True,
+                "accuracy": v['accuracy'],
+                "precision":v.get('precision', 0),
+                "recall":   v.get('recall', 0),
+                "f1":       v.get('f1', 0),
+                "algorithm":v.get('model_type', 'GradientBoostingClassifier'),
+                "samples":  v.get('dataset_size', 614),
+                "features": 8
+            }), 200
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
 

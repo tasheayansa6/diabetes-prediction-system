@@ -223,9 +223,13 @@ async function checkLabResults() {
 
         if (!glucoseTest) {
             updateStepUI('step4', 'missing', 'No recent glucose lab result found. Enter glucose manually below.');
-            // Default insulin to 0 since no lab test exists
             const insulinEl = document.getElementById('insulin');
-            if (insulinEl && !insulinEl.readOnly) insulinEl.value = '0';
+            if (insulinEl && !insulinEl.readOnly) {
+                insulinEl.value = '0';
+                insulinEl.placeholder = '0 (no lab test — leave as 0)';
+                const hint = document.getElementById('insulinHint');
+                if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong> — this is the standard default used by the ML model when insulin is not measured.</span>';
+            }
             Steps.labResults = false;
             return false;
         }
@@ -253,8 +257,9 @@ async function checkLabResults() {
             const el = document.getElementById('insulin');
             if (el && !el.readOnly) {
                 el.value = '0';
+                el.placeholder = '0 (no lab test — leave as 0)';
                 const hint = document.getElementById('insulinHint');
-                if (hint) hint.innerHTML = '🔬 No insulin lab test found — defaulted to 0.';
+                if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong> — this is the standard default used by the ML model when insulin is not measured.</span>';
             }
         }
 
@@ -347,8 +352,9 @@ function evaluateFormAccess() {
         const insulinEl = document.getElementById('insulin');
         if (insulinEl && !insulinEl.readOnly) {
             insulinEl.value = '0';
+            insulinEl.placeholder = '0 (no lab test — leave as 0)';
             const hint = document.getElementById('insulinHint');
-            if (hint) hint.innerHTML = '🔬 No insulin lab test found — defaulted to 0.';
+            if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong> — this is the standard default used by the ML model when insulin is not measured.</span>';
         }
     } else {
         // No nurse vitals at all — still show form, all fields editable
@@ -357,7 +363,10 @@ function evaluateFormAccess() {
         if (submitBtn)   submitBtn.disabled = false;
         // Default insulin to 0
         const insulinEl = document.getElementById('insulin');
-        if (insulinEl && !insulinEl.readOnly) insulinEl.value = '0';
+        if (insulinEl && !insulinEl.readOnly) {
+            insulinEl.value = '0';
+            insulinEl.placeholder = '0 (no lab test — leave as 0)';
+        }
         const glucoseHint = document.getElementById('glucoseHint');
         if (glucoseHint) glucoseHint.innerHTML = '✍️ Enter your latest fasting glucose reading manually.';
     }

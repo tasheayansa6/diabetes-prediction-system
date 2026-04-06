@@ -249,6 +249,13 @@ async function checkLabResults() {
                 if (badge) badge.style.display = 'inline';
                 filled.push('Insulin: ' + insulinVal + ' μU/mL');
             }
+        } else {
+            const el = document.getElementById('insulin');
+            if (el && !el.readOnly) {
+                el.value = '0';
+                const hint = document.getElementById('insulinHint');
+                if (hint) hint.innerHTML = '🔬 No insulin lab test found — defaulted to 0.';
+            }
         }
 
         updateStepUI('step4', 'done', '🔬 Auto-filled from DB: ' + filled.join(' | '));
@@ -331,12 +338,17 @@ function evaluateFormAccess() {
         if (formSection) formSection.style.display = 'block';
         if (blockedMsg)  blockedMsg.style.display  = 'none';
         if (submitBtn)   submitBtn.disabled = false;
-        // Glucose and insulin remain editable — patient fills manually
-        const glucoseEl  = document.getElementById('glucose');
-        const insulinEl  = document.getElementById('insulin');
+        // Glucose editable, insulin defaults to 0
+        const glucoseEl = document.getElementById('glucose');
         if (glucoseEl && !glucoseEl.readOnly) {
             const hint = document.getElementById('glucoseHint');
             if (hint) hint.innerHTML = '✍️ No recent lab result found. Enter your latest fasting glucose reading manually.';
+        }
+        const insulinEl = document.getElementById('insulin');
+        if (insulinEl && !insulinEl.readOnly) {
+            insulinEl.value = '0';
+            const hint = document.getElementById('insulinHint');
+            if (hint) hint.innerHTML = '🔬 No insulin lab test found — defaulted to 0.';
         }
     } else {
         // No nurse vitals at all — still show form, all fields editable

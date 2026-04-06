@@ -226,7 +226,8 @@ async function checkLabResults() {
             const insulinEl = document.getElementById('insulin');
             if (insulinEl && !insulinEl.readOnly) {
                 insulinEl.value = '0';
-                insulinEl.placeholder = '0 (no lab test — leave as 0)';
+                insulinEl.readOnly = true;
+                insulinEl.classList.add('field-autofilled');
                 const hint = document.getElementById('insulinHint');
                 if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong> — this is the standard default used by the ML model when insulin is not measured.</span>';
             }
@@ -257,7 +258,8 @@ async function checkLabResults() {
             const el = document.getElementById('insulin');
             if (el && !el.readOnly) {
                 el.value = '0';
-                el.placeholder = '0 (no lab test — leave as 0)';
+                el.readOnly = true;
+                el.classList.add('field-autofilled');
                 const hint = document.getElementById('insulinHint');
                 if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong> — this is the standard default used by the ML model when insulin is not measured.</span>';
             }
@@ -365,7 +367,8 @@ function evaluateFormAccess() {
         const insulinEl = document.getElementById('insulin');
         if (insulinEl && !insulinEl.readOnly) {
             insulinEl.value = '0';
-            insulinEl.placeholder = '0 (no lab test — leave as 0)';
+            insulinEl.readOnly = true;
+            insulinEl.classList.add('field-autofilled');
         }
         const glucoseHint = document.getElementById('glucoseHint');
         if (glucoseHint) glucoseHint.innerHTML = '✍️ Enter your latest fasting glucose reading manually.';

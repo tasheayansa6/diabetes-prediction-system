@@ -280,6 +280,7 @@ def record_vitals(current_nurse):
             height=data.get('height'),
             weight=data.get('weight'),
             bmi=bmi,
+            skin_thickness=data.get('skin_thickness'),
             pain_level=data.get('pain_level'),
             notes=data.get('notes', ''),
             recorded_at=datetime.utcnow(),

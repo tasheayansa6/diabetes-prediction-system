@@ -59,6 +59,7 @@ async function onPatientChange() {
             set('oxygen_saturation',        v.oxygen_saturation);
             set('height',                   v.height);
             set('weight',                   v.weight);
+            set('skin_thickness',           v.skin_thickness);
             showToast('Previous vitals pre-filled. Update as needed.', 'warning');
         }
     } catch { /* no previous vitals — that's fine */ }
@@ -138,9 +139,8 @@ async function handleVitalsSubmit(event) {
 
     ['blood_pressure_systolic','blood_pressure_diastolic','heart_rate','respiratory_rate','pain_level']
         .forEach(f => { const v = getOptionalInt(f);   if (v !== undefined) payload[f] = v; });
-    ['temperature','oxygen_saturation','height','weight']
+    ['temperature','oxygen_saturation','height','weight','skin_thickness']
         .forEach(f => { const v = getOptionalFloat(f); if (v !== undefined) payload[f] = v; });
-    // skin_thickness is NOT sent to backend (no DB column)
 
     const btn = event.target.querySelector('[type="submit"]');
     btn.disabled = true;

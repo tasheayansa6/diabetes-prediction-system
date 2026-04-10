@@ -56,17 +56,28 @@ function renderUsers(users) {
 
 // ===== Add User =====
 
+function deriveUsername(email, fullName) {
+    const local = (email || '').split('@')[0] || '';
+    let u = local.replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 50);
+    if (u.length < 3) {
+        u = (fullName || 'user').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
+    }
+    return u.length >= 3 ? u : 'user_' + Date.now();
+}
+
 async function addUser(event) {
     event.preventDefault();
+    const full_name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
     const payload = {
-        username: document.getElementById('name').value.trim(),
-        email: document.getElementById('email').value.trim(),
+        username: deriveUsername(email, full_name),
+        email,
+        full_name: full_name || deriveUsername(email, full_name),
         role: document.getElementById('role').value,
         password: document.getElementById('password').value
     };
     try {
-        // Use auth register endpoint since admin_routes has no POST /users
-        const res = await fetch('/api/auth/register', { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+        const res = await fetch(API, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
         const data = await res.json();
         if (!data.success) throw new Error(data.message || data.error);
         document.getElementById('addUserModal').style.display = 'none';

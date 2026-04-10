@@ -87,7 +87,9 @@ async function loadPatients() {
     const spinner    = document.getElementById('loadingSpinner');
     const errorAlert = document.getElementById('errorAlert');
 
-    spinner.style.display    = '';
+    // Tailwind's .hidden uses display:none !important — toggle class, not inline style only
+    spinner.classList.remove('hidden');
+    errorAlert.classList.add('hidden');
     errorAlert.style.display = 'none';
     tbody.innerHTML = '';
 
@@ -146,8 +148,10 @@ async function loadPatients() {
 
     } catch (err) {
         errorAlert.textContent   = err.message;
-        errorAlert.style.display = '';
+        errorAlert.classList.remove('hidden');
+        errorAlert.style.display = 'block';
     } finally {
+        spinner.classList.add('hidden');
         spinner.style.display = 'none';
     }
 }

@@ -105,6 +105,16 @@ def chapa_initialize(current_user):
 
         # Save a pending payment record
         payment_id = f"PAY{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+        lab_rid = data.get('lab_request_id')
+        ref_id = None
+        ref_type = None
+        if lab_rid is not None:
+            try:
+                ref_id = int(lab_rid)
+                ref_type = 'lab_test'
+            except (TypeError, ValueError):
+                pass
+
         payment = Payment(
             payment_id=payment_id,
             patient_id=patient.id,
@@ -114,7 +124,9 @@ def chapa_initialize(current_user):
             payment_status='pending',
             transaction_id=tx_ref,
             payment_date=datetime.utcnow(),
-            notes=data.get('notes', '')
+            notes=data.get('notes', ''),
+            reference_id=ref_id,
+            reference_type=ref_type,
         )
         if hasattr(payment, 'prediction_consumed'):
             payment.prediction_consumed = False
@@ -216,15 +228,13 @@ def check_prediction_access(current_user):
         if not patient:
             return jsonify({"success": False, "has_access": False, "message": "Patient not found"}), 404
 
-        # Look for a completed prediction payment today that hasn't been consumed
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        # Any completed, unconsumed prediction payment (not limited to "today" — avoids timezone / midnight bugs)
         payment = Payment.query.filter(
             Payment.patient_id == patient.id,
             Payment.payment_type == 'prediction',
             Payment.payment_status == 'completed',
             Payment.prediction_consumed == False,
-            Payment.created_at >= today_start
-        ).first()
+        ).order_by(Payment.created_at.desc()).first()
 
         if payment:
             return jsonify({
@@ -259,14 +269,12 @@ def consume_prediction_payment(current_user):
         if not patient:
             return jsonify({"success": False, "message": "Patient not found"}), 404
 
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         payment = Payment.query.filter(
             Payment.patient_id == patient.id,
             Payment.payment_type == 'prediction',
             Payment.payment_status == 'completed',
             Payment.prediction_consumed == False,
-            Payment.created_at >= today_start
-        ).first()
+        ).order_by(Payment.created_at.desc()).first()
 
         if payment:
             payment.prediction_consumed = True
@@ -329,12 +337,21 @@ def process_payment(current_user):
         pending_methods = ['cash', 'insurance', 'bank_transfer']
         status = 'pending' if method in pending_methods else 'completed'
 
+        ref_id = data.get('reference_id')
+        ref_type = data.get('reference_type')
+        if data.get('lab_request_id'):
+            try:
+                ref_id = int(data['lab_request_id'])
+                ref_type = 'lab_test'
+            except (TypeError, ValueError):
+                pass
+
         payment = Payment(
             payment_id=payment_id,
             patient_id=payer_id,
             payment_type=data.get('payment_type', 'general'),
-            reference_id=data.get('reference_id'),
-            reference_type=data.get('reference_type'),
+            reference_id=ref_id,
+            reference_type=ref_type,
             amount=amount,
             tax=tax,
             discount=discount,

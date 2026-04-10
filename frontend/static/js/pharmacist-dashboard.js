@@ -24,13 +24,13 @@ function renderPending(list) {
     if (!el) return;
     const pending = list.filter(p => ['pending','pending_pharmacist'].includes(p.status)).slice(0, 5);
     if (!pending.length) { el.innerHTML = '<div class="list-item" style="justify-content:center;color:#64748b;">No pending prescriptions.</div>'; return; }
-    el.innerHTML = pending.map(p => `
+        el.innerHTML = pending.map(p => `
         <div class="list-item justify-between">
             <div>
                 <div class="font-medium text-sm">${p.patient_name} — ${p.medication}</div>
                 <div class="text-xs text-muted">Prescribed: ${p.created_at ? p.created_at.split('T')[0] : '—'}</div>
             </div>
-            <a href="/templates/pharmacist/approve_medication.html" class="btn btn-sm btn-primary">Review</a>
+            <a href="/templates/pharmacist/prescription_review.html?status=pending" class="btn btn-sm btn-primary">Review</a>
         </div>`).join('');
 }
 
@@ -49,6 +49,8 @@ function renderDispensed(list) {
 }
 
 function initCharts(stats) {
+    if (typeof Chart === 'undefined') return;
+    try {
     const prescriptionCtx = document.getElementById('prescriptionChart');
     if (prescriptionCtx) {
         new Chart(prescriptionCtx, {
@@ -91,6 +93,7 @@ function initCharts(stats) {
             options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
         });
     }
+    } catch (_) { /* charts are optional */ }
 }
 
 async function loadDashboard() {

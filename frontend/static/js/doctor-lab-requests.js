@@ -42,12 +42,14 @@ async function loadRequests() {
         const r = await fetch('/api/doctor/lab-requests?' + p, { headers: { Authorization: 'Bearer ' + token() } });
         const d = await r.json();
         if (!d.success) throw new Error(d.message);
-        if (!d.lab_requests.length) {
+        const rowsList = Array.isArray(d.lab_requests) ? d.lab_requests : [];
+        const pag = d.pagination || { total: rowsList.length, offset: 0, limit: rowsList.length };
+        if (!rowsList.length) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center text-gray-400 py-4">No lab requests found.</td></tr>';
         } else {
             // Sort based on filter dropdown
             const sortBy = document.getElementById('filterSort')?.value || 'date';
-            const rows = [...d.lab_requests];
+            const rows = [...rowsList];
             if (sortBy === 'priority') {
                 rows.sort((a, b) => {
                     const order = { urgent: 0, normal: 1 };
@@ -87,7 +89,7 @@ async function loadRequests() {
                 </tr>`;
             }).join('');
         }
-        const { total, offset, limit } = d.pagination;
+        const { total, offset, limit } = pag;
         document.getElementById('paginationInfo').textContent =
             `Showing ${Math.min(offset+1,total)}–${Math.min(offset+limit,total)} of ${total}`;
     } catch (err) {

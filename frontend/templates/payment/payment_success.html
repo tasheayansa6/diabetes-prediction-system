@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payment Successful - Diabetes Prediction System</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
-    <script src="../../static/vendor/js/tailwind.min.js"></script>
-    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
-    <link href="../../static/css/app.css" rel="stylesheet">
+    <script src="/static/vendor/js/tailwind.min.js"></script>
+    <link href="/static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/app.css" rel="stylesheet">
 </head>
 <body>
 <div class="app-layout">
@@ -69,15 +69,15 @@
   </div>
 </div>
 <footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
-<script src="../../static/js/auth.js"></script>
-<script src="../../static/js/payment-success.js"></script>
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/payment-success.js"></script>
 <script>
 function downloadReceiptPDF() {
     const token = localStorage.getItem('token');
     const tx = JSON.parse(localStorage.getItem('lastTransaction') || '{}');
     const paymentId = tx.id;
     if (!token || !paymentId) { alert('No payment found.'); return; }
-    fetch(`http://localhost:5000/api/payments/receipt/${paymentId}/pdf`, {
+    fetch(`/api/payments/receipt/${paymentId}/pdf`, {
         headers: { 'Authorization': 'Bearer ' + token }
     }).then(r => {
         if (!r.ok) throw new Error('Failed');

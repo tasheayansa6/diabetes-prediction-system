@@ -5,6 +5,8 @@ Admin Routes - Handles admin dashboard, user management, and system statistics
 from flask import Blueprint, request, jsonify, current_app
 from backend.extensions import db
 from backend.models.user import User
+from backend.utils.role_accounts import create_polymorphic_user
+from backend.routes.auth_routes import validate_password
 from backend.models.patient import Patient
 from backend.models.doctor import Doctor
 from backend.models.prediction import Prediction
@@ -155,25 +157,52 @@ def get_dashboard(current_admin):
 @admin_bp.route('/users', methods=['POST'])
 @admin_token_required
 def create_user(current_admin):
-    """Admin creates a new user"""
+    """Admin creates a new user (correct polymorphic Patient/Doctor/Admin/… rows)."""
     try:
-        data = request.get_json()
-        if not data or not all(k in data for k in ['username', 'email', 'password', 'role']):
+        data = request.get_json() or {}
+        if not all(k in data for k in ['username', 'email', 'password', 'role']):
             return jsonify({'success': False, 'message': 'username, email, password, role required'}), 400
-        if User.query.filter((User.email == data['email']) | (User.username == data['username'])).first():
+
+        email = (data.get('email') or '').strip().lower()
+        username = (data.get('username') or '').strip()
+        role = (data.get('role') or '').lower().strip()
+        password = data.get('password') or ''
+
+        ok, msg = validate_password(password)
+        if not ok:
+            return jsonify({'success': False, 'message': msg}), 400
+
+        if User.query.filter((User.email == email) | (User.username == username)).first():
             return jsonify({'success': False, 'message': 'Email or username already exists'}), 409
+
         from werkzeug.security import generate_password_hash
-        user = User(
-            username=data['username'],
-            email=data['email'],
-            password_hash=generate_password_hash(data['password']),
-            role=data['role'],
-            is_active=True,
-            created_at=datetime.utcnow()
-        )
+        payload = {**data, 'username': username, 'email': email, 'full_name': data.get('full_name') or username}
+        user = create_polymorphic_user(payload, generate_password_hash(password), role)
+        if not user:
+            return jsonify({'success': False, 'message': f'Invalid role: {role}'}), 400
+
         db.session.add(user)
         db.session.commit()
-        return jsonify({'success': True, 'user': {'id': user.id, 'username': user.username, 'email': user.email, 'role': user.role}}), 201
+
+        from backend.utils.logger import log_security_event
+        log_security_event(
+            'admin_create_user',
+            user_id=current_admin.id,
+            username=current_admin.username,
+            ip_address=request.remote_addr,
+            status='success',
+            details=f'Created {role} id={user.id} email={email}',
+        )
+
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'role': user.role,
+            },
+        }), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500

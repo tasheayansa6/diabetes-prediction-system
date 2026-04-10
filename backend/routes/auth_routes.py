@@ -8,12 +8,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from backend.extensions import db
 from backend.models.user import User
 from sqlalchemy import text
-from backend.models.patient import Patient
-from backend.models.doctor import Doctor
-from backend.models.nurse import Nurse
-from backend.models.lab_technician import LabTechnician
-from backend.models.pharmacist import Pharmacist
-from backend.models.admin import Admin
+from backend.utils.role_accounts import create_polymorphic_user
 import re
 from datetime import datetime, timedelta
 import jwt
@@ -162,7 +157,12 @@ def register():
         if role == 'admin' and not allow_admin_signup:
             return jsonify({
                 "success": False,
-                "message": "Admin accounts cannot be created from public registration."
+                "message": (
+                    "Administrator accounts are not available on public signup. "
+                    "Use Admin → Manage Users (if you already have an admin), or run "
+                    "the server with ALLOW_ADMIN_SIGNUP=true once, or use "
+                    "python tools/bootstrap_admin.py (see .env.example)."
+                )
             }), 403
         
         # Validate username length
@@ -208,104 +208,11 @@ def register():
         
         # Create hashed password
         hashed_password = generate_password_hash(password)
-        
-        # Create user based on role - FIXED: Now properly handles all roles
-        new_user = None
-        
-        if role == 'patient':
-            new_user = Patient(
-                username=username,
-                email=email,
-                password_hash=hashed_password,
-                role='patient',
-                full_name=data.get('full_name') or username,
-                patient_id=data.get('patient_id') or f"PAT{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-                blood_group=data.get('blood_group'),
-                emergency_contact=data.get('emergency_contact'),
-                emergency_contact_name=data.get('emergency_contact_name'),
-                created_at=datetime.utcnow(),
-                is_active=True,
-                email_verified=False
-            )
-            
-        elif role == 'doctor':
-            new_user = Doctor(
-                username=username,
-                email=email,
-                password_hash=hashed_password,
-                role='doctor',
-                full_name=data.get('full_name') or username,
-                doctor_id=data.get('doctor_id') or f"DOC{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-                specialization=data.get('specialization'),
-                qualification=data.get('qualification'),
-                license_number=data.get('license_number'),
-                years_of_experience=data.get('years_of_experience'),
-                created_at=datetime.utcnow(),
-                is_active=True,
-                email_verified=False
-            )
-            
-        elif role == 'nurse':
-            new_user = Nurse(
-                username=username,
-                email=email,
-                password_hash=hashed_password,
-                role='nurse',
-                full_name=data.get('full_name') or username,
-                nurse_id=data.get('nurse_id') or f"NUR{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-                department=data.get('department'),
-                shift=data.get('shift'),
-                qualification=data.get('qualification'),
-                license_number=data.get('license_number'),
-                created_at=datetime.utcnow(),
-                is_active=True,
-                email_verified=False
-            )
-            
-        elif role == 'lab_technician':
-            new_user = LabTechnician(
-                username=username,
-                email=email,
-                password_hash=hashed_password,
-                role='lab_technician',
-                full_name=data.get('full_name') or username,
-                technician_id=data.get('technician_id') or f"LAB{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-                qualification=data.get('qualification'),
-                license_number=data.get('license_number'),
-                specialization=data.get('specialization'),
-                created_at=datetime.utcnow(),
-                is_active=True,
-                email_verified=False
-            )
-            
-        elif role == 'pharmacist':
-            new_user = Pharmacist(
-                username=username,
-                email=email,
-                password_hash=hashed_password,
-                role='pharmacist',
-                full_name=data.get('full_name') or username,
-                pharmacist_id=data.get('pharmacist_id') or f"PHR{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-                license_number=data.get('license_number'),
-                created_at=datetime.utcnow(),
-                is_active=True,
-                email_verified=False
-            )
-            
-        elif role == 'admin':
-            new_user = Admin(
-                username=username,
-                email=email,
-                password_hash=hashed_password,
-                role='admin',
-                full_name=data.get('full_name') or username,
-                admin_id=data.get('admin_id') or f"ADM{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-                created_at=datetime.utcnow(),
-                is_active=True,
-                email_verified=False
-            )
-            
-        else:
+
+        data['username'] = username
+        data['email'] = email
+        new_user = create_polymorphic_user(data, hashed_password, role)
+        if not new_user:
             return jsonify({
                 "success": False,
                 "message": f"Invalid role: {role}. Supported roles: patient, doctor, nurse, lab_technician, pharmacist, admin"

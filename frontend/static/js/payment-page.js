@@ -283,7 +283,10 @@ async function initiateChapaPayment() {
 
     const subtotal = selectedServices.reduce((s, x) => s + x.price, 0);
     const tax = subtotal * 0.08;
-    const isPrediction = selectedServices.some(s => s.name.toLowerCase().includes('prediction'));
+    const serviceContext = getServiceContext();
+    const returnTo = getReturnTarget();
+    const isPrediction = serviceContext === 'prediction'
+        || selectedServices.some(s => (s.name || '').toLowerCase().includes('prediction'));
     const labRequestId = localStorage.getItem('lab_request_id');
 
     try {
@@ -303,8 +306,7 @@ async function initiateChapaPayment() {
         const data = await res.json();
         if (!data.success) throw new Error(data.message || 'Chapa initialization failed');
 
-        // Save pending transaction info before redirect
-        localStorage.setItem('lastTransaction', JSON.stringify({
+        const pendingTx = {
             id: data.payment_id,
             invoice_id: data.invoice_id,
             tx_ref: data.tx_ref,
@@ -314,7 +316,16 @@ async function initiateChapaPayment() {
             currency: 'ETB',
             date: new Date().toISOString().split('T')[0],
             status: 'pending',
-            referenceNumber: data.tx_ref
+            referenceNumber: data.tx_ref,
+            serviceContext,
+            returnTo
+        };
+        localStorage.setItem('lastTransaction', JSON.stringify(pendingTx));
+        localStorage.setItem('chapaPendingContext', JSON.stringify({
+            serviceContext,
+            returnTo,
+            tx_ref: data.tx_ref,
+            lab_request_id: labRequestId || null
         }));
 
         // Redirect to Chapa checkout

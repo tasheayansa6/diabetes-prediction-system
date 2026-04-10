@@ -55,5 +55,15 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPrescriptions(btn.dataset.filter);
         })
     );
-    loadPrescriptions();
+    const initial = new URLSearchParams(window.location.search).get('status') || '';
+    if (initial) {
+        const match = document.querySelector(`[data-filter="${initial}"]`);
+        if (match) {
+            document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+            match.classList.add('active');
+        }
+        loadPrescriptions(initial);
+    } else {
+        loadPrescriptions();
+    }
 });

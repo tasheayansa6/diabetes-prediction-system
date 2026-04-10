@@ -173,5 +173,17 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
+
+    const paidQ = new URLSearchParams(window.location.search).get('paid');
+    const labPaid = localStorage.getItem('labPaid') === 'true';
+    if (paidQ === 'true' || labPaid) {
+        const b = document.getElementById('labPaidBanner');
+        if (b) b.style.display = 'block';
+        localStorage.removeItem('labPaid');
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, '', '/templates/patient/lab_results.html');
+        }
+    }
+
     loadLabResults();
 });

@@ -8,7 +8,65 @@ const METHOD_NAMES = {
     telebirr: 'TeleBirr', cbe_birr: 'CBE Birr', m_birr: 'M-Birr'
 };
 
-function loadTransaction() {
+async function verifyChapaIfNeeded() {
+    const params = new URLSearchParams(window.location.search);
+    let txRef = params.get('tx_ref') || params.get('trx_ref') || params.get('reference');
+    if (!txRef) {
+        try {
+            const prev = JSON.parse(localStorage.getItem('lastTransaction') || '{}');
+            if (prev.paymentMethod === 'chapa' && prev.status === 'pending' && prev.tx_ref) {
+                txRef = prev.tx_ref;
+            }
+        } catch (_) {}
+    }
+    if (!txRef) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+        const res = await fetch('/api/payments/chapa/verify?tx_ref=' + encodeURIComponent(txRef), {
+            headers: { Authorization: 'Bearer ' + token }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!data.success) return;
+
+        let t = {};
+        try {
+            t = JSON.parse(localStorage.getItem('lastTransaction') || '{}');
+        } catch (_) {}
+
+        let ctx = {};
+        try {
+            ctx = JSON.parse(localStorage.getItem('chapaPendingContext') || '{}');
+        } catch (_) {}
+
+        const merged = {
+            ...t,
+            id: t.id || data.payment_id || txRef,
+            tx_ref: txRef,
+            paymentMethod: 'chapa',
+            status: 'success',
+            serviceContext: ctx.serviceContext || t.serviceContext,
+            returnTo: ctx.returnTo || t.returnTo
+        };
+        localStorage.setItem('lastTransaction', JSON.stringify(merged));
+        localStorage.removeItem('chapaPendingContext');
+
+        if (merged.serviceContext === 'prediction' || (merged.services || []).some(s => (s.name || '').toLowerCase().includes('prediction'))) {
+            localStorage.setItem('predictionPaid', 'true');
+        }
+        if (merged.serviceContext === 'lab') {
+            localStorage.setItem('labPaid', 'true');
+        }
+    } catch (_) {
+        /* non-fatal */
+    }
+}
+
+async function loadTransaction() {
+    await verifyChapaIfNeeded();
+
     const t = JSON.parse(localStorage.getItem('lastTransaction') || '{}');
 
     document.getElementById('transactionId').textContent = t.id || '—';

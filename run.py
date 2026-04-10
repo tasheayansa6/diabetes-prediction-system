@@ -1,16 +1,15 @@
 import os
-import sys
-from flask import render_template, send_from_directory, send_file
+from flask import send_from_directory, send_file
 from backend import create_app
 
-if not os.path.exists('backend'):
-    print(" Error: Please run this script from the 'Diabetes prediction' directory")
-    sys.exit(1)
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+if not os.path.exists(os.path.join(PROJECT_ROOT, 'backend')):
+    raise RuntimeError("Backend package directory not found relative to run.py")
 
 config_name = os.getenv('FLASK_ENV', 'development')
 app = create_app(config_name)
 
-FRONTEND_DIR = os.path.join(os.path.dirname(__file__), 'frontend')
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, 'frontend')
 
 def send_html(path):
     return send_file(os.path.join(FRONTEND_DIR, path))

@@ -74,6 +74,7 @@
       }
       .btn-dismiss-alert:hover { background: rgba(255,255,255,0.2); }
     </style>
+</head>
 <body>
 <div class="app-layout">
   <div class="topbar">
@@ -101,7 +102,6 @@
         <a class="nav-item" href="/templates/payment/payment_history.html"><i class="bi bi-clock-history"></i> Payment History</a>
         <a class="nav-item" href="/templates/payment/payment_page.html"><i class="bi bi-wallet2"></i> Make Payment</a>
       </nav>
-    </aside>
     </aside>
     <main class="main">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
@@ -168,6 +168,15 @@
             <div class="card-header"><h5><i class="bi bi-lightbulb me-2"></i>Recommendation</h5></div>
             <div class="p-4"><p id="recommendation" class="text-sm text-gray-700">Loading recommendation...</p></div>
           </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><h5><i class="bi bi-person-check me-2"></i>Doctor Review Status</h5></div>
+        <div class="p-4">
+          <div id="reviewStatusBadge" class="risk-pill pill-moderate">Pending Review</div>
+          <p id="reviewSummary" class="text-sm text-gray-700 mt-3">Awaiting doctor review.</p>
+          <p id="reviewMeta" class="text-xs text-gray-500 mt-2"></p>
         </div>
       </div>
 

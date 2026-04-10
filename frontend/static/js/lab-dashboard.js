@@ -66,15 +66,26 @@ function renderPendingList(tests) {
         el.innerHTML = '<div class="list-item" style="justify-content:center;color:#64748b;">No pending tests</div>';
         return;
     }
-    el.innerHTML = tests.slice(0, 5).map(t => `
-        <div class="list-item justify-between">
-            <div>
-                <div class="font-medium text-sm">${t.patient_name || 'Unknown'} — ${t.test_name}</div>
-                <div class="text-xs text-muted">${t.created_at ? new Date(t.created_at).toLocaleDateString() : ''}</div>
+    el.innerHTML = tests.slice(0, 8).map(t => {
+        const patientName = t.patient ? t.patient.name : (t.patient_name || 'Unknown');
+        const priority    = t.priority || 'normal';
+        const badgeColor  = priority === 'urgent' ? '#dc2626' : priority === 'emergency' ? '#7c3aed' : '#d97706';
+        const date        = t.created_at ? new Date(t.created_at).toLocaleDateString() : '';
+        const waitTime    = t.wait_time ? ` · ${t.wait_time}` : '';
+        const testId      = t.test_id || t.id;
+        return `
+        <div class="list-item justify-between" style="align-items:center;">
+            <div style="flex:1;min-width:0;">
+                <div class="font-medium text-sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    ${patientName} — ${t.test_name}
+                </div>
+                <div class="text-xs text-muted">${date}${waitTime}
+                    <span style="background:${badgeColor}20;color:${badgeColor};padding:1px 6px;border-radius:99px;font-weight:600;margin-left:4px;">${priority}</span>
+                </div>
             </div>
-            <a href="/templates/lab/enter_lab_results.html" class="btn btn-sm btn-primary">Process</a>
-        </div>
-    `).join('');
+            <a href="/templates/lab/enter_lab_results.html?test_id=${testId}" class="btn btn-sm btn-primary" style="margin-left:8px;white-space:nowrap;">Process</a>
+        </div>`;
+    }).join('');
 }
 
 function renderCompletedList(tests) {
@@ -97,19 +108,29 @@ function renderCompletedList(tests) {
 
 async function loadDashboard() {
     try {
-        const res = await fetch('/api/labs/dashboard', { headers: authHeaders() });
-        const data = await res.json();
+        // Fetch dashboard stats and pending tests in parallel
+        const [dashRes, pendingRes] = await Promise.all([
+            fetch('/api/labs/dashboard', { headers: authHeaders() }),
+            fetch('/api/labs/pending?limit=8', { headers: authHeaders() })
+        ]);
+
+        const data        = await dashRes.json();
+        const pendingData = await pendingRes.json();
+
         if (!data.success) throw new Error(data.message);
 
         const { statistics: stats, recent_activity, technician_info } = data.dashboard;
 
         // Stat cards
-        document.getElementById('statPending').textContent = stats.pending_tests ?? 0;
+        document.getElementById('statPending').textContent   = stats.pending_tests   ?? 0;
         document.getElementById('statCompleted').textContent = stats.completed_today ?? 0;
-        document.getElementById('statTotal').textContent = stats.total_processed ?? 0;
-        document.getElementById('statUrgent').textContent = stats.urgent_pending ?? 0;
+        document.getElementById('statTotal').textContent     = stats.total_processed ?? 0;
+        document.getElementById('statUrgent').textContent    = stats.urgent_pending  ?? 0;
 
-        renderPendingList(recent_activity.filter(t => t.status === 'pending'));
+        // Pending list — from dedicated endpoint (all pending, not just last 10)
+        const pendingTests = pendingData.success ? pendingData.pending_tests : [];
+        renderPendingList(pendingTests);
+
         renderCompletedList(recent_activity);
         initCharts(stats, recent_activity);
 

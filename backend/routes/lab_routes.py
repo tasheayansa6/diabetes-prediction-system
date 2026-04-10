@@ -286,6 +286,9 @@ def get_pending_tests(current_technician):
                 "test_category": test.test_category,
                 "priority": test.priority,
                 "priority_label": "Normal" if test.priority == 'normal' else "Urgent" if test.priority == 'urgent' else "Emergency",
+                "unit": test.unit or '',
+                "normal_range": test.normal_range or '',
+                "cost": test.cost,
                 "patient": {
                     "id": patient.id,
                     "name": patient.username,
@@ -360,6 +363,18 @@ def enter_results(current_technician):
                 "success": False,
                 "message": f"Cannot enter results for test with status '{test.status}'"
             }), 400
+
+        # Prevent write conflicts: if another technician already started this test,
+        # only that technician can finalize it.
+        if (
+            test.status == 'in_progress'
+            and test.technician_id
+            and test.technician_id != current_technician['id']
+        ):
+            return jsonify({
+                "success": False,
+                "message": "Conflict: this test is already being processed by another technician."
+            }), 409
         
         # Update test with results
         test.results = data['results']
@@ -396,6 +411,7 @@ def enter_results(current_technician):
                     type='lab_result',
                     category='lab',
                     is_read=False,
+                    link='/templates/patient/lab_results.html',
                     created_at=datetime.utcnow()
                 ))
 
@@ -408,6 +424,7 @@ def enter_results(current_technician):
                     type='lab_result',
                     category='lab',
                     is_read=False,
+                    link='/templates/doctor/lab_requests.html',
                     created_at=datetime.utcnow()
                 ))
 

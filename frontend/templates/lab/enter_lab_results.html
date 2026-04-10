@@ -34,44 +34,78 @@
       </nav>
     </aside>
     <main class="main">
-      <h2 class="page-title"><i class="bi bi-clipboard-data"></i> Enter Lab Results</h2>
+      <input type="hidden" id="hiddenTestId">
       <div id="formAlert" class="mb-4"></div>
-      <!-- Step 1 -->
-      <div class="card mb-4">
-        <div class="card-header"><h5><i class="bi bi-search"></i> Select Pending Test</h5></div>
-        <div class="space-y-3">
-          <div>
-            <label class="form-label">Pending Test Request <span class="text-red-500">*</span></label>
-            <select class="form-input" id="pendingTestSelect"><option value="">Loading pending tests...</option></select>
-            <p class="text-gray-400 text-xs mt-1">Select a test ordered by a doctor to enter results for.</p>
-          </div>
-          <div class="card bg-gray-50 hidden" id="testInfoCard">
-            <h5 class="font-semibold mb-3"><i class="bi bi-person-lines-fill"></i> Test Request Info</h5>
-            <div class="grid grid-cols-3 gap-4 text-sm">
-              <p><strong>Patient:</strong> <span id="infoPatient">—</span></p>
-              <p><strong>Test:</strong> <span id="infoTestName">—</span></p>
-              <p><strong>Priority:</strong> <span id="infoPriority">—</span></p>
-            </div>
+
+      <!-- PANEL A: Pending requests list (default view) -->
+      <div id="panelList">
+        <h2 class="page-title"><i class="bi bi-clipboard-data"></i> Lab Requests from Doctors</h2>
+        <p class="text-sm text-gray-500 mb-4">
+          These tests were ordered by doctors. Click <strong>Enter Result</strong> on any test to fill in the result — no selection needed.
+        </p>
+        <div id="requestsList">
+          <div class="card" style="text-align:center;padding:2rem;color:#64748b;">
+            <i class="bi bi-hourglass-split" style="font-size:2rem;"></i>
+            <p class="mt-2">Loading doctor lab requests...</p>
           </div>
         </div>
       </div>
-      <!-- Step 2 -->
-      <div class="card">
-        <div class="card-header"><h5><i class="bi bi-clipboard-data"></i> Result Details</h5></div>
-        <form id="labResultsForm" class="space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label class="form-label">Test Date</label><input type="date" class="form-input" id="test_date" name="test_date"></div>
-            <div><label class="form-label">Result Value <span class="text-red-500">*</span></label><input type="text" class="form-input" id="resultValue" placeholder="e.g. 126, High, 5.8%" required></div>
-            <div><label class="form-label">Unit</label><input type="text" class="form-input" id="unit" placeholder="e.g. mg/dL, %"></div>
-            <div><label class="form-label">Normal Range</label><input type="text" class="form-input" id="normalRange" placeholder="e.g. 70-140 mg/dL"></div>
+
+      <!-- PANEL B: Result entry form (shown after clicking Enter Result) -->
+      <div id="panelForm" style="display:none;">
+
+        <!-- Test info banner -->
+        <div id="testBanner" style="background:#1e40af;color:#fff;border-radius:10px;
+             padding:1rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1rem;">
+          <i class="bi bi-flask-fill" style="font-size:2rem;flex-shrink:0;"></i>
+          <div style="flex:1;">
+            <div style="font-size:.7rem;opacity:.75;text-transform:uppercase;letter-spacing:.06em;">Test Ordered by Doctor</div>
+            <div id="bannerTestName" style="font-size:1.2rem;font-weight:700;"></div>
+            <div id="bannerTestMeta" style="font-size:.82rem;opacity:.85;margin-top:.2rem;"></div>
           </div>
-          <div><label class="form-label">Remarks / Notes</label><textarea class="form-input" id="notes" rows="3" placeholder="Any additional observations..."></textarea></div>
-          <div class="flex justify-end gap-2">
-            <a href="/templates/lab/dashboard.html" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Cancel</a>
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Save Results</button>
-          </div>
-        </form>
+          <button onclick="backToList()" class="btn btn-secondary" style="flex-shrink:0;">
+            <i class="bi bi-arrow-left"></i> Back
+          </button>
+        </div>
+
+        <!-- Result form -->
+        <div class="card">
+          <div class="card-header"><h5><i class="bi bi-pencil-square"></i> Enter Result</h5></div>
+          <form id="labResultsForm" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="form-label">Test Date</label>
+                <input type="date" class="form-input" id="test_date">
+              </div>
+              <div>
+                <label class="form-label">Result Value <span class="text-red-500">*</span></label>
+                <input type="text" class="form-input" id="resultValue" required>
+              </div>
+              <div>
+                <label class="form-label">Unit</label>
+                <input type="text" class="form-input" id="unit">
+              </div>
+              <div>
+                <label class="form-label">Normal Range</label>
+                <input type="text" class="form-input" id="normalRange">
+              </div>
+            </div>
+            <div>
+              <label class="form-label">Remarks / Notes</label>
+              <textarea class="form-input" id="notes" rows="3" placeholder="Any additional observations..."></textarea>
+            </div>
+            <div class="flex justify-end gap-2">
+              <button type="button" onclick="backToList()" class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> Cancel
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Save Result
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
+
     </main>
   </div>
 </div>

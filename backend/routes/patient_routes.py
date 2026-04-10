@@ -9,6 +9,7 @@ from backend.models.user import User
 from backend.models.patient import Patient
 from backend.models.health_record import HealthRecord
 from backend.models.prediction import Prediction
+from backend.models.note import Note
 from backend.models.prescription import Prescription
 from backend.models.lab_test import LabTest
 from backend.models.appointment import Appointment
@@ -22,6 +23,52 @@ from sqlalchemy import text, inspect
 
 patient_bp = Blueprint('patient', __name__, url_prefix='/api/patient')
 prediction_service = PredictionService()
+
+
+def _extract_prediction_review(prediction):
+    """
+    Resolve latest doctor review for a prediction from prediction_review notes.
+    """
+    if not prediction:
+        return {
+            'status': 'pending_review',
+            'summary': 'Awaiting doctor review.',
+            'doctor_id': None,
+            'doctor_name': None,
+            'reviewed_at': None
+        }
+
+    note = Note.query.filter(
+        Note.patient_id == prediction.patient_id,
+        Note.category == 'prediction_review',
+        Note.title == f'Prediction Review #{prediction.id}'
+    ).order_by(Note.created_at.desc()).first()
+
+    if not note:
+        return {
+            'status': 'pending_review',
+            'summary': 'Awaiting doctor review.',
+            'doctor_id': prediction.doctor_id,
+            'doctor_name': None,
+            'reviewed_at': None
+        }
+
+    status = 'pending_review'
+    summary = note.content or ''
+    for line in (note.content or '').splitlines():
+        if line.startswith('status:'):
+            status = line.split(':', 1)[1].strip() or 'pending_review'
+        elif line.startswith('summary:'):
+            summary = line.split(':', 1)[1].strip() or summary
+
+    reviewer = User.query.get(note.doctor_id) if note.doctor_id else None
+    return {
+        'status': status,
+        'summary': summary,
+        'doctor_id': note.doctor_id,
+        'doctor_name': reviewer.username if reviewer else None,
+        'reviewed_at': note.created_at.isoformat() if note.created_at else None
+    }
 
 def validate_email(email):
     """Validate email format"""
@@ -96,6 +143,42 @@ def get_my_latest_vitals(current_user):
                 bp_source = 'previous_record'
             # No default fallback — let JS handle missing BP
 
+        # If pregnancies/pedigree/age are null (nurse didn't fill them),
+        # search ALL vitals for this patient to find any record that has them
+        pregnancies       = vital.pregnancies
+        diabetes_pedigree = vital.diabetes_pedigree
+        age               = vital.age
+
+        if pregnancies is None or diabetes_pedigree is None or age is None:
+            # Search other vitals records for this patient
+            other_vitals = VitalSign.query.filter(
+                VitalSign.patient_id == current_user['id'],
+                VitalSign.id != vital.id
+            ).order_by(VitalSign.recorded_at.desc()).all()
+
+            for ov in other_vitals:
+                if pregnancies is None and ov.pregnancies is not None:
+                    pregnancies = ov.pregnancies
+                if diabetes_pedigree is None and ov.diabetes_pedigree is not None:
+                    diabetes_pedigree = ov.diabetes_pedigree
+                if age is None and ov.age is not None:
+                    age = ov.age
+                if pregnancies is not None and diabetes_pedigree is not None and age is not None:
+                    break
+
+        # Still null? Fall back to last prediction input_data
+        if pregnancies is None or diabetes_pedigree is None or age is None:
+            last_pred = Prediction.query.filter_by(patient_id=current_user['id'])\
+                .order_by(Prediction.created_at.desc()).first()
+            if last_pred and last_pred.input_data:
+                d = last_pred.input_data
+                if pregnancies is None:
+                    pregnancies = d.get('pregnancies')
+                if diabetes_pedigree is None:
+                    diabetes_pedigree = d.get('diabetes_pedigree')
+                if age is None:
+                    age = d.get('age')
+
         return jsonify({
             'success': True,
             'vitals': {
@@ -106,6 +189,9 @@ def get_my_latest_vitals(current_user):
                 'skin_thickness':           vital.skin_thickness,
                 'height':                   vital.height,
                 'weight':                   vital.weight,
+                'pregnancies':              pregnancies,
+                'diabetes_pedigree':        diabetes_pedigree,
+                'age':                      age,
                 'recorded_at':              vital.recorded_at.isoformat() if vital.recorded_at else None
             }
         }), 200
@@ -285,49 +371,76 @@ def predict(current_user):
             }), 400
         
         # Create health record first
-        health_record = HealthRecord(
-            patient_id=current_user['id'],
-            pregnancies=data.get('pregnancies', 0),
-            glucose=float(data['glucose']),
-            blood_pressure=float(data['blood_pressure']),
-            skin_thickness=float(data.get('skin_thickness', 0)),
-            insulin=float(data.get('insulin', 0)),
-            bmi=float(data['bmi']),
-            diabetes_pedigree=float(data.get('diabetes_pedigree', 0.5)),
-            age=int(data['age']),
-            created_at=datetime.utcnow()
-        )
-        
-        db.session.add(health_record)
-        db.session.flush()
-        
-        # Make prediction using ML service
-        prediction_result = prediction_service.predict_diabetes(data)
-        
+        try:
+            health_record = HealthRecord(
+                patient_id=current_user['id'],
+                pregnancies=data.get('pregnancies', 0),
+                glucose=float(data['glucose']),
+                blood_pressure=float(data['blood_pressure']),
+                skin_thickness=float(data.get('skin_thickness', 0)),
+                insulin=float(data.get('insulin', 0)),
+                bmi=float(data['bmi']),
+                diabetes_pedigree=float(data.get('diabetes_pedigree', 0.5)),
+                age=int(data['age']),
+                created_at=datetime.utcnow()
+            )
+            db.session.add(health_record)
+            db.session.flush()
+        except Exception as hr_err:
+            db.session.rollback()
+            current_app.logger.error(f'HealthRecord create error: {hr_err}')
+            return jsonify({"success": False, "message": f"Health record error: {str(hr_err)}"}), 500
+
+        # Make prediction using ML service — force reload if not ready
+        try:
+            from backend.services.ml_service import get_ml_service, MLService
+            ml = get_ml_service()
+            if not ml.is_ready():
+                # Model failed at startup — try reloading now
+                ml = get_ml_service(force_reload=True)
+            if not ml.is_ready():
+                db.session.rollback()
+                return jsonify({"success": False, "message": "ML model failed to load. Please contact admin."}), 500
+            prediction_result = ml.predict(data)
+        except Exception as ml_err:
+            db.session.rollback()
+            current_app.logger.error(f'ML prediction error: {ml_err}')
+            return jsonify({"success": False, "message": f"ML error: {str(ml_err)}"}), 500
+
         if not prediction_result.get('success', False):
             db.session.rollback()
+            err = prediction_result.get('error', 'Prediction failed')
+            # If model not loaded, give a clear message
+            if 'not loaded' in str(err).lower() or 'MODEL_NOT_LOADED' in str(prediction_result.get('error_code', '')):
+                return jsonify({
+                    "success": False,
+                    "message": "ML model is not ready. Please restart the server."
+                }), 500
             return jsonify({
                 "success": False,
-                "message": "Prediction failed",
-                "error": prediction_result.get('error', 'Unknown error')
+                "message": err
             }), 500
-        
+
         # Create prediction record
-        prediction = Prediction(
-            patient_id=current_user['id'],
-            health_record_id=health_record.id,
-            prediction=prediction_result.get('prediction_code', 0),
-            probability=prediction_result.get('probability', 0),
-            probability_percent=prediction_result.get('probability_percent', 0),
-            risk_level=prediction_result.get('risk_level', 'UNKNOWN'),
-            model_version=prediction_result.get('model_version', '1.0.0'),
-            explanation=prediction_result.get('interpretation', ''),
-            input_data=data,
-            created_at=datetime.utcnow()
-        )
-        
-        db.session.add(prediction)
-        db.session.commit()
+        try:
+            prediction = Prediction(
+                patient_id=current_user['id'],
+                health_record_id=health_record.id,
+                prediction=prediction_result.get('prediction_code', 0),
+                probability=prediction_result.get('probability', 0),
+                probability_percent=prediction_result.get('probability_percent', 0),
+                risk_level=prediction_result.get('risk_level', 'UNKNOWN'),
+                model_version=prediction_result.get('model_version', '1.0.0'),
+                explanation=prediction_result.get('interpretation', ''),
+                input_data=data,
+                created_at=datetime.utcnow()
+            )
+            db.session.add(prediction)
+            db.session.commit()
+        except Exception as pred_err:
+            db.session.rollback()
+            current_app.logger.error(f'Prediction save error: {pred_err}')
+            return jsonify({"success": False, "message": f"Save error: {str(pred_err)}"}), 500
 
         from backend.utils.logger import log_prediction
         log_prediction(
@@ -366,6 +479,7 @@ def predict(current_user):
                     type='high_risk_alert' if is_high else 'prediction',
                     category='general',
                     is_read=False,
+                    link=f'/templates/doctor/patient_list.html?highlight={current_user["id"]}',
                     created_at=datetime.utcnow()
                 ))
             db.session.commit()
@@ -435,6 +549,7 @@ def get_predictions(current_user):
                     "probability_percent": p.probability_percent,
                     "risk_level": p.risk_level,
                     "input_data": p.input_data,
+                    "review": _extract_prediction_review(p),
                     "created_at": p.created_at.isoformat() if p.created_at else None
                 } for p in predictions
             ],
@@ -481,8 +596,10 @@ def get_prediction(current_user, prediction_id):
                 "risk_level": prediction.risk_level,
                 "prediction": "Diabetic" if prediction.prediction == 1 else "Non-Diabetic",
                 "explanation": prediction.explanation,
+                "model_version": prediction.model_version,
                 "confidence": round(50.0 + (max(prediction.probability, 1 - prediction.probability) - 0.5) * 90.0, 1) if prediction.probability else 0,
                 "input_data": prediction.input_data,
+                "review": _extract_prediction_review(prediction),
                 "created_at": prediction.created_at.isoformat() if prediction.created_at else None,
                 "health_record_id": prediction.health_record_id
             }
@@ -689,8 +806,12 @@ def get_lab_results(current_user):
         limit = request.args.get('limit', 10, type=int)
         offset = request.args.get('offset', 0, type=int)
         
+        # Sort by result completion time first, then creation time.
+        # This ensures newly completed tests appear immediately in patient auto-fill flows
+        # even if the original lab order was created earlier.
+        result_sort_time = func.coalesce(LabTest.test_completed_at, LabTest.created_at)
         lab_results = LabTest.query.filter_by(patient_id=current_user['id'])\
-            .order_by(LabTest.created_at.desc())\
+            .order_by(result_sort_time.desc(), LabTest.id.desc())\
             .offset(offset)\
             .limit(limit)\
             .all()
@@ -843,6 +964,113 @@ def get_appointments(current_user):
         }), 500
 
 
+@patient_bp.route('/appointments/daily-summary', methods=['GET'])
+@token_required
+def get_daily_appointment_summary(current_user):
+    """
+    GET /api/patient/appointments/daily-summary
+    Returns today's and yesterday's appointment summary.
+    Also creates daily reminder notifications once per day (no duplicates).
+    """
+    try:
+        patient_id = current_user['id']
+        today = datetime.utcnow().date()
+        yesterday = today - timedelta(days=1)
+
+        today_appts = Appointment.query.filter_by(
+            patient_id=patient_id,
+            appointment_date=today
+        ).order_by(Appointment.appointment_time.asc()).all()
+
+        yesterday_appts = Appointment.query.filter_by(
+            patient_id=patient_id,
+            appointment_date=yesterday
+        ).order_by(Appointment.appointment_time.asc()).all()
+
+        def to_item(a):
+            doctor_user = User.query.get(a.doctor_id) if a.doctor_id else None
+            return {
+                "id": a.id,
+                "appointment_id": a.appointment_id or f"APT{a.id:04d}",
+                "date": a.appointment_date.isoformat() if a.appointment_date else None,
+                "time": a.appointment_time,
+                "status": a.status,
+                "reason": a.reason,
+                "doctor_name": doctor_user.username if doctor_user else f"Doctor #{a.doctor_id}"
+            }
+
+        today_items = [to_item(a) for a in today_appts]
+        yesterday_items = [to_item(a) for a in yesterday_appts]
+
+        # Build reminder candidates
+        today_scheduled = [a for a in today_appts if a.status == 'scheduled']
+        yesterday_missed = [a for a in yesterday_appts if a.status in ['scheduled', 'no-show']]
+
+        # Create notifications once per day (deduplicated by title+date range)
+        from backend.models.notification import Notification
+        today_start = datetime.combine(today, datetime.min.time())
+
+        reminder_payloads = []
+        if today_scheduled:
+            reminder_payloads.append({
+                "title": "Today's Appointment Reminder",
+                "message": f"You have {len(today_scheduled)} appointment(s) today. Please arrive on time.",
+                "link": "/templates/patient/appointment.html"
+            })
+        if yesterday_missed:
+            reminder_payloads.append({
+                "title": "Yesterday Appointment Follow-up",
+                "message": f"You have {len(yesterday_missed)} appointment(s) from yesterday that may need follow-up or rescheduling.",
+                "link": "/templates/patient/appointment.html"
+            })
+
+        created_notifications = 0
+        for payload in reminder_payloads:
+            exists_today = Notification.query.filter(
+                Notification.user_id == patient_id,
+                Notification.title == payload["title"],
+                Notification.created_at >= today_start
+            ).first()
+            if not exists_today:
+                db.session.add(Notification(
+                    user_id=patient_id,
+                    title=payload["title"],
+                    message=payload["message"],
+                    type='appointment',
+                    category='appointment',
+                    is_read=False,
+                    link=payload["link"],
+                    created_at=datetime.utcnow()
+                ))
+                created_notifications += 1
+
+        if created_notifications:
+            db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "summary": {
+                "today_count": len(today_items),
+                "yesterday_count": len(yesterday_items),
+                "today_scheduled_count": len(today_scheduled),
+                "yesterday_missed_count": len(yesterday_missed),
+                "today": today_items,
+                "yesterday": yesterday_items
+            }
+        }), 200
+
+    except Exception as e:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({
+            "success": False,
+            "message": "An error occurred fetching daily appointment summary",
+            "error": str(e)
+        }), 500
+
+
 @patient_bp.route('/appointments', methods=['POST'])
 @token_required
 def create_appointment(current_user):
@@ -931,6 +1159,7 @@ def create_appointment(current_user):
                 type='appointment',
                 category='general',
                 is_read=False,
+                link='/templates/doctor/appointments.html',
                 created_at=datetime.utcnow()
             ))
 
@@ -942,6 +1171,7 @@ def create_appointment(current_user):
                 type='appointment',
                 category='general',
                 is_read=False,
+                link='/templates/patient/appointment.html',
                 created_at=datetime.utcnow()
             ))
 

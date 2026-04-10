@@ -152,6 +152,107 @@ def get_dashboard(current_admin):
         }), 500
 
 
+@admin_bp.route('/users', methods=['POST'])
+@admin_token_required
+def create_user(current_admin):
+    """Admin creates a new user"""
+    try:
+        data = request.get_json()
+        if not data or not all(k in data for k in ['username', 'email', 'password', 'role']):
+            return jsonify({'success': False, 'message': 'username, email, password, role required'}), 400
+        if User.query.filter((User.email == data['email']) | (User.username == data['username'])).first():
+            return jsonify({'success': False, 'message': 'Email or username already exists'}), 409
+        from werkzeug.security import generate_password_hash
+        user = User(
+            username=data['username'],
+            email=data['email'],
+            password_hash=generate_password_hash(data['password']),
+            role=data['role'],
+            is_active=True,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({'success': True, 'user': {'id': user.id, 'username': user.username, 'email': user.email, 'role': user.role}}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/users/<int:user_id>', methods=['PUT'])
+@admin_token_required
+def update_user(current_admin, user_id):
+    """Admin updates a user"""
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        data = request.get_json() or {}
+        for field in ['username', 'email', 'role', 'is_active']:
+            if field in data:
+                setattr(user, field, data[field])
+        db.session.commit()
+        return jsonify({'success': True, 'user': {'id': user.id, 'username': user.username, 'email': user.email, 'role': user.role}}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/roles', methods=['GET'])
+@admin_token_required
+def get_roles(current_admin):
+    """Get all available roles"""
+    roles = ['patient', 'doctor', 'nurse', 'lab_technician', 'pharmacist', 'admin']
+    return jsonify({'success': True, 'roles': roles}), 200
+
+
+@admin_bp.route('/audit-logs', methods=['GET'])
+@admin_token_required
+def get_audit_logs(current_admin):
+    """Get audit logs"""
+    try:
+        from sqlalchemy import text
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        offset = (page - 1) * per_page
+        rows = db.session.execute(text(
+            'SELECT id, username, user_role, action, resource, status, created_at '
+            'FROM audit_logs ORDER BY created_at DESC LIMIT :limit OFFSET :offset'
+        ), {'limit': per_page, 'offset': offset}).fetchall()
+        total = db.session.execute(text('SELECT COUNT(*) FROM audit_logs')).scalar() or 0
+        logs = [{'id': r[0], 'username': r[1], 'role': r[2], 'action': r[3],
+                 'resource': r[4], 'status': r[5], 'created_at': str(r[6])} for r in rows]
+        return jsonify({'success': True, 'audit_logs': logs,
+                        'pagination': {'page': page, 'per_page': per_page, 'total': total}}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/system-stats', methods=['GET'])
+@admin_token_required
+def get_system_stats(current_admin):
+    """Get system statistics"""
+    try:
+        from sqlalchemy import text
+        total_users = User.query.count()
+        total_patients = Patient.query.count()
+        total_doctors = Doctor.query.count()
+        total_predictions = Prediction.query.count()
+        db_size = db.session.execute(text('SELECT COUNT(*) FROM users')).scalar() or 0
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_users': total_users,
+                'total_patients': total_patients,
+                'total_doctors': total_doctors,
+                'total_predictions': total_predictions,
+                'db_records': db_size
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @admin_bp.route('/users', methods=['GET'])
 @admin_token_required
 def get_users(current_admin):

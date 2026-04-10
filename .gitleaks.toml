@@ -1,0 +1,10 @@
+[extend]
+# Start from official default rules.
+useDefault = true
+
+[allowlist]
+description = "Allow documented example/env template values only"
+paths = [
+  '''^\.env\.example$'''
+]
+

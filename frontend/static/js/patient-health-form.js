@@ -25,6 +25,7 @@ function parseLabValue(raw) {
 }
 
 const Steps = { nurseVitals: false, labResults: false };
+let labPollingTimer = null;
 
 // ── Validation ────────────────────────────────────────────────────────────────
 function validateForm(body) {
@@ -55,6 +56,56 @@ function collectFormData() {
         diabetes_pedigree: parseFloat(document.getElementById('diabetesPedigree').value) || 0.5,
         age:               parseInt(document.getElementById('age').value)
     };
+}
+
+function updateLiveRiskHint() {
+    const hint = document.getElementById('liveRiskHint');
+    if (!hint) return;
+
+    const glucose = parseFloat(document.getElementById('glucose')?.value);
+    const bmi = parseFloat(document.getElementById('bmi')?.value);
+    const age = parseFloat(document.getElementById('age')?.value);
+    const bp = parseFloat(document.getElementById('bloodPressure')?.value);
+    const dpf = parseFloat(document.getElementById('diabetesPedigree')?.value);
+    const insulin = parseFloat(document.getElementById('insulin')?.value);
+
+    const reasons = [];
+    let score = 0;
+
+    if (!isNaN(glucose)) {
+        if (glucose >= 200) { score += 3; reasons.push(`very high glucose (${glucose} mg/dL)`); }
+        else if (glucose >= 140) { score += 2; reasons.push(`high glucose (${glucose} mg/dL)`); }
+        else if (glucose >= 126) { score += 1; reasons.push(`elevated fasting glucose (${glucose} mg/dL)`); }
+    }
+    if (!isNaN(bmi)) {
+        if (bmi >= 35) { score += 2; reasons.push(`obesity class II+ (BMI ${bmi.toFixed(1)})`); }
+        else if (bmi >= 30) { score += 1; reasons.push(`obesity (BMI ${bmi.toFixed(1)})`); }
+        else if (bmi >= 25) { score += 0.5; reasons.push(`overweight (BMI ${bmi.toFixed(1)})`); }
+    }
+    if (!isNaN(age) && age >= 45) { score += 1; reasons.push(`age ${age}`); }
+    if (!isNaN(bp) && bp >= 90) { score += 1; reasons.push(`high diastolic BP (${bp} mmHg)`); }
+    if (!isNaN(dpf) && dpf > 0.8) { score += 1; reasons.push(`strong family-history score (${dpf})`); }
+    if (!isNaN(insulin) && insulin > 200) { score += 0.5; reasons.push(`high insulin (${insulin})`); }
+
+    // If key fields aren't entered yet, keep hint hidden.
+    if (isNaN(glucose) || isNaN(bmi) || isNaN(age)) {
+        hint.style.display = 'none';
+        return;
+    }
+
+    let level = 'Low';
+    let cls = 'alert-success';
+    if (score >= 4) { level = 'High'; cls = 'alert-danger'; }
+    else if (score >= 2) { level = 'Moderate'; cls = 'alert-warning'; }
+
+    const why = reasons.length ? reasons.join(', ') : 'values are currently within lower-risk ranges';
+    hint.className = `alert ${cls} mt-3`;
+    hint.innerHTML =
+        `<i class="bi bi-activity me-2"></i>` +
+        `<strong>Live Risk Hint (pre-check): ${level}</strong><br>` +
+        `<span style="font-size:.85rem;">Based on your current entries: ${why}. ` +
+        `Final risk comes from the ML model after submission.</span>`;
+    hint.style.display = 'block';
 }
 
 // ── Alert helpers ─────────────────────────────────────────────────────────────
@@ -165,14 +216,51 @@ async function checkNurseVitals() {
             const badge = document.getElementById('skinBadge');
             if (badge) badge.style.display = 'inline';
             filled.push('Skin Thickness: ' + v.skin_thickness + ' mm');
+        } else {
+            // Default to 0 when nurse didn't measure — standard ML model default
+            const el = document.getElementById('skinThickness');
+            if (el) { el.value = '0'; el.readOnly = true; el.classList.add('field-autofilled'); }
+            const badge = document.getElementById('skinBadge');
+            if (badge) badge.style.display = 'inline';
+            filled.push('Skin Thickness: 0 mm (not measured)');
+        }
+
+        // Auto-fill ML fields recorded by nurse
+        if (v.pregnancies != null) {
+            const el = document.getElementById('pregnancies');
+            if (el) { el.value = v.pregnancies; el.readOnly = true; el.classList.add('field-autofilled'); }
+            const badge = document.getElementById('pregnanciesBadge');
+            if (badge) badge.style.display = 'inline';
+            const hint = document.getElementById('pregnanciesHint');
+            if (hint) hint.innerHTML = '🩺 Auto-filled from nurse record.';
+            filled.push('Pregnancies: ' + v.pregnancies);
+        }
+        if (v.diabetes_pedigree != null) {
+            const el = document.getElementById('diabetesPedigree');
+            if (el) { el.value = v.diabetes_pedigree; el.readOnly = true; el.classList.add('field-autofilled'); }
+            const badge = document.getElementById('pedigreeBadge');
+            if (badge) badge.style.display = 'inline';
+            const hint = document.getElementById('pedigreeHint');
+            if (hint) hint.innerHTML = '🩺 Auto-filled from nurse record.';
+            filled.push('Pedigree: ' + v.diabetes_pedigree);
+        }
+        if (v.age != null) {
+            const el = document.getElementById('age');
+            if (el) { el.value = v.age; el.readOnly = true; el.classList.add('field-autofilled'); }
+            const badge = document.getElementById('ageBadge');
+            if (badge) badge.style.display = 'inline';
+            const hint = document.getElementById('ageHint');
+            if (hint) hint.innerHTML = '🩺 Auto-filled from nurse record.';
+            filled.push('Age: ' + v.age);
         }
 
         // Unlock form if at least one vital field was filled
-        const hasBMI = document.getElementById('bmi')?.readOnly;
-        const hasBP  = v.blood_pressure_diastolic != null;
+        const hasBMI  = document.getElementById('bmi')?.readOnly;
+        const hasBP   = v.blood_pressure_diastolic != null;
+        const hasAge  = v.age != null;
 
-        if (!hasBMI && !hasBP) {
-            updateStepUI('step1', 'missing', 'Nurse recorded vitals but BP and BMI are both missing.');
+        if (!hasBMI && !hasBP && !hasAge) {
+            updateStepUI('step1', 'missing', 'Nurse recorded vitals but key fields (BP, BMI, Age) are all missing.');
             Steps.nurseVitals = false;
             return false;
         }
@@ -190,39 +278,58 @@ async function checkNurseVitals() {
 
 // ── Step 2: Lab results — fetched from DB via API ─────────────────────────────
 async function checkLabResults() {
-    updateStepUI('step4', 'checking');
+    updateStepUI('step2', 'checking');
     try {
-        const res  = await fetch(API + '/patient/lab-results?limit=20', {
+        const res  = await fetch(API + '/patient/lab-results?limit=100', {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         const data = await res.json();
 
         if (!data.success || !data.lab_results || data.lab_results.length === 0) {
-            updateStepUI('step4', 'missing');
+            updateStepUI('step2', 'missing');
             Steps.labResults = false;
             return false;
         }
 
         const thirtyDaysAgo = Date.now() - (30 * 24 * 3600000);
-        const isDone = r => ['completed', 'validated'].includes(r.status) && r.results;
+        const isDone = r => ['completed', 'validated'].includes((r.status || '').toLowerCase()) && r.results;
+        const getResultTime = r => {
+            const ts = r.test_completed_at || r.created_at;
+            const t = ts ? new Date(ts).getTime() : 0;
+            return Number.isFinite(t) ? t : 0;
+        };
+        const isRecent = r => getResultTime(r) > thirtyDaysAgo;
+        const normalize = s => String(s || '').toLowerCase();
 
-        const glucoseTest = data.lab_results.find(r =>
-            isDone(r) &&
-            new Date(r.created_at).getTime() > thirtyDaysAgo &&
-            (r.test_name.toLowerCase().includes('glucose') ||
-             r.test_name.toLowerCase().includes('blood sugar') ||
-             r.test_name.toLowerCase().includes('fasting') ||
-             r.test_name.toLowerCase().includes('hba1c') ||
-             r.test_name.toLowerCase().includes('sugar'))
-        );
-        const insulinTest = data.lab_results.find(r =>
-            isDone(r) &&
-            new Date(r.created_at).getTime() > thirtyDaysAgo &&
-            r.test_name.toLowerCase().includes('insulin')
-        );
+        const isGlucoseLike = r => {
+            const name = normalize(r.test_name);
+            const unit = normalize(r.unit);
+            const range = normalize(r.normal_range);
+            return (
+                name.includes('glucose') ||
+                name.includes('blood sugar') ||
+                name.includes('fasting') ||
+                name.includes('fbs') ||
+                name.includes('hba1c') ||
+                name.includes('sugar') ||
+                unit.includes('mg/dl') ||
+                range.includes('mg/dl')
+            );
+        };
+        const isInsulinLike = r => {
+            const name = normalize(r.test_name);
+            return name.includes('insulin');
+        };
+
+        const completedRecent = data.lab_results
+            .filter(r => isDone(r) && isRecent(r))
+            .sort((a, b) => getResultTime(b) - getResultTime(a));
+
+        const glucoseTest = completedRecent.find(isGlucoseLike);
+        const insulinTest = completedRecent.find(isInsulinLike);
 
         if (!glucoseTest) {
-            updateStepUI('step4', 'missing', 'No recent glucose lab result found. Enter glucose manually below.');
+            updateStepUI('step2', 'missing', 'No recent glucose lab result found. Enter glucose manually below.');
             const insulinEl = document.getElementById('insulin');
             if (insulinEl && !insulinEl.readOnly) {
                 insulinEl.value = '0';
@@ -265,15 +372,22 @@ async function checkLabResults() {
             }
         }
 
-        updateStepUI('step4', 'done', '🔬 Auto-filled from DB: ' + filled.join(' | '));
+        updateStepUI('step2', 'done', '🔬 Auto-filled from DB: ' + filled.join(' | '));
         Steps.labResults = true;
         return true;
 
     } catch {
-        updateStepUI('step4', 'missing');
+        updateStepUI('step2', 'missing');
         Steps.labResults = false;
         return false;
     }
+}
+
+async function refreshLabResultsIfNeeded() {
+    // Skip background polling when tab is hidden.
+    if (document.hidden) return;
+    await checkLabResults();
+    evaluateFormAccess();
 }
 
 // ── Step 3: Last prediction data — auto-fill Age, Pregnancies, Pedigree ─────
@@ -317,11 +431,14 @@ function showAutofillBanner() {
     const bannerText = document.getElementById('autofillText');
     if (!banner || !bannerText) return;
     const autofilled = [];
-    if (document.getElementById('bloodPressure')?.readOnly) autofilled.push('Diastolic BP (from nurse) 🩺');
-    if (document.getElementById('bmi')?.readOnly)           autofilled.push('BMI 🩺');
-    if (document.getElementById('skinThickness')?.readOnly) autofilled.push('Skin Thickness 🩺');
-    if (document.getElementById('glucose')?.readOnly)       autofilled.push('Glucose 🔬');
-    if (document.getElementById('insulin')?.readOnly)       autofilled.push('Insulin 🔬');
+    if (document.getElementById('bloodPressure')?.readOnly)  autofilled.push('Diastolic BP 🩺');
+    if (document.getElementById('bmi')?.readOnly)            autofilled.push('BMI 🩺');
+    if (document.getElementById('skinThickness')?.readOnly)  autofilled.push('Skin Thickness 🩺');
+    if (document.getElementById('pregnancies')?.readOnly)    autofilled.push('Pregnancies 🩺');
+    if (document.getElementById('diabetesPedigree')?.readOnly) autofilled.push('Pedigree 🩺');
+    if (document.getElementById('age')?.readOnly)            autofilled.push('Age 🩺');
+    if (document.getElementById('glucose')?.readOnly)        autofilled.push('Glucose 🔬');
+    if (document.getElementById('insulin')?.readOnly)        autofilled.push('Insulin 🔬');
     if (autofilled.length) {
         bannerText.textContent = 'Auto-filled from database: ' + autofilled.join(', ') + '. Please verify before submitting.';
         banner.style.cssText = 'display:block;background:#f0fdf4;border:1px solid #86efac;color:#166534;padding:.75rem 1rem;border-radius:10px;margin-bottom:1rem;';
@@ -373,6 +490,7 @@ function evaluateFormAccess() {
         const glucoseHint = document.getElementById('glucoseHint');
         if (glucoseHint) glucoseHint.innerHTML = '✍️ Enter your latest fasting glucose reading manually.';
     }
+    updateLiveRiskHint();
 }
 
 // ── Payment redirect — uses localStorage (persists across page navigations) ───
@@ -404,6 +522,7 @@ function applyRestoredData(d) {
     if (!document.getElementById('bloodPressure')?.readOnly) set('bloodPressure', d.blood_pressure);
     if (!document.getElementById('insulin')?.readOnly)       set('insulin',       d.insulin);
     if (!document.getElementById('bmi')?.readOnly)           set('bmi',           d.bmi);
+    updateLiveRiskHint();
 }
 
 // ── Run ML prediction ─────────────────────────────────────────────────────────
@@ -469,12 +588,17 @@ async function handleSubmit(e) {
     hideAlert();
 
     if (!Steps.nurseVitals) {
-        showAlert(
-            '<i class="bi bi-exclamation-triangle-fill me-2"></i>' +
-            '<strong>Nurse check-up required first.</strong> Please visit the nurse station to have your vitals recorded.',
-            'danger'
-        );
-        return;
+        // Warn but don't block — nurse may not have recorded yet, patient can still fill manually
+        const bmi = parseFloat(document.getElementById('bmi')?.value);
+        const bp  = parseFloat(document.getElementById('bloodPressure')?.value);
+        if (isNaN(bmi) || isNaN(bp)) {
+            showAlert(
+                '<i class="bi bi-exclamation-triangle-fill me-2"></i>' +
+                '<strong>BMI and Blood Pressure are required.</strong> Please visit the nurse station or enter values manually.',
+                'warning'
+            );
+            return;
+        }
     }
 
     const body = collectFormData();
@@ -516,6 +640,10 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     const form = document.getElementById('healthDataForm');
     if (form) form.addEventListener('submit', handleSubmit);
+    ['glucose', 'bloodPressure', 'bmi', 'age', 'diabetesPedigree', 'insulin'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateLiveRiskHint);
+    });
 
     // Step 1: Fetch nurse vitals from DB
     await checkNurseVitals();
@@ -525,6 +653,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     await checkLastPredictionData();
     // Show/hide form based on results
     evaluateFormAccess();
+
+    // Keep checking for newly entered lab results so patient does not need to refresh.
+    labPollingTimer = setInterval(refreshLabResultsIfNeeded, 20000);
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) refreshLabResultsIfNeeded();
+    });
 
     // Check if returning from payment page
     const paid    = localStorage.getItem('predictionPaid');
@@ -547,4 +681,5 @@ document.addEventListener('DOMContentLoaded', async function () {
             await runPrediction(body);
         }
     }
+    updateLiveRiskHint();
 });

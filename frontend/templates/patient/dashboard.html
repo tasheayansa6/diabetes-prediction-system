@@ -137,6 +137,18 @@
         .risk-alert { border-radius:14px; padding:1rem 1.25rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:.9rem; }
         .risk-alert.high     { background:#ffebee; border:1.5px solid #ef9a9a; }
         .risk-alert.veryhigh { background:linear-gradient(135deg,#f3e5f5,#fce4ec); border:1.5px solid #ce93d8; }
+
+        /* ── Daily appointments block ── */
+        .appt-daily-card { background:#fff; border-radius:18px; box-shadow:0 2px 12px rgba(0,0,0,.07); padding:1rem 1.1rem; border:1px solid #e8edf5; }
+        .appt-daily-header { display:flex; align-items:center; gap:.5rem; font-size:.95rem; font-weight:700; color:#1a237e; margin-bottom:.8rem; }
+        .appt-mini-col { background:#f8fbff; border:1px solid #e3f2fd; border-radius:12px; padding:.8rem; }
+        .appt-mini-title { display:flex; justify-content:space-between; align-items:center; font-size:.82rem; font-weight:700; color:#1565c0; margin-bottom:.55rem; }
+        .appt-mini-count { background:#e3f2fd; color:#1565c0; border-radius:99px; padding:.1rem .55rem; font-size:.72rem; font-weight:700; }
+        .appt-mini-row { display:flex; justify-content:space-between; align-items:center; gap:.6rem; border-top:1px solid #e8edf5; padding:.55rem 0; }
+        .appt-mini-row:first-of-type { border-top:none; padding-top:0; }
+        .appt-mini-main { font-size:.78rem; color:#334155; }
+        .appt-mini-status { margin-left:.4rem; color:#64748b; font-size:.72rem; text-transform:capitalize; }
+        .appt-mini-empty { font-size:.78rem; color:#94a3b8; }
     </style>
 </head>
 <body>
@@ -239,6 +251,30 @@
                         <div class="ac-label">Make Payment</div>
                         <div class="ac-sub">Pay for services</div>
                     </a>
+                </div>
+            </div>
+
+            <div id="appointmentDailyBlock" class="mb-6" style="display:none;">
+                <div class="appt-daily-card">
+                    <div class="appt-daily-header">
+                        <i class="bi bi-calendar2-week" style="color:#1565c0;"></i> Appointment Messages
+                    </div>
+                    <div class="grid-2">
+                        <div class="appt-mini-col">
+                            <div class="appt-mini-title">
+                                <span>Today</span>
+                                <span class="appt-mini-count" id="todayApptCount">0</span>
+                            </div>
+                            <div id="todayApptList"></div>
+                        </div>
+                        <div class="appt-mini-col">
+                            <div class="appt-mini-title">
+                                <span>Yesterday</span>
+                                <span class="appt-mini-count" id="yesterdayApptCount">0</span>
+                            </div>
+                            <div id="yesterdayApptList"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

@@ -5,7 +5,6 @@ from flask import Flask, jsonify
 
 # Load .env file FIRST - before anything else
 env_path = Path(__file__).parent.parent / '.env'
-print(f"Loading .env from: {env_path}")
 load_dotenv(dotenv_path=env_path)
 
 from backend.config import config
@@ -93,6 +92,19 @@ def create_app(config_name="development"):
     def health_check():
         return jsonify({"status": "healthy"}), 200
 
+    # Force ML model reload (fixes startup load failures)
+    @app.route("/api/ml/reload", methods=["POST"])
+    def reload_ml_model():
+        try:
+            from backend.services.ml_service import get_ml_service
+            ml = get_ml_service(force_reload=True)
+            if ml.is_ready():
+                return jsonify({"success": True, "message": f"Model reloaded: {type(ml.model).__name__}"}), 200
+            else:
+                return jsonify({"success": False, "message": "Model reload failed"}), 500
+        except Exception as e:
+            return jsonify({"success": False, "message": str(e)}), 500
+
     # Public model info route (no auth required)
     @app.route("/api/model/info")
     def model_info():
@@ -134,6 +146,48 @@ def create_app(config_name="development"):
                 "algorithm":v.get('model_type', 'GradientBoostingClassifier'),
                 "samples":  v.get('dataset_size', 614),
                 "features": 8
+            }), 200
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    # Public model statistics endpoint (dataset size + all registered models)
+    @app.route("/api/model/stats")
+    def model_stats():
+        import json as _json
+        from pathlib import Path
+        project_root = Path(app.root_path).parent
+        metadata_path = project_root / 'ml_model' / 'saved_models' / 'model_metadata.json'
+        registry_path = project_root / 'ml_model' / 'model_registry.json'
+        try:
+            models = []
+            active = None
+            if registry_path.exists():
+                models = _json.load(open(registry_path))
+                active = next((m for m in models if m.get('status') == 'active'), None)
+
+            training_samples = None
+            test_samples = None
+            total_samples = None
+            if metadata_path.exists():
+                md = _json.load(open(metadata_path))
+                training_samples = md.get('training_samples')
+                test_samples = md.get('test_samples')
+                if training_samples is not None and test_samples is not None:
+                    total_samples = training_samples + test_samples
+
+            # Fallback to registry training sample count if metadata is missing
+            if total_samples is None and active and active.get('trainingSamples') is not None:
+                total_samples = int(active.get('trainingSamples'))
+
+            return jsonify({
+                "success": True,
+                "active_model": active,
+                "models": models,
+                "dataset": {
+                    "training_samples": training_samples,
+                    "test_samples": test_samples,
+                    "total_samples": total_samples
+                }
             }), 200
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500

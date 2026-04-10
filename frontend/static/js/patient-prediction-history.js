@@ -34,6 +34,8 @@ function renderCards(predictions) {
         const glucose = inp.glucose ? inp.glucose + ' mg/dL' : '--';
         const bmi     = inp.bmi    ? 'BMI ' + inp.bmi       : '';
         const age     = inp.age    ? 'Age ' + inp.age        : '';
+        const review = p.review || {};
+        const reviewStatus = review.status ? String(review.status).replace('_', ' ') : 'pending review';
 
         return `<div class="pred-card ${cfg.cls}">
             <div class="pred-icon ${cfg.cls}">
@@ -49,6 +51,7 @@ function renderCards(predictions) {
                     ${glucose !== '--' ? `<span><i class="bi bi-droplet"></i> Glucose: ${esc(glucose)}</span>` : ''}
                     ${bmi ? `<span><i class="bi bi-person"></i> ${esc(bmi)}</span>` : ''}
                     ${age ? `<span><i class="bi bi-clock"></i> ${esc(age)}</span>` : ''}
+                    <span><i class="bi bi-person-check"></i> Review: ${esc(reviewStatus)}</span>
                 </div>
             </div>
             <div class="pred-pct ${cfg.cls}">${esc(pct)}</div>

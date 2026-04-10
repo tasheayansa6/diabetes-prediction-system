@@ -22,7 +22,7 @@ def train_random_forest(compare_with_lr=True):
     print("="*60)
     print("RANDOM FOREST TRAINING")
     print("="*60)
-    df = pd.read_csv('ml_model/data/diabetes.csv')
+    df = pd.read_csv('ml_model/dataset/diabetes.csv')
     print(f"Dataset shape: {df.shape}")
     
     # Prepare features and target

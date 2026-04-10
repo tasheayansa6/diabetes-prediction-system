@@ -88,6 +88,8 @@ class MLService:
         self.scaler = None
         self.feature_names = None
         self.model_metadata = None
+        self.active_model_file = None
+        self.active_model_entry = None
         self.load_successful = False
         
         # Try to load artifacts on initialization
@@ -114,6 +116,7 @@ class MLService:
                     registry = _json.load(f)
                 active = next((m for m in registry if m.get('status') == 'active'), None)
                 if active:
+                    self.active_model_entry = active
                     algo = active.get('algorithm', '').lower().replace(' ', '_')
                     # If registry has explicit filename, use it directly
                     if active.get('filename'):
@@ -150,17 +153,71 @@ class MLService:
                     logger.warning(f"{active_file} not found, falling back to logistic_regression.pkl")
                     model_path = fallback
                 else:
-                    logger.error(f"Model file not found: {model_path}")
-                    return False
+                    # Final fallback: first available .pkl model in saved_models directory
+                    candidates = sorted(self.model_dir.glob('*.pkl'))
+                    # Prefer non-scaler artifacts
+                    candidates = [c for c in candidates if c.name.lower() != 'scaler.pkl']
+                    if candidates:
+                        model_path = candidates[0]
+                        logger.warning(f"{active_file} not found, using first available model: {model_path.name}")
+                    else:
+                        logger.error(f"Model file not found: {model_path}")
+                        return False
 
             if not scaler_path.exists():
                 logger.error(f"Scaler file not found: {scaler_path}")
                 return False
 
-            # Load model and scaler
-            self.model  = joblib.load(model_path)
-            self.scaler = joblib.load(scaler_path)
-            print(f"Loaded model: {type(self.model).__name__} from {model_path.name}")
+            # Load model and scaler with compatibility fallback
+            import warnings
+            model_candidates = [model_path]
+            # Add fallback files while preserving order and uniqueness
+            for candidate in sorted(self.model_dir.glob('*.pkl')):
+                if candidate.name.lower() == 'scaler.pkl':
+                    continue
+                if candidate not in model_candidates:
+                    model_candidates.append(candidate)
+
+            load_error = None
+            loaded_model_path = None
+            for candidate in model_candidates:
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        _model = joblib.load(candidate)
+                        _scaler = joblib.load(scaler_path)
+                    self.model = _model
+                    self.scaler = _scaler
+                    loaded_model_path = candidate
+                    break
+                except Exception as e:
+                    load_error = e
+                    logger.warning(f"Failed loading model candidate {candidate.name}: {e}")
+
+            if loaded_model_path is None:
+                logger.error(f"Failed to load any model artifact: {load_error}")
+                return False
+
+            self.active_model_file = loaded_model_path.name
+            # Keep active model metadata aligned with the actual loaded file.
+            if registry_path.exists():
+                try:
+                    with open(registry_path, 'r') as f:
+                        registry = json.load(f)
+                    matched = next((m for m in registry if m.get('filename') == self.active_model_file), None)
+                    if matched:
+                        self.active_model_entry = matched
+                    else:
+                        self.active_model_entry = {
+                            'version': 'fallback',
+                            'algorithm': type(self.model).__name__,
+                            'filename': self.active_model_file,
+                            'status': 'fallback_active'
+                        }
+                except Exception:
+                    pass
+
+            print(f"Loaded model: {type(self.model).__name__} from {self.active_model_file}")
 
             # Load feature names
             if feature_path.exists():
@@ -257,7 +314,7 @@ class MLService:
             
             # Make prediction
             prediction = self.model.predict(feature_scaled)[0]
-            probability = self.model.predict_proba(feature_scaled)[0][1]
+            probability = self._get_probability(feature_scaled, prediction)
             
             # Get risk level
             risk_info = self._get_risk_level(probability)
@@ -282,7 +339,10 @@ class MLService:
                 'action': risk_info['action'],
                 'recommendation': risk_info['recommendation'],
                 'confidence': round(confidence, 1),
-                'features_used': dict(zip(self.feature_names, feature_values))
+                'features_used': dict(zip(self.feature_names, feature_values)),
+                'model_version': (self.active_model_entry or {}).get('version', '1.0.0'),
+                'model_algorithm': (self.active_model_entry or {}).get('algorithm', type(self.model).__name__),
+                'model_file': self.active_model_file
             }
             
             # Add warning if features were missing
@@ -299,6 +359,28 @@ class MLService:
                 'error_type': type(e).__name__,
                 'error_code': 'PREDICTION_FAILED'
             }
+
+    def _get_probability(self, feature_scaled: np.ndarray, prediction: Any) -> float:
+        """
+        Return positive-class probability in [0,1] for models with/without predict_proba.
+        """
+        # Preferred path
+        if hasattr(self.model, 'predict_proba'):
+            proba = self.model.predict_proba(feature_scaled)
+            # Typical binary shape: (n,2)
+            if len(proba.shape) == 2 and proba.shape[1] >= 2:
+                return float(proba[0][1])
+            # Some wrappers may return single column
+            return float(proba[0][0])
+
+        # Fallback: use decision_function and sigmoid mapping
+        if hasattr(self.model, 'decision_function'):
+            score = float(self.model.decision_function(feature_scaled)[0])
+            return float(1 / (1 + np.exp(-score)))
+
+        # Last-resort fallback: map class prediction to coarse probability
+        pred = int(prediction)
+        return 0.8 if pred == 1 else 0.2
     
     def _extract_feature_value(self, features: Dict[str, Any], target_feature: str) -> Optional[float]:
         """Extract feature value from input dictionary using multiple matching strategies"""
@@ -368,6 +450,9 @@ class MLService:
             'success': True,
             'status': 'loaded',
             'model_type': type(self.model).__name__,
+            'model_file': self.active_model_file,
+            'active_model_version': (self.active_model_entry or {}).get('version'),
+            'active_model_algorithm': (self.active_model_entry or {}).get('algorithm'),
             'features': self.feature_names,
             'n_features': len(self.feature_names),
             'model_dir': str(self.model_dir),

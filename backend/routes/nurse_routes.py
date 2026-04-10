@@ -282,6 +282,9 @@ def record_vitals(current_nurse):
             bmi=bmi,
             skin_thickness=data.get('skin_thickness'),
             pain_level=data.get('pain_level'),
+            pregnancies=data.get('pregnancies'),
+            diabetes_pedigree=data.get('diabetes_pedigree'),
+            age=data.get('age'),
             notes=data.get('notes', ''),
             recorded_at=datetime.utcnow(),
             created_at=datetime.utcnow(),
@@ -310,6 +313,7 @@ def record_vitals(current_nurse):
                     type='vitals',
                     category='general',
                     is_read=False,
+                    link=f'/templates/doctor/lab_requests.html?patient_id={patient.id}',
                     created_at=datetime.utcnow()
                 ))
             db.session.commit()
@@ -338,6 +342,50 @@ def record_vitals(current_nurse):
             "message": "Error recording vital signs",
             "error": str(e)
         }), 500
+
+
+# ============ UPDATE VITAL SIGNS ============
+
+@nurse_bp.route('/vitals/<int:vital_id>', methods=['PUT'])
+@token_required
+def update_vitals(current_nurse, vital_id):
+    """
+    PUT /api/nurse/vitals/<id> - Update existing vital signs record
+    """
+    try:
+        vital = VitalSign.query.filter_by(id=vital_id, nurse_id=current_nurse['id']).first()
+        if not vital:
+            return jsonify({'success': False, 'message': 'Vital record not found'}), 404
+
+        data = request.get_json()
+
+        # Recalculate BMI if height/weight provided
+        if data.get('height') and data.get('weight'):
+            try:
+                h = float(data['height']) / 100
+                w = float(data['weight'])
+                vital.bmi = round(w / (h * h), 2)
+            except (ValueError, ZeroDivisionError):
+                pass
+
+        fields = [
+            'temperature', 'heart_rate', 'respiratory_rate',
+            'blood_pressure_systolic', 'blood_pressure_diastolic',
+            'oxygen_saturation', 'height', 'weight', 'skin_thickness',
+            'pain_level', 'pregnancies', 'diabetes_pedigree', 'age', 'notes'
+        ]
+        for f in fields:
+            if f in data and data[f] is not None:
+                setattr(vital, f, data[f])
+
+        vital.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Vitals updated successfully'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ============ GET PATIENT QUEUE ============
@@ -745,8 +793,12 @@ def get_patient_vitals(current_nurse, patient_id):
                 "height": v.height,
                 "weight": v.weight,
                 "bmi": v.bmi,
+                "skin_thickness": v.skin_thickness,
                 "respiratory_rate": v.respiratory_rate,
                 "pain_level": v.pain_level,
+                "pregnancies": v.pregnancies,
+                "diabetes_pedigree": v.diabetes_pedigree,
+                "age": v.age,
                 "notes": v.notes,
                 "recorded_at": v.recorded_at.isoformat() if v.recorded_at else None
             })

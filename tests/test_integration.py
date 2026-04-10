@@ -599,7 +599,7 @@ class TestCrossRoleWorkflow:
                                        headers={'Authorization': f'Bearer {patient_token}'},
                                        json={
                                            'glucose': 145,
-                                           'blood_pressure': 125,
+                                           'blood_pressure': 90,
                                            'bmi': 29.5,
                                            'age': 48,
                                            'pregnancies': 2
@@ -611,7 +611,7 @@ class TestCrossRoleWorkflow:
                                         headers={'Authorization': f'Bearer {patient_token}'},
                                         json={
                                             'glucose': 145,
-                                            'blood_pressure': 125,
+                                            'blood_pressure': 90,
                                             'bmi': 29.5,
                                             'age': 48,
                                             'pregnancies': 2

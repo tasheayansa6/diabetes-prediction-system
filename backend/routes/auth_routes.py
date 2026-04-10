@@ -686,3 +686,22 @@ def mark_all_read():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@auth_bp.route('/notifications/<int:notif_id>', methods=['DELETE'])
+def delete_notification(notif_id):
+    """DELETE /api/auth/notifications/<id>"""
+    user_id = _get_user_id_from_token()
+    if not user_id:
+        return jsonify({'success': False, 'message': 'Invalid token'}), 401
+    try:
+        from backend.models.notification import Notification
+        n = Notification.query.filter_by(id=notif_id, user_id=user_id).first()
+        if not n:
+            return jsonify({'success': False, 'message': 'Not found'}), 404
+        db.session.delete(n)
+        db.session.commit()
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500

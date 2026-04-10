@@ -4,6 +4,11 @@ from pathlib import Path
 class BaseConfig:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+    REMEMBER_COOKIE_HTTPONLY = True
+    PREFERRED_URL_SCHEME = os.getenv('PREFERRED_URL_SCHEME', 'https')
     # Flask-Mail
     MAIL_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.getenv('SMTP_PORT', 587))
@@ -56,9 +61,66 @@ class TestingConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 20,
+        'max_overflow': 30,
+        'pool_pre_ping': True,
+        'pool_recycle': 3600,
+        'pool_timeout': 30,
+    }
+    
+    # PostgreSQL specific settings
+    POSTGRES_SSL_MODE = os.getenv('POSTGRES_SSL_MODE', 'require')
+    POSTGRES_SSL_CERT = os.getenv('POSTGRES_SSL_CERT')
+    POSTGRES_SSL_KEY = os.getenv('POSTGRES_SSL_KEY')
+    POSTGRES_SSL_CA = os.getenv('POSTGRES_SSL_CA')
+
+    @staticmethod
+    def init_app(app):
+        # Enforce secure defaults in production.
+        app.config['SESSION_COOKIE_SECURE'] = True
+        secret = app.config.get('SECRET_KEY') or ''
+        if secret in ['', 'dev-secret-key', 'your-secret-key-change-this-in-production']:
+            raise RuntimeError('Unsafe SECRET_KEY for production. Set a strong SECRET_KEY in environment.')
+        if not app.config.get('SQLALCHEMY_DATABASE_URI'):
+            raise RuntimeError('DATABASE_URL is required in production.')
+
+class PostgreSQLConfig(BaseConfig):
+    """PostgreSQL-specific configuration for production"""
+    DEBUG = False
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        'POSTGRES_URL',
+        'postgresql://username:password@localhost:5432/diabetes_db'
+    )
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 20,
+        'max_overflow': 30,
+        'pool_pre_ping': True,
+        'pool_recycle': 3600,
+        'pool_timeout': 30,
+        'connect_args': {
+            'sslmode': os.getenv('POSTGRES_SSL_MODE', 'require'),
+            'sslcert': os.getenv('POSTGRES_SSL_CERT'),
+            'sslkey': os.getenv('POSTGRES_SSL_KEY'),
+            'sslrootcert': os.getenv('POSTGRES_SSL_CA'),
+            'application_name': 'diabetes_prediction_system',
+            'connect_timeout': 30,
+        }
+    }
+    
+    # Connection pooling settings
+    DB_POOL_SIZE = int(os.getenv('DB_POOL_SIZE', '20'))
+    DB_MAX_OVERFLOW = int(os.getenv('DB_MAX_OVERFLOW', '30'))
+    DB_POOL_TIMEOUT = int(os.getenv('DB_POOL_TIMEOUT', '30'))
+    DB_POOL_RECYCLE = int(os.getenv('DB_POOL_RECYCLE', '3600'))
+    
+    # Performance settings
+    DB_STATEMENT_TIMEOUT = int(os.getenv('DB_STATEMENT_TIMEOUT', '30000'))  # 30 seconds
+    DB_IDLE_IN_TRANSACTION_TIMEOUT = int(os.getenv('DB_IDLE_IN_TRANSACTION_TIMEOUT', '60000'))  # 1 minute
 
 config = {
     'development': DevelopmentConfig,
-    'testing': TestingConfig,  # Add this line
-    'production': ProductionConfig
+    'testing': TestingConfig,
+    'production': ProductionConfig,
+    'postgresql': PostgreSQLConfig
 }

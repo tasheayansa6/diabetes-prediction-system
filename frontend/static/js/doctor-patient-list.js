@@ -9,6 +9,78 @@ function handleLogout() {
     window.location.href = '/';
 }
 
+async function getLatestPrediction(patientId) {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/doctor/patients/${patientId}/predictions?limit=1`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    if (!data.success || !data.predictions || !data.predictions.length) return null;
+    return data.predictions[0];
+}
+
+async function quickReview(patientId, status) {
+    try {
+        const latest = await getLatestPrediction(patientId);
+        if (!latest) {
+            alert('No prediction found for this patient.');
+            return;
+        }
+
+        const summary = window.prompt(
+            `Enter review summary (${status.replace('_', ' ')}):`,
+            status === 'approved'
+                ? 'Reviewed and approved. Continue current care plan and follow routine follow-up.'
+                : 'Needs follow-up visit and confirmatory tests.'
+        );
+        if (!summary || !summary.trim()) return;
+
+        const token = localStorage.getItem('token');
+        const payload = { status, summary: summary.trim() };
+        const reviewUrl = `/api/doctor/predictions/${latest.id}/review`;
+        const res = await fetch(reviewUrl, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(payload)
+        });
+        let data = null;
+        try { data = await res.json(); } catch (_) {}
+
+        // Fallback path: if review endpoint is unavailable, store equivalent review as doctor note.
+        if (res.status === 404) {
+            const noteRes = await fetch('/api/doctor/notes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify({
+                    patient_id: parseInt(patientId, 10),
+                    title: `Prediction Review #${latest.id}`,
+                    content: `status:${status}\nsummary:${summary.trim()}`,
+                    category: 'prediction_review',
+                    is_important: status === 'rejected' || status === 'needs_followup'
+                })
+            });
+            let noteData = null;
+            try { noteData = await noteRes.json(); } catch (_) {}
+            if (!noteRes.ok || !noteData || !noteData.success) {
+                throw new Error((noteData && noteData.message) || 'Failed to save review fallback note');
+            }
+            alert('Prediction review saved (fallback mode).');
+            return;
+        }
+
+        if (!res.ok || !data || !data.success) throw new Error((data && data.message) || 'Failed to save review');
+        alert('Prediction review saved.');
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
 async function loadPatients() {
     const search     = document.getElementById('searchInput').value.trim();
     const tbody      = document.getElementById('patientTableBody');
@@ -46,9 +118,26 @@ async function loadPatients() {
                         <a href="/templates/doctor/prescribe_medication.html?patient_id=${p.id}" class="btn btn-sm btn-success" style="margin-left:4px;">
                             <i class="bi bi-capsule"></i> Prescribe
                         </a>
+                        <button class="btn btn-sm btn-outline quick-approve-btn" data-patient-id="${p.id}" style="margin-left:4px;">
+                            <i class="bi bi-check2-circle"></i> Approve ML
+                        </button>
+                        <button class="btn btn-sm btn-outline quick-followup-btn" data-patient-id="${p.id}" style="margin-left:4px;">
+                            <i class="bi bi-exclamation-circle"></i> Needs Follow-up
+                        </button>
                     </td>
                 </tr>
             `).join('');
+
+            tbody.querySelectorAll('.quick-approve-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    quickReview(this.dataset.patientId, 'approved');
+                });
+            });
+            tbody.querySelectorAll('.quick-followup-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    quickReview(this.dataset.patientId, 'needs_followup');
+                });
+            });
         }
 
         const { total, offset, limit } = data.pagination;

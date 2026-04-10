@@ -28,6 +28,11 @@ class VitalSign(db.Model):
     bmi = db.Column(db.Float, nullable=True)
     skin_thickness = db.Column(db.Float, nullable=True)  # triceps skinfold in mm
     pain_level = db.Column(db.Integer, nullable=True)  # 0-10 scale
+
+    # ML prediction fields collected by nurse
+    pregnancies = db.Column(db.Integer, nullable=True)           # 0 if male
+    diabetes_pedigree = db.Column(db.Float, nullable=True)       # family history score
+    age = db.Column(db.Integer, nullable=True)                   # patient age in years
     
     # Additional Info
     notes = db.Column(db.Text, nullable=True)
@@ -53,6 +58,9 @@ class VitalSign(db.Model):
             'bmi': self.bmi,
             'skin_thickness': self.skin_thickness,
             'pain_level': self.pain_level,
+            'pregnancies': self.pregnancies,
+            'diabetes_pedigree': self.diabetes_pedigree,
+            'age': self.age,
             'notes': self.notes,
             'recorded_at': self.recorded_at.isoformat() if self.recorded_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None

@@ -39,8 +39,19 @@ async function loadPatients() {
 }
 
 // When patient is selected, load their latest vitals to pre-fill form
+let _existingVitalId = null;  // track if we should PUT (update) or POST (new)
+
 async function onPatientChange() {
     const patientId = document.getElementById('patient_id').value;
+    _existingVitalId = null;
+
+    // Clear previous state
+    const banner = document.getElementById('missingFieldsBanner');
+    if (banner) banner.remove();
+    ['pregnancies','diabetes_pedigree','age'].forEach(id => {
+        document.getElementById(id)?.classList.remove('border-red-500');
+    });
+
     if (!patientId) return;
 
     try {
@@ -60,9 +71,47 @@ async function onPatientChange() {
             set('height',                   v.height);
             set('weight',                   v.weight);
             set('skin_thickness',           v.skin_thickness);
-            showToast('Previous vitals pre-filled. Update as needed.', 'warning');
+            set('pregnancies',              v.pregnancies);
+            set('diabetes_pedigree',        v.diabetes_pedigree);
+            set('age',                      v.age);
+
+            // Check if ML fields are missing — warn nurse to fill them
+            // Use strict null check: undefined means field not in API response (old server)
+            // null means field exists in DB but was not filled
+            const missing = [];
+            if (v.pregnancies       === null) missing.push('Pregnancies');
+            if (v.diabetes_pedigree === null) missing.push('Diabetes Pedigree');
+            if (v.age               === null) missing.push('Age');
+
+            if (missing.length) {
+                _existingVitalId = v.id;  // will UPDATE this record
+
+                // Show persistent banner on the form
+                let banner = document.getElementById('missingFieldsBanner');
+                if (!banner) {
+                    banner = document.createElement('div');
+                    banner.id = 'missingFieldsBanner';
+                    document.getElementById('vitalsForm').prepend(banner);
+                }
+                banner.className = 'alert alert-danger mb-4';
+                banner.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Missing ML fields from previous visit:</strong> ${missing.join(', ')}.
+                    Please fill them below and save — this will <strong>update</strong> the existing record.`;
+
+                // Highlight the missing input fields
+                if (v.pregnancies       == null) document.getElementById('pregnancies').classList.add('border-red-500');
+                if (v.diabetes_pedigree == null) document.getElementById('diabetes_pedigree').classList.add('border-red-500');
+                if (v.age              == null) document.getElementById('age').classList.add('border-red-500');
+
+                showToast(`Missing ML fields: ${missing.join(', ')} — please fill them now.`, 'danger');
+            } else {
+                // Clear any previous banner
+                const banner = document.getElementById('missingFieldsBanner');
+                if (banner) banner.remove();
+                showToast('Previous vitals pre-filled. Update as needed.', 'warning');
+            }
         }
-    } catch { /* no previous vitals — that's fine */ }
+    } catch { /* no previous vitals — that is fine */ }
 }
 
 function setCurrentDateTime() {
@@ -135,6 +184,24 @@ async function handleVitalsSubmit(event) {
         return;
     }
 
+    // Validate required ML fields — warn but don't hard block
+    const pregVal = document.getElementById('pregnancies').value;
+    const dpfVal  = document.getElementById('diabetes_pedigree').value;
+    const ageVal  = document.getElementById('age').value;
+
+    const missingML = [];
+    if (pregVal === '' || isNaN(parseInt(pregVal)))    missingML.push('Pregnancies');
+    if (!dpfVal || isNaN(parseFloat(dpfVal)))          missingML.push('Diabetes Pedigree');
+    if (!ageVal || isNaN(parseInt(ageVal)))            missingML.push('Age');
+
+    if (missingML.length) {
+        showToast(`Please fill required ML fields: ${missingML.join(', ')}`, 'danger');
+        if (missingML.includes('Pregnancies'))       document.getElementById('pregnancies').focus();
+        else if (missingML.includes('Diabetes Pedigree')) document.getElementById('diabetes_pedigree').focus();
+        else document.getElementById('age').focus();
+        return;
+    }
+
     const payload = { patient_id: patientId, notes: document.getElementById('notes').value };
 
     ['blood_pressure_systolic','blood_pressure_diastolic','heart_rate','respiratory_rate','pain_level']
@@ -142,19 +209,39 @@ async function handleVitalsSubmit(event) {
     ['temperature','oxygen_saturation','height','weight','skin_thickness']
         .forEach(f => { const v = getOptionalFloat(f); if (v !== undefined) payload[f] = v; });
 
+    // Required ML fields — only include if filled
+    const pregInt = parseInt(document.getElementById('pregnancies').value);
+    const dpfFloat = parseFloat(document.getElementById('diabetes_pedigree').value);
+    const ageInt = parseInt(document.getElementById('age').value);
+    if (!isNaN(pregInt))   payload.pregnancies       = pregInt;
+    if (!isNaN(dpfFloat))  payload.diabetes_pedigree = dpfFloat;
+    if (!isNaN(ageInt))    payload.age               = ageInt;
+
     const btn = event.target.querySelector('[type="submit"]');
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
 
     try {
-        const res  = await fetch('/api/nurse/vitals', {
-            method: 'POST',
+        // If existing vital had missing ML fields, UPDATE it instead of creating duplicate
+        const method = _existingVitalId ? 'PUT' : 'POST';
+        const url    = _existingVitalId
+            ? `/api/nurse/vitals/${_existingVitalId}`
+            : '/api/nurse/vitals';
+
+        const res  = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
             body: JSON.stringify(payload)
         });
         const data = await res.json();
 
         if (data.success) {
+            _existingVitalId = null;
+            const banner = document.getElementById('missingFieldsBanner');
+            if (banner) banner.remove();
+            ['pregnancies','diabetes_pedigree','age'].forEach(id => {
+                document.getElementById(id)?.classList.remove('border-red-500');
+            });
             showToast('Vitals saved successfully!');
             setTimeout(() => window.location.href = '/templates/nurse/dashboard.html', 1200);
         } else {

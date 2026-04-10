@@ -470,6 +470,7 @@ def create_prescription(current_doctor):
                     type='prescription',
                     category='general',
                     is_read=False,
+                    link='/templates/pharmacist/prescription_review.html',
                     created_at=datetime.utcnow()
                 ))
             db.session.commit()
@@ -679,6 +680,95 @@ def get_patient_predictions(current_doctor, patient_id):
         return jsonify({
             "success": False,
             "message": "Error fetching patient predictions",
+            "error": str(e)
+        }), 500
+
+
+@doctor_bp.route('/predictions/<int:prediction_id>/review', methods=['PUT'])
+@token_required
+def review_prediction(current_doctor, prediction_id):
+    """
+    Review/approve an ML prediction and persist doctor decision.
+    Status: approved | rejected | needs_followup | pending_review
+    """
+    try:
+        prediction = Prediction.query.get(prediction_id)
+        if not prediction:
+            return jsonify({"success": False, "message": "Prediction not found"}), 404
+
+        data = request.get_json() or {}
+        status = str(data.get('status', '')).strip().lower()
+        summary = str(data.get('summary', '')).strip()
+
+        valid = ['approved', 'rejected', 'needs_followup', 'pending_review']
+        if status not in valid:
+            return jsonify({
+                "success": False,
+                "message": f"Invalid status. Must be one of: {', '.join(valid)}"
+            }), 400
+
+        if not summary:
+            return jsonify({"success": False, "message": "Review summary is required"}), 400
+
+        # Mark reviewer on prediction (existing column)
+        prediction.doctor_id = current_doctor['id']
+
+        # Create/append review note linked to this prediction
+        note_id = f"NOTE{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+        review_note = Note(
+            note_id=note_id,
+            patient_id=prediction.patient_id,
+            doctor_id=current_doctor['id'],
+            title=f"Prediction Review #{prediction.id}",
+            content=f"status:{status}\nsummary:{summary}",
+            category='prediction_review',
+            is_private=False,
+            is_important=status in ['rejected', 'needs_followup'],
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        db.session.add(review_note)
+        db.session.commit()
+
+        # Notify patient
+        try:
+            from backend.models.notification import Notification
+            label = status.replace('_', ' ').title()
+            db.session.add(Notification(
+                user_id=prediction.patient_id,
+                title='Prediction Reviewed by Doctor',
+                message=f'Your prediction was reviewed: {label}. Please open your result for details.',
+                type='prediction',
+                category='general',
+                is_read=False,
+                link=f'/templates/patient/prediction_result.html?id={prediction.id}',
+                created_at=datetime.utcnow()
+            ))
+            db.session.commit()
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+
+        return jsonify({
+            "success": True,
+            "message": "Prediction review saved successfully",
+            "review": {
+                "prediction_id": prediction.id,
+                "status": status,
+                "summary": summary,
+                "doctor_id": current_doctor['id'],
+                "doctor_name": current_doctor['username'],
+                "reviewed_at": review_note.created_at.isoformat() if review_note.created_at else None
+            }
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "message": "Error saving prediction review",
             "error": str(e)
         }), 500
 # ============ DOCTOR NOTES ============
@@ -1357,6 +1447,43 @@ def get_prescription(current_doctor, prescription_id):
 
 # ============ FIXED LAB REQUESTS MANAGEMENT ============
 
+@doctor_bp.route('/test-types', methods=['GET'])
+@token_required
+def get_test_types_for_doctor(current_doctor):
+    """GET /api/doctor/test-types — returns test types, seeds defaults if empty"""
+    try:
+        from backend.models.test_type import TestType
+        types = TestType.query.order_by(TestType.category, TestType.test_name).all()
+        if not types:
+            defaults = [
+                ('Blood Glucose (Fasting)', 'BG001',   'Diabetes',    25.0, '70-99 mg/dL',          'Fast for 8 hours before test'),
+                ('HbA1c',                  'HBA1C',    'Diabetes',    45.0, '< 5.7%',               'No fasting required'),
+                ('Oral Glucose Tolerance', 'OGTT',     'Diabetes',    60.0, '< 140 mg/dL at 2hr',   'Fast 8hrs, drink glucose solution'),
+                ('Insulin Level',          'INS001',   'Diabetes',    55.0, '2-25 uU/mL',           'Fast for 8 hours before test'),
+                ('Lipid Profile',          'LIP001',   'Cardiology',  50.0, 'LDL<100, HDL>40 mg/dL','Fast for 12 hours'),
+                ('Complete Blood Count',   'CBC001',   'Hematology',  35.0, 'WBC 4.5-11 x10^9/L',  'No fasting required'),
+                ('Kidney Function',        'KFT001',   'Nephrology',  40.0, '0.6-1.2 mg/dL',        'No fasting required'),
+                ('Liver Function',         'LFT001',   'Hepatology',  45.0, 'ALT 7-56 U/L',         'No fasting required'),
+                ('Thyroid (TSH)',           'TSH001',   'Endocrinology',50.0,'0.4-4.0 mIU/L',       'No fasting required'),
+                ('Urine Analysis',         'UA001',    'Urology',     20.0, 'Normal',               'Midstream clean catch urine'),
+                ('Microalbumin (Urine)',    'MALB001',  'Nephrology',  40.0, '< 30 mg/g',            'Random urine sample'),
+                ('C-Peptide',              'CPEP001',  'Diabetes',    65.0, '0.5-2.0 ng/mL',        'Fast for 8 hours before test'),
+            ]
+            for name, code, cat, cost, normal, prep in defaults:
+                if not TestType.query.filter_by(test_code=code).first():
+                    db.session.add(TestType(
+                        test_name=name, test_code=code, category=cat,
+                        cost=cost, normal_range=normal,
+                        preparation_instructions=prep
+                    ))
+            db.session.commit()
+            types = TestType.query.order_by(TestType.category, TestType.test_name).all()
+        return jsonify({'success': True, 'test_types': [t.to_dict() for t in types]}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 @doctor_bp.route('/lab-requests', methods=['GET'])
 @token_required
 def get_lab_requests(current_doctor):
@@ -1478,6 +1605,7 @@ def create_lab_request(current_doctor):
                     type='lab_order',
                     category='general',
                     is_read=False,
+                    link=f'/templates/lab/enter_lab_results.html?test_id={test_id}',
                     created_at=datetime.utcnow()
                 ))
             db.session.commit()

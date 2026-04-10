@@ -1,25 +1,46 @@
 /**
- * Notification System — reads real notifications from the database
- * API: GET /api/auth/notifications
+ * Notification System
  */
 
 function getToken() { return localStorage.getItem('token'); }
 
-async function initNotifications(role) {
+const ICON_MAP = {
+    'high_risk_alert': { icon: 'bi-exclamation-triangle-fill', color: '#dc2626' },
+    'prediction':      { icon: 'bi-graph-up-arrow',            color: '#059669' },
+    'vitals':          { icon: 'bi-heart-pulse-fill',          color: '#2563eb' },
+    'lab_result':      { icon: 'bi-flask-fill',                color: '#0891b2' },
+    'lab_order':       { icon: 'bi-clipboard2-pulse',          color: '#d97706' },
+    'prescription':    { icon: 'bi-capsule',                   color: '#7c3aed' },
+    'appointment':     { icon: 'bi-calendar-check-fill',       color: '#059669' },
+    'payment':         { icon: 'bi-credit-card-fill',          color: '#d97706' },
+    'info':            { icon: 'bi-info-circle-fill',          color: '#64748b' },
+};
+
+const NOTIF_URLS = {
+    'high_risk_alert': '/templates/patient/prediction_history.html',
+    'prediction':      '/templates/patient/prediction_history.html',
+    'vitals':          '/templates/doctor/lab_requests.html',
+    'lab_result':      '/templates/patient/lab_results.html',
+    'lab_order':       '/templates/lab/enter_lab_results.html',
+    'prescription':    '/templates/patient/prescriptions.html',
+    'appointment':     '/templates/patient/appointment.html',
+    'payment':         '/templates/payment/payment_history.html',
+};
+
+async function initNotifications() {
     const navRight = document.querySelector('.topbar-right');
     if (!navRight) return;
 
-    // Insert bell HTML first (with 0 badge)
     navRight.insertAdjacentHTML('afterbegin', `
         <div class="notif-wrapper" id="notifWrapper">
-            <button class="notif-bell" id="notifBell" onclick="toggleNotifDropdown()" aria-label="Notifications">
+            <button class="notif-bell" id="notifBell" aria-label="Notifications">
                 <i class="bi bi-bell-fill"></i>
                 <span class="notif-badge d-none" id="notifBadge">0</span>
             </button>
             <div class="notif-dropdown" id="notifDropdown">
                 <div class="notif-header">
                     <span>Notifications</span>
-                    <button class="notif-mark-all" onclick="markAllRead()">Mark all read</button>
+                    <button class="notif-mark-all" id="notifMarkAll">Mark all read</button>
                 </div>
                 <div class="notif-list" id="notifList">
                     <div class="notif-empty"><i class="bi bi-arrow-repeat"></i><p>Loading...</p></div>
@@ -29,7 +50,17 @@ async function initNotifications(role) {
         </div>
     `);
 
-    // Close dropdown on outside click
+    document.getElementById('notifBell').addEventListener('click', function (e) {
+        e.stopPropagation();
+        document.getElementById('notifDropdown').classList.toggle('open');
+    });
+
+    document.getElementById('notifMarkAll').addEventListener('click', function (e) {
+        e.stopPropagation();
+        markAllRead();
+    });
+
+    // Close on outside click
     document.addEventListener('click', function (e) {
         const wrapper = document.getElementById('notifWrapper');
         if (wrapper && !wrapper.contains(e.target)) {
@@ -38,10 +69,7 @@ async function initNotifications(role) {
         }
     });
 
-    // Load notifications from DB
     await loadNotifications();
-
-    // Poll every 30 seconds for new notifications
     setInterval(loadNotifications, 30000);
 }
 
@@ -51,16 +79,12 @@ async function loadNotifications() {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         const data = await res.json();
-
         if (!data.success) return;
-
         renderNotifications(data.notifications);
         updateBadge(data.unread_count);
-
         const footer = document.getElementById('notifFooter');
         if (footer) footer.textContent = data.notifications.length + ' notifications';
-
-    } catch { /* silent fail — don't break the page */ }
+    } catch (e) { console.warn('loadNotifications error:', e); }
 }
 
 function renderNotifications(notifications) {
@@ -72,54 +96,50 @@ function renderNotifications(notifications) {
         return;
     }
 
-    // Icon map by notification type
-    const iconMap = {
-        'high_risk_alert': { icon: 'bi-exclamation-triangle-fill', color: '#dc2626' },
-        'prediction':      { icon: 'bi-graph-up-arrow',            color: '#059669' },
-        'vitals':          { icon: 'bi-heart-pulse-fill',          color: '#2563eb' },
-        'lab_result':      { icon: 'bi-flask-fill',                color: '#0891b2' },
-        'lab_order':       { icon: 'bi-clipboard2-pulse',          color: '#d97706' },
-        'prescription':    { icon: 'bi-capsule',                   color: '#7c3aed' },
-        'appointment':     { icon: 'bi-calendar-check-fill',       color: '#059669' },
-        'payment':         { icon: 'bi-credit-card-fill',          color: '#d97706' },
-        'info':            { icon: 'bi-info-circle-fill',          color: '#64748b' },
-    };
-
-// URL map — where each notification type navigates to
-const NOTIF_URLS = {
-    'high_risk_alert': '/templates/patient/prediction_history.html',
-    'prediction':      '/templates/patient/prediction_history.html',
-    'vitals':          '/templates/nurse/record_vitals.html',
-    'lab_result':      '/templates/patient/lab_results.html',
-    'lab_order':       '/templates/lab/enter_lab_results.html',
-    'prescription':    '/templates/patient/prescriptions.html',
-    'appointment':     '/templates/patient/appointment.html',
-    'payment':         '/templates/payment/payment_history.html',
-};
-
-function getNotifUrl(type) {
-    return NOTIF_URLS[type] || null;
-}
-
     list.innerHTML = notifications.map(n => {
-        const cfg   = iconMap[n.type] || iconMap['info'];
-        const time  = n.created_at ? timeAgo(n.created_at) : '';
+        const cfg    = ICON_MAP[n.type] || ICON_MAP['info'];
+        const time   = n.created_at ? timeAgo(n.created_at) : '';
         const unread = !n.is_read;
-        const url   = getNotifUrl(n.type);
+        const url    = n.link || NOTIF_URLS[n.type] || '';
         return `
-            <div class="notif-item ${unread ? 'unread' : ''}" onclick="handleNotifClick(${n.id}, '${url || ''}')" style="cursor:pointer;">
+            <div class="notif-item ${unread ? 'unread' : ''}" id="notif-${n.id}">
                 <div class="notif-icon" style="background:${cfg.color}20;color:${cfg.color};">
                     <i class="bi ${cfg.icon}"></i>
                 </div>
-                <div class="notif-content">
+                <div class="notif-content" data-notif-id="${n.id}" data-url="${url.replace(/"/g,'&quot;')}">
                     <div class="notif-title">${escHtml(n.title)}</div>
                     <div class="notif-msg">${escHtml(n.message)}</div>
                     <div class="notif-time"><i class="bi bi-clock"></i> ${time}</div>
                 </div>
                 ${unread ? '<div class="notif-dot"></div>' : ''}
-            </div>
-        `;
+                <button class="notif-delete-btn" id="del-${n.id}" title="Delete">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>`;
     }).join('');
+
+    // Bind each delete button directly — most reliable approach
+    notifications.forEach(function(n) {
+        const delBtn = document.getElementById('del-' + n.id);
+        if (delBtn) {
+            delBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                doDelete(n.id);
+            });
+        }
+
+        // Row click for navigation (only on content area)
+        const content = list.querySelector('#notif-' + n.id + ' .notif-content');
+        if (content) {
+            const url = n.link || NOTIF_URLS[n.type] || '';
+            content.style.cursor = 'pointer';
+            content.addEventListener('click', function(e) {
+                e.stopPropagation();
+                markOneRead(n.id, url);
+            });
+        }
+    });
 }
 
 function updateBadge(count) {
@@ -133,28 +153,13 @@ function updateBadge(count) {
     }
 }
 
-function toggleNotifDropdown() {
-    const dd = document.getElementById('notifDropdown');
-    if (dd) dd.classList.toggle('open');
-}
-
-async function markOneRead(id) {
+async function markOneRead(id, url) {
     try {
         await fetch('/api/auth/notifications/' + id + '/read', {
             method: 'PUT',
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
-        await loadNotifications();
-    } catch { /* silent */ }
-}
-
-async function handleNotifClick(id, url) {
-    try {
-        await fetch('/api/auth/notifications/' + id + '/read', {
-            method: 'PUT',
-            headers: { 'Authorization': 'Bearer ' + getToken() }
-        });
-    } catch { /* silent */ }
+    } catch (e) { console.warn('markOneRead error:', e); }
     if (url) window.location.href = url;
     else await loadNotifications();
 }
@@ -166,10 +171,47 @@ async function markAllRead() {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         await loadNotifications();
-    } catch { /* silent */ }
+    } catch (e) { console.warn('markAllRead error:', e); }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+async function doDelete(id) {
+    // Remove from DOM immediately
+    const el = document.getElementById('notif-' + id);
+    if (el) {
+        const wasUnread = el.classList.contains('unread');
+        el.remove();
+
+        const list      = document.getElementById('notifList');
+        const remaining = list ? list.querySelectorAll('.notif-item').length : 0;
+        const footer    = document.getElementById('notifFooter');
+        if (footer) footer.textContent = remaining + ' notifications';
+
+        if (wasUnread) {
+            const badge = document.getElementById('notifBadge');
+            if (badge && !badge.classList.contains('d-none')) {
+                const next = Math.max(0, (parseInt(badge.textContent) || 0) - 1);
+                if (next > 0) {
+                    badge.textContent = next > 99 ? '99+' : next;
+                } else {
+                    badge.classList.add('d-none');
+                }
+            }
+        }
+
+        if (remaining === 0 && list) {
+            list.innerHTML = '<div class="notif-empty"><i class="bi bi-bell-slash"></i><p>No notifications yet</p></div>';
+        }
+    }
+
+    // Call API
+    try {
+        await fetch('/api/auth/notifications/' + id, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+    } catch (e) { console.warn('doDelete error:', e); }
+}
+
 function escHtml(str) {
     const d = document.createElement('div');
     d.textContent = str || '';
@@ -178,8 +220,8 @@ function escHtml(str) {
 
 function timeAgo(isoString) {
     const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-    if (diff < 60)   return diff + 's ago';
-    if (diff < 3600) return Math.floor(diff / 60) + ' min ago';
+    if (diff < 60)    return diff + 's ago';
+    if (diff < 3600)  return Math.floor(diff / 60) + ' min ago';
     if (diff < 86400) return Math.floor(diff / 3600) + ' hr ago';
     return Math.floor(diff / 86400) + ' day ago';
 }

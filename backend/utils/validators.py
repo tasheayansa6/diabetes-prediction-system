@@ -107,11 +107,11 @@ def validate_health_data(data: dict) -> Tuple[bool, str]:
     except (ValueError, TypeError):
         return False, "Age must be a valid number"
     
-    # Validate blood pressure (dataset range: 1–122 mm Hg)
+    # Validate blood pressure (diastolic, reasonable range)
     try:
         bp = float(data['blood_pressure'])
-        if bp < 1 or bp > 122:
-            return False, "Blood pressure must be between 1–122 mm Hg"
+        if bp < 1 or bp > 200:
+            return False, "Blood pressure must be between 1–200 mm Hg"
     except (ValueError, TypeError):
         return False, "Blood pressure must be a valid number"
     
@@ -133,12 +133,12 @@ def validate_health_data(data: dict) -> Tuple[bool, str]:
         except (ValueError, TypeError):
             return False, "Insulin must be a valid number"
     
-    # Validate diabetes pedigree function (dataset range: 0.078–2.42)
+    # Validate diabetes pedigree function
     if 'diabetes_pedigree' in data:
         try:
             dpf = float(data['diabetes_pedigree'])
-            if dpf < 0.078 or dpf > 2.42:
-                return False, "Diabetes pedigree function must be between 0.078–2.42"
+            if dpf < 0.001 or dpf > 3.0:
+                return False, "Diabetes pedigree function must be between 0.001–3.0"
         except (ValueError, TypeError):
             return False, "Diabetes pedigree function must be a valid number"
     

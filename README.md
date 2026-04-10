@@ -13,6 +13,7 @@ An intelligent healthcare platform for early diabetes detection and patient mana
 - [Running the Application](#running-the-application)
 - [API Documentation](#api-documentation)
 - [Testing](#testing)
+- [Security and Operations](#security-and-operations)
 - [Project Structure](#project-structure)
 - [Deployment](#deployment)
 - [Contributing](#contributing)
@@ -59,3 +60,12 @@ The Diabetes Prediction System is a comprehensive healthcare management platform
 - **python-dotenv** - Environment variables
 
 ## 🏗️ System Architecture
+
+## 🔐 Security and Operations
+
+- Security policy: `SECURITY.md`
+- Operations runbook: `docs/OPERATIONS_RUNBOOK.md`
+- Compliance checklist: `docs/COMPLIANCE_CHECKLIST.md`
+- Model governance: `docs/MODEL_GOVERNANCE.md`
+- Migration integrity check: `tools/check_migrations.py`
+- Backup/restore smoke check: `tools/backup_restore_smoke.py`

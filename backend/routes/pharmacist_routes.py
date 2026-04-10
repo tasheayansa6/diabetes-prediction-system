@@ -305,6 +305,7 @@ def verify_prescription(current_pharmacist, prescription_id):
                 type='prescription',
                 category='general',
                 is_read=False,
+                link='/templates/doctor/prescribe_medication.html',
                 created_at=datetime.utcnow()
             ))
             db.session.commit()
@@ -396,6 +397,7 @@ def dispense_medication(current_pharmacist, prescription_id):
                 type='prescription',
                 category='general',
                 is_read=False,
+                link='/templates/patient/prescriptions.html',
                 created_at=datetime.utcnow()
             ))
 
@@ -407,6 +409,7 @@ def dispense_medication(current_pharmacist, prescription_id):
                 type='prescription',
                 category='general',
                 is_read=False,
+                link='/templates/doctor/prescribe_medication.html',
                 created_at=datetime.utcnow()
             ))
 
@@ -700,6 +703,7 @@ def reject_prescription(current_pharmacist, prescription_id):
                 type='prescription',
                 category='general',
                 is_read=False,
+                link='/templates/doctor/prescribe_medication.html',
                 created_at=datetime.utcnow()
             ))
             db.session.add(Notification(
@@ -709,6 +713,7 @@ def reject_prescription(current_pharmacist, prescription_id):
                 type='prescription',
                 category='general',
                 is_read=False,
+                link='/templates/patient/prescriptions.html',
                 created_at=datetime.utcnow()
             ))
             db.session.commit()

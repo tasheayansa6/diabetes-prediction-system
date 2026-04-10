@@ -178,6 +178,42 @@ function initCharts(predictions) {
     }
 }
 
+function renderAppointmentDailyBlock(summary) {
+    const block = document.getElementById('appointmentDailyBlock');
+    const todayWrap = document.getElementById('todayApptList');
+    const yWrap = document.getElementById('yesterdayApptList');
+    const todayCount = document.getElementById('todayApptCount');
+    const yCount = document.getElementById('yesterdayApptCount');
+    if (!block || !todayWrap || !yWrap || !todayCount || !yCount || !summary) return;
+
+    const row = (a, isYesterday) => `
+        <div class="appt-mini-row">
+            <div class="appt-mini-main">
+                <strong>${esc(a.time || 'Time TBD')}</strong> with Dr. ${esc(a.doctor_name || 'Unknown')}
+                <span class="appt-mini-status">${esc(a.status || 'scheduled')}</span>
+            </div>
+            <div class="appt-mini-actions">
+                <a href="/templates/patient/appointment.html" class="btn btn-outline btn-sm">${isYesterday ? 'Reschedule' : 'View'}</a>
+            </div>
+        </div>
+    `;
+
+    const todayItems = summary.today || [];
+    const yItems = summary.yesterday || [];
+    todayCount.textContent = String(todayItems.length);
+    yCount.textContent = String(yItems.length);
+
+    todayWrap.innerHTML = todayItems.length
+        ? todayItems.map(a => row(a, false)).join('')
+        : '<div class="appt-mini-empty">No appointments for today.</div>';
+
+    yWrap.innerHTML = yItems.length
+        ? yItems.map(a => row(a, true)).join('')
+        : '<div class="appt-mini-empty">No appointments from yesterday.</div>';
+
+    block.style.display = '';
+}
+
 async function initDashboard() {
     const user = checkAuth('patient');
     if (!user) return;
@@ -188,11 +224,12 @@ async function initDashboard() {
     if (sb) sb.textContent = user.name || user.username;
     document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const [dashRes, predRes, rxRes, apptRes] = await Promise.all([
+    const [dashRes, predRes, rxRes, apptRes, dailyApptRes] = await Promise.all([
         apiFetch('/patient/dashboard'),
         apiFetch('/patient/predictions?limit=50'),
         apiFetch('/patient/prescriptions?limit=50'),
-        apiFetch('/patient/appointments?limit=50')
+        apiFetch('/patient/appointments?limit=50'),
+        apiFetch('/patient/appointments/daily-summary')
     ]);
 
     if (!dashRes.success) return;
@@ -209,6 +246,9 @@ async function initDashboard() {
     renderStats(dashRes.dashboard, predictions, prescriptions, appointments);
     renderRecentPredictions(predictions);
     initCharts(predictions);
+    if (dailyApptRes && dailyApptRes.success && dailyApptRes.summary) {
+        renderAppointmentDailyBlock(dailyApptRes.summary);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', initDashboard);

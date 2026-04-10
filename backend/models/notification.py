@@ -12,6 +12,7 @@ class Notification(db.Model):
     type = db.Column(db.String(40), default='info')   # info | success | warning | error
     category = db.Column(db.String(40), default='general')  # prediction | lab | prescription | payment | appointment
     is_read = db.Column(db.Boolean, default=False)
+    link = db.Column(db.String(255), nullable=True)   # target URL when clicked
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -22,5 +23,6 @@ class Notification(db.Model):
             'type': self.type,
             'category': self.category,
             'is_read': self.is_read,
+            'link': self.link,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }

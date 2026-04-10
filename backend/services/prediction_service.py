@@ -30,34 +30,14 @@ class PredictionService:
                         patient_id: Optional[int] = None,
                         health_record_id: Optional[int] = None) -> Dict[str, Any]:
         """
-        Predict diabetes risk for a patient
-        
-        Args:
-            patient_data: Patient health data
-            patient_id: Optional patient identifier
-            health_record_id: Optional health record identifier
-        
-        Returns:
-            Prediction results
+        Predict diabetes risk for a patient.
+        NOTE: Does NOT save to DB — the calling route handles persistence.
         """
-        # Get prediction from ML service
         result = self.ml_service.predict(patient_data)
         
         if result.get('success'):
-            # Add metadata
             result['timestamp'] = datetime.now().isoformat()
             result['patient_id'] = patient_id
-            
-            # Save to history
-            self.prediction_history.append(result)
-            
-            # Save to database if patient_id is provided
-            if patient_id:
-                prediction_record = self._save_to_database(
-                    result, patient_id, health_record_id
-                )
-                if prediction_record:
-                    result['prediction_id'] = prediction_record.id
         
         return result
     

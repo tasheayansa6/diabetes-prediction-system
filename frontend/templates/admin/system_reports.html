@@ -17,7 +17,7 @@
         ::-webkit-scrollbar-thumb { background:#334155; }
 
         /* ── Report type cards ── */
-        .report-cards { display:grid; grid-template-columns:repeat(5,1fr); gap:1rem; margin-bottom:1.75rem; }
+        .report-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.75rem; }
         .rpt-card {
             background:#1e293b; border:1px solid #334155; border-radius:16px;
             padding:1.25rem 1rem; cursor:pointer; transition:all 0.2s;
@@ -111,7 +111,7 @@
         /* ── Footer ── */
         .footer { background:#0a1120; border-top:1px solid #1e293b; }
 
-        @media(max-width:1100px){ .report-cards{grid-template-columns:repeat(3,1fr);} .metric-row{grid-template-columns:repeat(2,1fr);} }
+        @media(max-width:1100px){ .report-cards{grid-template-columns:repeat(2,1fr);} .metric-row{grid-template-columns:repeat(2,1fr);} }
         @media(max-width:768px){ .report-cards{grid-template-columns:repeat(2,1fr);} .chart-row{grid-template-columns:1fr;} }
     </style>
 </head>
@@ -169,11 +169,6 @@
                     <div class="rpt-icon" style="background:rgba(16,185,129,0.15);color:#34d399;"><i class="bi bi-graph-up-arrow"></i></div>
                     <div class="rpt-title">Predictions</div>
                     <div class="rpt-stat" id="statPredictions">Loading...</div>
-                </div>
-                <div class="rpt-card" style="--accent:#ef4444;" onclick="showReport('high_risk')" id="card_high_risk">
-                    <div class="rpt-icon" style="background:rgba(239,68,68,0.15);color:#f87171;"><i class="bi bi-exclamation-triangle-fill"></i></div>
-                    <div class="rpt-title">High Risk Patients</div>
-                    <div class="rpt-stat" id="statHighRisk">Loading...</div>
                 </div>
                 <div class="rpt-card" style="--accent:#f59e0b;" onclick="showReport('financial')" id="card_financial">
                     <div class="rpt-icon" style="background:rgba(245,158,11,0.15);color:#fbbf24;"><i class="bi bi-cash-stack"></i></div>
@@ -246,7 +241,6 @@
                         <option value="">Select type...</option>
                         <option value="user_activity">👥 User Activity</option>
                         <option value="predictions">🧠 Predictions</option>
-                        <option value="high_risk">🚨 High Risk Patients</option>
                         <option value="financial">💰 Financial</option>
                         <option value="security">🔒 Security</option>
                     </select>

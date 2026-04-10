@@ -125,6 +125,32 @@ function moveNeedle(pct) {
     setTimeout(() => { needle.style.left = Math.min(Math.max(pct, 0), 100) + '%'; }, 100);
 }
 
+function renderReview(review) {
+    const badge = document.getElementById('reviewStatusBadge');
+    const summary = document.getElementById('reviewSummary');
+    const meta = document.getElementById('reviewMeta');
+    if (!badge || !summary || !meta) return;
+
+    const st = (review && review.status) ? String(review.status) : 'pending_review';
+    const map = {
+        pending_review: { text: 'Pending Review', cls: 'pill-moderate' },
+        approved: { text: 'Approved by Doctor', cls: 'pill-low' },
+        rejected: { text: 'Rejected - Follow-up Needed', cls: 'pill-high' },
+        needs_followup: { text: 'Needs Follow-up', cls: 'pill-high' }
+    };
+    const cfg = map[st] || map.pending_review;
+    badge.className = 'risk-pill ' + cfg.cls;
+    badge.textContent = cfg.text;
+
+    summary.textContent = (review && review.summary) ? review.summary : 'Awaiting doctor review.';
+    if (review && review.doctor_name) {
+        const dt = review.reviewed_at ? new Date(review.reviewed_at).toLocaleString() : '';
+        meta.textContent = `Reviewed by Dr. ${review.doctor_name}${dt ? ' on ' + dt : ''}`;
+    } else {
+        meta.textContent = '';
+    }
+}
+
 async function loadResult() {
     const user = checkAuth('patient');
     if (!user) return;
@@ -194,6 +220,9 @@ async function loadResult() {
     // Recommendation
     const recEl = document.getElementById('recommendation');
     if (recEl) recEl.textContent = cfg.recommendation;
+
+    // Doctor review status/details
+    renderReview(p.review || null);
 
     // Model used
     const modelEl = document.getElementById('modelUsed');

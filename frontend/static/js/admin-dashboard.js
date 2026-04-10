@@ -276,6 +276,45 @@ async function checkDbHealth() {
 // ── Load active model info from registry ─────────────────────────────────────
 async function loadActiveModel() {
     try {
+        // Prefer runtime stats endpoint (includes active model + dataset counts + fallback state).
+        const statsRes = await fetch('/api/model/stats');
+        const stats = await statsRes.json();
+
+        const nameEl = document.getElementById('activeModelName');
+        const subEl  = document.getElementById('activeModelSub');
+        const mlNameEl = document.getElementById('mlModelName');
+
+        if (stats && stats.success && stats.active_model) {
+            const active = stats.active_model;
+            const ds = stats.dataset || {};
+            const total = ds.total_samples != null ? ds.total_samples : 'N/A';
+            const tr = ds.training_samples != null ? ds.training_samples : 'N/A';
+            const te = ds.test_samples != null ? ds.test_samples : 'N/A';
+            const algo = active.algorithm || 'Unknown';
+            const version = active.version || 'N/A';
+            const acc = active.accuracy != null ? `${active.accuracy}%` : 'N/A';
+
+            if (nameEl) nameEl.textContent = algo;
+            if (subEl) {
+                subEl.innerHTML = `${version} &nbsp;&middot;&nbsp; Accuracy: <strong>${acc}</strong><br>` +
+                                  `Dataset: <strong>${total}</strong> (train ${tr} / test ${te})`;
+            }
+            if (mlNameEl) mlNameEl.textContent = `${algo} (${version})`;
+
+            const mlStatus = document.getElementById('mlStatus');
+            if (mlStatus) {
+                if (active.status === 'fallback_active') {
+                    mlStatus.textContent = 'Fallback Active';
+                    mlStatus.className = 'badge badge-red';
+                } else {
+                    mlStatus.textContent = 'Active';
+                    mlStatus.className = 'badge badge-green';
+                }
+            }
+            return;
+        }
+
+        // Fallback to admin models endpoint if stats endpoint is unavailable.
         const res = await fetch('/api/admin/models', {
             headers: { 'Authorization': `Bearer ${token()}` }
         });
@@ -283,9 +322,6 @@ async function loadActiveModel() {
         if (!data.success) return;
         const active = data.models.find(m => m.status === 'active') || data.models[0];
         if (!active) return;
-        const nameEl = document.getElementById('activeModelName');
-        const subEl  = document.getElementById('activeModelSub');
-        const mlNameEl = document.getElementById('mlModelName');
         if (nameEl) nameEl.textContent = active.algorithm;
         if (subEl)  subEl.innerHTML = `${active.version} &nbsp;&middot;&nbsp; Accuracy: <strong>${active.accuracy}%</strong>`;
         if (mlNameEl) mlNameEl.textContent = active.algorithm + ' (' + active.version + ')';

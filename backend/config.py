@@ -82,8 +82,22 @@ class ProductionConfig(BaseConfig):
         secret = app.config.get('SECRET_KEY') or ''
         if secret in ['', 'dev-secret-key', 'your-secret-key-change-this-in-production']:
             raise RuntimeError('Unsafe SECRET_KEY for production. Set a strong SECRET_KEY in environment.')
-        if not app.config.get('SQLALCHEMY_DATABASE_URI'):
+
+        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI') or ''
+        if not db_uri:
             raise RuntimeError('DATABASE_URL is required in production.')
+
+        # If using sqlite in production-like environments (e.g. Render free tier),
+        # normalize to an absolute writable path and apply sqlite-safe engine options.
+        if db_uri.startswith('sqlite:///'):
+            sqlite_path = db_uri.replace('sqlite:///', '', 1)
+            db_file = Path(sqlite_path) if Path(sqlite_path).is_absolute() else (Path(app.root_path).parent / sqlite_path)
+            db_file.parent.mkdir(parents=True, exist_ok=True)
+            app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_file.as_posix()}"
+            app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+                'connect_args': {'check_same_thread': False, 'timeout': 30},
+                'pool_pre_ping': True,
+            }
 
 class PostgreSQLConfig(BaseConfig):
     """PostgreSQL-specific configuration for production"""

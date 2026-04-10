@@ -80,6 +80,13 @@ async function loadPrediction(patientId) {
     const submitBtn = document.getElementById('submitBtn');
     const blockMsg  = document.getElementById('prescribeBlockMsg');
 
+    const fmt = (v, suffix = '') => (v === null || v === undefined || v === '' ? 'N/A' : `${v}${suffix}`);
+    const toDate = (v) => v ? new Date(v).toLocaleString() : 'N/A';
+    const showPanel = () => {
+        panel.classList.remove('hidden');
+        panel.style.display = '';
+    };
+
     try {
         const res  = await fetch(`/api/doctor/patients/${patientId}/predictions?limit=1`, {
             headers: { 'Authorization': 'Bearer ' + token() }
@@ -87,6 +94,7 @@ async function loadPrediction(patientId) {
         const data = await res.json();
 
         if (!data.success || !data.predictions.length) {
+            panel.classList.add('hidden');
             panel.style.display = 'none';
             // No prediction — block prescription
             if (blockMsg) {
@@ -105,13 +113,48 @@ async function loadPrediction(patientId) {
         const isHighRisk = risk.includes('HIGH');
         const badgeColor = risk.includes('LOW') ? '#16a34a' : risk.includes('MODERATE') ? '#d97706' : '#dc2626';
 
+        // Pull full prediction details so doctor sees full patient values before prescribing/tests.
+        let detail = null;
+        try {
+            const dRes = await fetch(`/api/doctor/predictions/${pred.id}`, {
+                headers: { 'Authorization': 'Bearer ' + token() }
+            });
+            const dData = await dRes.json();
+            if (dData.success) detail = dData.prediction;
+        } catch (_) {}
+
+        const input = detail?.input_data || {};
+        const hr = detail?.health_record || {};
+        const glucose = input.glucose ?? input.Glucose ?? hr.glucose;
+        const insulin = input.insulin ?? input.Insulin;
+        const bmi = input.bmi ?? input.BMI ?? hr.bmi;
+        const bp = input.blood_pressure ?? input.BloodPressure ?? hr.blood_pressure;
+        const age = input.age ?? input.Age ?? hr.age;
+        const pregnancies = input.pregnancies ?? input.Pregnancies ?? hr.pregnancies;
+        const dpf = input.diabetes_pedigree_function ?? input.DiabetesPedigreeFunction;
+
         body.innerHTML = `
             <div class="space-y-1 text-sm" style="padding:.5rem;">
                 <div><strong>Risk Level:</strong> <span style="background:${badgeColor};color:#fff;padding:2px 10px;border-radius:99px;font-size:.75rem;font-weight:700;">${esc(pred.risk_level)}</span></div>
-                <div><strong>Probability:</strong> ${pred.probability_percent ? pred.probability_percent.toFixed(1) + '%' : 'N/A'}</div>
-                <div class="text-xs text-muted">Date: ${pred.created_at ? new Date(pred.created_at).toLocaleDateString() : 'N/A'}</div>
+                <div><strong>Probability:</strong> ${fmt(pred.probability_percent, '%')}</div>
+                <div><strong>Prediction:</strong> ${esc(detail?.prediction_result || (isHighRisk ? 'Diabetic (likely)' : 'Non-Diabetic / Lower risk'))}</div>
+                ${isHighRisk ? `
+                <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:8px;padding:.5rem .75rem;margin:.35rem 0;">
+                    <i class="bi bi-exclamation-triangle-fill"></i> HIGH RISK ALERT: Review labs/vitals before prescription.
+                </div>` : ''}
+                <div class="mt-2" style="border-top:1px solid #e5e7eb;padding-top:.5rem;">
+                    <div class="font-semibold mb-1">Patient Values Used</div>
+                    <div>Glucose: <strong>${fmt(glucose)}</strong></div>
+                    <div>Insulin: <strong>${fmt(insulin)}</strong></div>
+                    <div>BMI: <strong>${fmt(bmi)}</strong></div>
+                    <div>Blood Pressure: <strong>${fmt(bp)}</strong></div>
+                    <div>Age: <strong>${fmt(age)}</strong></div>
+                    <div>Pregnancies: <strong>${fmt(pregnancies)}</strong></div>
+                    <div>DPF: <strong>${fmt(dpf)}</strong></div>
+                </div>
+                <div class="text-xs text-muted mt-1">Date: ${toDate(pred.created_at)}</div>
             </div>`;
-        panel.style.display = '';
+        showPanel();
 
         // Block prescription for Low and Moderate risk
         if (!isHighRisk) {
@@ -135,6 +178,7 @@ async function loadPrediction(patientId) {
         }
 
     } catch (_) {
+        panel.classList.add('hidden');
         panel.style.display = 'none';
     }
 }

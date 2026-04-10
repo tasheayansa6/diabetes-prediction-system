@@ -1,4 +1,4 @@
-const API = '/api';
+const API = '/api/pharmacy';
 const authHeaders = () => ({ 'Authorization': 'Bearer ' + localStorage.getItem('token') });
 
 const statusBadge = s => {
@@ -10,7 +10,7 @@ async function loadPrescriptions(status = '') {
     const tbody = document.getElementById('prescriptionsTable');
     tbody.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
     try {
-        const url = status ? `${API}/pharmacist/prescriptions?status=${status}` : `${API}/pharmacist/prescriptions`;
+        const url = status ? `${API}/prescriptions?status=${status}` : `${API}/prescriptions`;
         const res = await fetch(url, { headers: authHeaders() });
         const data = await res.json();
         if (!data.success) throw new Error(data.message);

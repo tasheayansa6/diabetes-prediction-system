@@ -26,6 +26,8 @@ class BaseConfig:
     CHAPA_BASE_URL = 'https://api.chapa.co/v1'
     # Security hardening: public signup must not create admin accounts by default.
     ALLOW_ADMIN_SIGNUP = os.getenv('ALLOW_ADMIN_SIGNUP', 'False').lower() == 'true'
+    # Optional hard lock: only this email can login as admin.
+    ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', '').strip().lower()
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True

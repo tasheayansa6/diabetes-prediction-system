@@ -405,6 +405,14 @@ def login():
                 "success": False,
                 "message": f"Invalid role for this user. Expected {user.role}, got {requested_role}"
             }), 401
+
+        # Optional hard lock: restrict admin login to configured admin email only.
+        admin_email_lock = (current_app.config.get('ADMIN_EMAIL') or '').strip().lower()
+        if user.role == 'admin' and admin_email_lock and user.email.lower() != admin_email_lock:
+            return jsonify({
+                "success": False,
+                "message": "This admin account is not allowed to login on this system."
+            }), 403
         
         # Check if account is active
         if hasattr(user, 'is_active') and not user.is_active:

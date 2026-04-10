@@ -43,6 +43,19 @@ function loadTransaction() {
         document.getElementById('insuranceInstructions').style.display = 'block';
         showRefRow(t.referenceNumber);
     }
+
+    // Auto-continue flow for completed online payments (lab/consultation/medication/prediction).
+    if (!isPending) {
+        const target = t.returnTo ||
+            (t.serviceContext === 'prediction' ? '/templates/patient/health_data_form.html' :
+            t.serviceContext === 'lab' ? '/templates/patient/lab_results.html?paid=true' :
+            t.serviceContext === 'consultation' ? '/templates/patient/appointment.html?paid=true' :
+            t.serviceContext === 'medication' ? '/templates/patient/prescriptions.html?paid=true' : '');
+
+        if (target) {
+            setTimeout(() => { window.location.href = target; }, 1200);
+        }
+    }
 }
 
 function showRefRow(ref) {

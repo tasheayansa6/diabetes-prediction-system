@@ -42,6 +42,33 @@ function authHeaders() {
     };
 }
 
+function getServiceContext() {
+    const params = new URLSearchParams(window.location.search);
+    const fromQuery = (params.get('service') || '').toLowerCase();
+    if (['prediction', 'consultation', 'lab', 'medication'].includes(fromQuery)) return fromQuery;
+
+    const names = selectedServices.map(s => (s.name || '').toLowerCase());
+    if (names.some(n => n.includes('prediction'))) return 'prediction';
+    if (names.some(n => n.includes('consultation'))) return 'consultation';
+    if (names.some(n => n.includes('lab'))) return 'lab';
+    if (names.some(n => n.includes('medication'))) return 'medication';
+    return '';
+}
+
+function getReturnTarget() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('return') || '';
+}
+
+function nextPageAfterCompletedPayment(serviceContext, returnTo) {
+    if (returnTo) return returnTo;
+    if (serviceContext === 'prediction') return '/templates/patient/health_data_form.html';
+    if (serviceContext === 'lab') return '/templates/patient/lab_results.html?paid=true';
+    if (serviceContext === 'consultation') return '/templates/patient/appointment.html?paid=true';
+    if (serviceContext === 'medication') return '/templates/patient/prescriptions.html?paid=true';
+    return '/templates/payment/payment_success.html';
+}
+
 function updateTotal() {
     selectedServices = [];
     let subtotal = 0;
@@ -159,7 +186,9 @@ async function processPayment(event) {
     const subtotal = selectedServices.reduce((s, x) => s + x.price, 0);
     const tax = subtotal * 0.08;
 
-    const isPrediction = selectedServices.some(s => s.name.toLowerCase().includes('prediction'));
+    const serviceContext = getServiceContext();
+    const returnTo = getReturnTarget();
+    const isPrediction = serviceContext === 'prediction';
     const labRequestId = localStorage.getItem('lab_request_id');
 
     const payload = {
@@ -212,6 +241,8 @@ async function processPayment(event) {
             id: data.payment.payment_id,
             invoice_id: data.invoice.invoice_id,
             services: selectedServices,
+            serviceContext,
+            returnTo,
             paymentMethod: method,
             amount: data.payment.total_amount,
             currency: 'ETB',
@@ -220,11 +251,12 @@ async function processPayment(event) {
             referenceNumber: data.payment.is_pending ? data.payment.payment_id : null
         }));
 
-        const isPredictionPayment = data.payment.payment_type === 'prediction' ||
-            selectedServices.some(s => s.name.toLowerCase().includes('prediction'));
+        const isPredictionPayment = data.payment.payment_type === 'prediction' || serviceContext === 'prediction';
         if (isPredictionPayment) {
             localStorage.setItem('predictionPaid', 'true');
-            window.location.href = '/templates/patient/health_data_form.html';
+            window.location.href = nextPageAfterCompletedPayment(serviceContext, returnTo);
+        } else if (!data.payment.is_pending) {
+            window.location.href = nextPageAfterCompletedPayment(serviceContext, returnTo);
         } else {
             window.location.href = '/templates/payment/payment_success.html';
         }
@@ -341,19 +373,23 @@ function showPaypalRedirect() {
                 });
                 const data = await res.json();
                 if (!data.success) throw new Error(data.message);
+                const serviceContext = getServiceContext();
+                const returnTo = getReturnTarget();
                 localStorage.setItem('lastTransaction', JSON.stringify({
                     id: data.payment.payment_id, invoice_id: data.invoice.invoice_id,
                     services: selectedServices, paymentMethod: 'paypal',
+                    serviceContext, returnTo,
                     amount: data.payment.total_amount, currency: 'ETB',
                     date: new Date().toISOString().split('T')[0],
                     status: data.payment.is_pending ? 'pending' : 'success',
                     referenceNumber: data.payment.is_pending ? data.payment.payment_id : null
                 }));
-                const isPredictionPayment = data.payment.payment_type === 'prediction' ||
-                    selectedServices.some(s => s.name.toLowerCase().includes('prediction'));
+                const isPredictionPayment = data.payment.payment_type === 'prediction' || serviceContext === 'prediction';
                 if (isPredictionPayment) {
                     localStorage.setItem('predictionPaid', 'true');
-                    window.location.href = '/templates/patient/health_data_form.html';
+                    window.location.href = nextPageAfterCompletedPayment(serviceContext, returnTo);
+                } else if (!data.payment.is_pending) {
+                    window.location.href = nextPageAfterCompletedPayment(serviceContext, returnTo);
                 } else {
                     window.location.href = '/templates/payment/payment_success.html';
                 }

@@ -3,7 +3,7 @@ services:
     name: diabetes-prediction-system
     env: python
     plan: free
-    buildCommand: pip install -r requirements_production.txt
+    buildCommand: pip install -r requirements_render.txt
     startCommand: gunicorn run:app --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
     autoDeploy: true
     envVars:

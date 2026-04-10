@@ -1,4 +1,4 @@
-# Production runtime requirements (deploy-safe)
+# Render runtime requirements (lean production set)
 
 # Core web stack
 Flask==2.3.3

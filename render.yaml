@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: diabetes-prediction-system
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements_production.txt
+    startCommand: gunicorn run:app --workers 2 --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
+    autoDeploy: true
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: SESSION_COOKIE_SAMESITE
+        value: Lax
+      - key: DATABASE_URL
+        value: sqlite:///database/diabetes.db
+      - key: SECRET_KEY
+        generateValue: true
+

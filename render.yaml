@@ -16,7 +16,7 @@ services:
       - key: SESSION_COOKIE_SAMESITE
         value: Lax
       - key: DATABASE_URL
-        value: sqlite:///database/diabetes.db
+        value: sqlite:////tmp/diabetes.db
       - key: SECRET_KEY
         generateValue: true
 

@@ -43,6 +43,15 @@ def create_app(config_name="development"):
     bcrypt.init_app(app)
     mail.init_app(app)
 
+    # Render SQLite bootstrap: ensure tables exist on first boot.
+    # This avoids registration/login 500s when /tmp sqlite starts empty.
+    if str(app.config.get('SQLALCHEMY_DATABASE_URI', '')).startswith('sqlite:///'):
+        try:
+            with app.app_context():
+                db.create_all()
+        except Exception as e:
+            app.logger.warning(f"SQLite bootstrap skipped: {e}")
+
     # Configure logging
     configure_logging(app)
 

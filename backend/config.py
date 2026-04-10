@@ -24,6 +24,8 @@ class BaseConfig:
     CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY', '')
     CHAPA_PUBLIC_KEY = os.getenv('CHAPA_PUBLIC_KEY', '')
     CHAPA_BASE_URL = 'https://api.chapa.co/v1'
+    # Security hardening: public signup must not create admin accounts by default.
+    ALLOW_ADMIN_SIGNUP = os.getenv('ALLOW_ADMIN_SIGNUP', 'False').lower() == 'true'
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True

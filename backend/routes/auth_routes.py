@@ -155,6 +155,15 @@ def register():
         email = data.get("email", "").strip().lower()
         password = data.get("password")
         role = data.get("role", "patient").lower()
+
+        # Real-world hardening: never allow public self-registration for admin
+        # unless explicitly enabled by environment for one-time bootstrap.
+        allow_admin_signup = str(current_app.config.get('ALLOW_ADMIN_SIGNUP', False)).lower() == 'true'
+        if role == 'admin' and not allow_admin_signup:
+            return jsonify({
+                "success": False,
+                "message": "Admin accounts cannot be created from public registration."
+            }), 403
         
         # Validate username length
         if len(username) < 3:

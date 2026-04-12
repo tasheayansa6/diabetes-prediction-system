@@ -4,32 +4,32 @@
     "version": "v1.0.0",
     "algorithm": "Logistic Regression",
     "filename": "logistic_regression.pkl",
-    "accuracy": 77.1,
+    "accuracy": 78.04,
     "precision": 69.0,
     "recall": 75.0,
     "f1Score": 71.88,
-    "rocAuc": 86.53,
+    "rocAuc": 88.02,
     "trainingSamples": 1068,
     "features": 8,
-    "date": "2026-04-08",
-    "status": "active",
-    "notes": "Retrained on 1068 samples (Pima 768 + Frankfurt 300). Accuracy 77.10%, ROC-AUC 86.53%."
+    "date": "2026-04-10",
+    "status": "archived",
+    "notes": "Retrained on 1068 samples."
   },
   {
     "id": 2,
     "version": "v1.0.1",
     "algorithm": "Random Forest",
     "filename": "random_forest.pkl",
-    "accuracy": 78.04,
+    "accuracy": 88.32,
     "precision": 72.0,
     "recall": 70.0,
     "f1Score": 71.0,
-    "rocAuc": 88.64,
+    "rocAuc": 96.35,
     "trainingSamples": 1068,
     "features": 8,
-    "date": "2026-04-08",
+    "date": "2026-04-10",
     "status": "archived",
-    "notes": "Retrained on 1068 samples (Pima 768 + Frankfurt 300). Accuracy 78.04%, ROC-AUC 88.64%."
+    "notes": "Retrained on 1068 samples."
   },
   {
     "id": 3,
@@ -43,8 +43,8 @@
     "rocAuc": 97.26,
     "trainingSamples": 1068,
     "features": 8,
-    "date": "2026-04-08",
-    "status": "archived",
-    "notes": "Retrained on Pima (768) + Frankfurt (300) = 1068 samples. Accuracy 88.79%, ROC-AUC 97.26%. CV-5: 86.07%."
+    "date": "2026-04-10",
+    "status": "active",
+    "notes": "Best model. Retrained on Pima (768) + Frankfurt (300) = 1068 samples. Accuracy 88.79%, ROC-AUC 97.26%."
   }
 ]

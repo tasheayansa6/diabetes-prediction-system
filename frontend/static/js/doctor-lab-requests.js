@@ -141,38 +141,70 @@ async function loadTestTypes() {
         const d = await r.json();
         if (!d.success) throw new Error(d.message);
         allTests = d.test_types;
-        renderCheckboxes();
+        renderCheckboxes('');
     } catch (err) {
         grid.innerHTML = `<div style="grid-column:1/-1;color:#ef4444;padding:1rem;font-size:.82rem;">
             Error loading tests: ${esc(err.message)}</div>`;
     }
 }
 
-function renderCheckboxes() {
+function renderCheckboxes(filter) {
     const grid = document.getElementById('testGrid');
     if (!allTests.length) {
         grid.innerHTML = '<div style="grid-column:1/-1;color:#94a3b8;padding:1rem;text-align:center;">No test types found.</div>';
         return;
     }
+
+    const q = (filter || '').toLowerCase();
+    const filtered = q ? allTests.filter(t =>
+        t.test_name.toLowerCase().includes(q) ||
+        t.test_code.toLowerCase().includes(q) ||
+        (t.category || '').toLowerCase().includes(q)
+    ) : allTests;
+
+    if (!filtered.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;color:#94a3b8;padding:1rem;text-align:center;">No tests match your search.</div>';
+        return;
+    }
+
     // Group by category
     const groups = {};
-    allTests.forEach(t => { (groups[t.category] = groups[t.category]||[]).push(t); });
+    filtered.forEach(t => { (groups[t.category] = groups[t.category]||[]).push(t); });
+
+    const catIcons = {
+        'Diabetes': 'bi-droplet-fill',
+        'Cardiology': 'bi-heart-pulse-fill',
+        'Nephrology': 'bi-funnel-fill',
+        'Hematology': 'bi-activity',
+        'Hepatology': 'bi-shield-fill',
+        'Endocrinology': 'bi-thermometer-half',
+        'Electrolytes': 'bi-lightning-fill',
+        'Immunology': 'bi-shield-check',
+        'Urology': 'bi-droplet-half',
+    };
 
     let html = '';
     Object.entries(groups).forEach(([cat, tests]) => {
-        html += `<div class="cat-header"><i class="bi bi-tag-fill"></i> ${esc(cat)}</div>`;
+        const icon = catIcons[cat] || 'bi-flask-fill';
+        html += `<div class="cat-header"><i class="bi ${icon}"></i> ${cat}</div>`;
         tests.forEach(t => {
+            const isChecked = selectedIds.includes(t.id);
             html += `
-            <div class="test-item" id="ti-${t.id}" onclick="toggleTest(${t.id})">
-                <input type="checkbox" id="chk-${t.id}" onclick="event.stopPropagation();toggleTest(${t.id})">
+            <div class="test-item${isChecked ? ' active' : ''}" id="ti-${t.id}" onclick="toggleTest(${t.id})">
+                <input type="checkbox" id="chk-${t.id}" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation();toggleTest(${t.id})">
                 <div style="flex:1;min-width:0;">
                     <div class="ti-name">${esc(t.test_name)}</div>
                     <div class="ti-code">${esc(t.test_code)}</div>
+                    <div class="ti-cost">ETB ${(t.cost||0).toFixed(0)}</div>
                 </div>
             </div>`;
         });
     });
     grid.innerHTML = html;
+}
+
+function filterTests(q) {
+    renderCheckboxes(q);
 }
 
 function toggleTest(id) {
@@ -243,6 +275,9 @@ function openModal() {
     selectedIds = [];
     document.querySelectorAll('.test-item').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.test-item input').forEach(el => el.checked = false);
+    const search = document.getElementById('testSearch');
+    if (search) search.value = '';
+    renderCheckboxes('');
     updateDetail(); updateSummary();
     document.getElementById('modal_notes').value = '';
     document.getElementById('modalAlert').style.display = 'none';

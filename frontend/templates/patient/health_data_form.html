@@ -239,9 +239,6 @@
 
               <!-- Buttons at bottom -->
               <div class="flex justify-end gap-3 mt-5">
-                <button type="button" onclick="clearForm()" class="btn btn-outline">
-                  <i class="bi bi-arrow-counterclockwise"></i> Clear Manual Fields
-                </button>
                 <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
                   <i class="bi bi-calculator"></i> Get Prediction
                 </button>
@@ -254,7 +251,26 @@
     </main>
   </div>
 </div>
-<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System
+    </div>
+    <div class="footer-links">
+      <a href="/templates/patient/dashboard.html">Patient Portal</a>
+      <a href="/templates/doctor/dashboard.html">Doctor Portal</a>
+      <a href="/templates/admin/dashboard.html">Admin</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; 2026 Diabetes Prediction System. All rights reserved.</span>
+    <div class="footer-badges">
+      <span class="footer-badge"><i class="bi bi-shield-check"></i> HIPAA Compliant</span>
+      <span class="footer-badge"><i class="bi bi-lock-fill"></i> Secure</span>
+      <span class="footer-badge"><i class="bi bi-robot"></i> AI Powered</span>
+    </div>
+  </div>
+</footer>
 
 <!-- Processing overlay -->
 <div id="processingOverlay">

@@ -61,7 +61,17 @@ function getReturnTarget() {
 }
 
 function nextPageAfterCompletedPayment(serviceContext, returnTo) {
-    if (returnTo) return returnTo;
+    // Map short return keys to full paths
+    const returnMap = {
+        'health_form':  '/templates/patient/health_data_form.html',
+        'health-form':  '/templates/patient/health_data_form.html',
+        'prediction':   '/templates/patient/health_data_form.html',
+        'lab':          '/templates/patient/lab_results.html',
+        'appointment':  '/templates/patient/appointment.html',
+        'prescriptions':'/templates/patient/prescriptions.html',
+    };
+    const resolved = returnMap[returnTo] || (returnTo && returnTo.startsWith('/') ? returnTo : null);
+    if (resolved) return resolved;
     if (serviceContext === 'prediction') return '/templates/patient/health_data_form.html';
     if (serviceContext === 'lab') return '/templates/patient/lab_results.html?paid=true';
     if (serviceContext === 'consultation') return '/templates/patient/appointment.html?paid=true';

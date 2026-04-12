@@ -8,6 +8,111 @@
     <script src="../../static/vendor/js/tailwind.min.js"></script>
     <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
     <link href="../../static/css/app.css" rel="stylesheet">
+    <style>
+        /* ── Request card ── */
+        .req-card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1.5px solid #e2e8f0;
+            padding: 1.1rem 1.25rem;
+            margin-bottom: .85rem;
+            transition: box-shadow .15s, border-color .15s;
+            border-left: 4px solid #2563eb;
+        }
+        .req-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.08); border-color: #93c5fd; }
+        .req-card.urgent { border-left-color: #dc2626; }
+
+        .req-test-name {
+            font-size: 1rem; font-weight: 700; color: #1e293b;
+            display: flex; align-items: center; gap: .5rem;
+            margin-bottom: .4rem;
+        }
+        .req-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: .2rem .75rem;
+            font-size: .8rem; color: #374151;
+        }
+        .req-meta span { color: #6b7280; }
+
+        .priority-badge {
+            display: inline-flex; align-items: center; gap: .3rem;
+            padding: .2rem .7rem; border-radius: 99px;
+            font-size: .72rem; font-weight: 700;
+        }
+        .priority-normal { background: #fef9c3; color: #854d0e; }
+        .priority-urgent  { background: #fee2e2; color: #991b1b; }
+
+        /* ── Category icon colors ── */
+        .cat-glucose    { color: #2563eb; }
+        .cat-hba1c      { color: #7c3aed; }
+        .cat-insulin    { color: #059669; }
+        .cat-kidney     { color: #0891b2; }
+        .cat-lipid      { color: #d97706; }
+        .cat-liver      { color: #dc2626; }
+        .cat-urine      { color: #0284c7; }
+        .cat-thyroid    { color: #6d28d9; }
+        .cat-default    { color: #475569; }
+
+        /* ── Result form ── */
+        .result-form-card {
+            background: #fff; border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,.08);
+            overflow: hidden;
+        }
+        .result-form-header {
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            padding: 1.25rem 1.5rem;
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .result-form-body { padding: 1.5rem; }
+
+        .result-input-large {
+            font-size: 1.5rem !important;
+            font-weight: 700 !important;
+            text-align: center;
+            letter-spacing: .05em;
+            color: #1e293b !important;
+            background: #f0fdf4 !important;
+            border-color: #86efac !important;
+        }
+        .result-input-large:focus {
+            background: #fff !important;
+            border-color: #22c55e !important;
+            box-shadow: 0 0 0 3px rgba(34,197,94,.15) !important;
+        }
+
+        /* ── Normal range hint ── */
+        .range-hint {
+            background: #eff6ff; border: 1px solid #bfdbfe;
+            border-radius: 8px; padding: .5rem .85rem;
+            font-size: .8rem; color: #1d4ed8;
+            display: flex; align-items: center; gap: .4rem;
+        }
+
+        /* ── Empty state ── */
+        .empty-state {
+            text-align: center; padding: 3rem 1rem;
+            background: #fff; border-radius: 14px;
+            border: 2px dashed #e2e8f0;
+        }
+        .empty-state i { font-size: 3rem; color: #22c55e; display: block; margin-bottom: .75rem; }
+
+        /* ── Filter bar ── */
+        .filter-bar {
+            display: flex; gap: .6rem; margin-bottom: 1rem; flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: .35rem .85rem; border-radius: 99px;
+            border: 1.5px solid #e2e8f0; background: #fff;
+            font-size: .78rem; font-weight: 600; color: #475569;
+            cursor: pointer; transition: all .15s;
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background: #2563eb; color: #fff; border-color: #2563eb;
+        }
+        .filter-btn.urgent.active { background: #dc2626; border-color: #dc2626; }
+    </style>
 </head>
 <body>
 <div class="app-layout">
@@ -33,83 +138,148 @@
         <a class="nav-item" href="/templates/lab/lab_report.html"><i class="bi bi-file-earmark-text"></i> Lab Reports</a>
       </nav>
     </aside>
+
     <main class="main">
       <input type="hidden" id="hiddenTestId">
       <div id="formAlert" class="mb-4"></div>
 
-      <!-- PANEL A: Pending requests list (default view) -->
+      <!-- ── PANEL A: Pending requests list ── -->
       <div id="panelList">
-        <h2 class="page-title"><i class="bi bi-clipboard-data"></i> Lab Requests from Doctors</h2>
-        <p class="text-sm text-gray-500 mb-4">
-          These tests were ordered by doctors. Click <strong>Enter Result</strong> on any test to fill in the result — no selection needed.
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="page-title mb-0"><i class="bi bi-clipboard-data"></i> Doctor Lab Requests</h2>
+          <span id="pendingCount" class="badge" style="background:#2563eb;color:#fff;font-size:.8rem;padding:.35rem .85rem;border-radius:99px;"></span>
+        </div>
+        <p class="text-sm mb-4" style="color:#64748b;">
+          Tests ordered by doctors for diabetes diagnosis. Click <strong>Enter Result</strong> to fill in the value.
         </p>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <button class="filter-btn active" onclick="filterRequests('all', this)">All</button>
+          <button class="filter-btn urgent" onclick="filterRequests('urgent', this)">🔴 Urgent</button>
+          <button class="filter-btn" onclick="filterRequests('glucose', this)">🩸 Glucose</button>
+          <button class="filter-btn" onclick="filterRequests('hba1c', this)">📊 HbA1c</button>
+          <button class="filter-btn" onclick="filterRequests('insulin', this)">💉 Insulin</button>
+          <button class="filter-btn" onclick="filterRequests('kidney', this)">🫘 Kidney</button>
+          <button class="filter-btn" onclick="filterRequests('urine', this)">🧪 Urine</button>
+        </div>
+
         <div id="requestsList">
-          <div class="card" style="text-align:center;padding:2rem;color:#64748b;">
-            <i class="bi bi-hourglass-split" style="font-size:2rem;"></i>
-            <p class="mt-2">Loading doctor lab requests...</p>
+          <div class="empty-state">
+            <i class="bi bi-hourglass-split" style="color:#94a3b8;"></i>
+            <p style="color:#64748b;">Loading doctor lab requests...</p>
           </div>
         </div>
       </div>
 
-      <!-- PANEL B: Result entry form (shown after clicking Enter Result) -->
+      <!-- ── PANEL B: Result entry form ── -->
       <div id="panelForm" style="display:none;">
 
-        <!-- Test info banner -->
-        <div id="testBanner" style="background:#1e40af;color:#fff;border-radius:10px;
-             padding:1rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1rem;">
-          <i class="bi bi-flask-fill" style="font-size:2rem;flex-shrink:0;"></i>
-          <div style="flex:1;">
-            <div style="font-size:.7rem;opacity:.75;text-transform:uppercase;letter-spacing:.06em;">Test Ordered by Doctor</div>
-            <div id="bannerTestName" style="font-size:1.2rem;font-weight:700;"></div>
-            <div id="bannerTestMeta" style="font-size:.82rem;opacity:.85;margin-top:.2rem;"></div>
+        <div class="result-form-card">
+          <!-- Header banner -->
+          <div class="result-form-header">
+            <div style="width:52px;height:52px;background:rgba(255,255,255,.15);border-radius:14px;
+                        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="bi bi-flask-fill" style="font-size:1.6rem;color:#fff;"></i>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:.7rem;color:#93c5fd;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.2rem;">
+                Entering Result For
+              </div>
+              <div id="bannerTestName" style="font-size:1.25rem;font-weight:800;color:#fff;"></div>
+              <div id="bannerTestMeta" style="font-size:.82rem;color:#bfdbfe;margin-top:.2rem;"></div>
+            </div>
+            <button onclick="backToList()" class="btn btn-secondary" style="flex-shrink:0;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;">
+              <i class="bi bi-arrow-left"></i> Back
+            </button>
           </div>
-          <button onclick="backToList()" class="btn btn-secondary" style="flex-shrink:0;">
-            <i class="bi bi-arrow-left"></i> Back
-          </button>
-        </div>
 
-        <!-- Result form -->
-        <div class="card">
-          <div class="card-header"><h5><i class="bi bi-pencil-square"></i> Enter Result</h5></div>
-          <form id="labResultsForm" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="form-label">Test Date</label>
-                <input type="date" class="form-input" id="test_date">
-              </div>
-              <div>
-                <label class="form-label">Result Value <span class="text-red-500">*</span></label>
-                <input type="text" class="form-input" id="resultValue" required>
-              </div>
-              <div>
-                <label class="form-label">Unit</label>
-                <input type="text" class="form-input" id="unit">
-              </div>
-              <div>
-                <label class="form-label">Normal Range</label>
-                <input type="text" class="form-input" id="normalRange">
-              </div>
+          <!-- Normal range hint -->
+          <div id="rangeHintBox" style="display:none;padding:.75rem 1.5rem;border-bottom:1px solid #e2e8f0;">
+            <div class="range-hint">
+              <i class="bi bi-info-circle-fill"></i>
+              <span id="rangeHintText"></span>
             </div>
-            <div>
-              <label class="form-label">Remarks / Notes</label>
-              <textarea class="form-input" id="notes" rows="3" placeholder="Any additional observations..."></textarea>
-            </div>
-            <div class="flex justify-end gap-2">
-              <button type="button" onclick="backToList()" class="btn btn-secondary">
-                <i class="bi bi-x-circle"></i> Cancel
-              </button>
-              <button type="submit" class="btn btn-primary">
-                <i class="bi bi-check-circle"></i> Save Result
-              </button>
-            </div>
-          </form>
+          </div>
+
+          <!-- Form body -->
+          <div class="result-form-body">
+            <form id="labResultsForm">
+
+              <!-- Result value — large prominent input -->
+              <div style="margin-bottom:1.5rem;">
+                <label class="form-label" style="font-size:.9rem;font-weight:700;color:#1e293b;">
+                  Result Value <span style="color:#ef4444;">*</span>
+                </label>
+                <div style="position:relative;">
+                  <input type="text" class="form-input result-input-large" id="resultValue"
+                         placeholder="Enter result..." required
+                         style="padding-right:4rem;">
+                  <span id="unitSuffix" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);
+                        font-size:.9rem;font-weight:700;color:#64748b;pointer-events:none;"></span>
+                </div>
+              </div>
+
+              <!-- Secondary fields in 3 columns -->
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                <div>
+                  <label class="form-label">Unit</label>
+                  <input type="text" class="form-input" id="unit" placeholder="e.g. mg/dL">
+                </div>
+                <div>
+                  <label class="form-label">Normal Range</label>
+                  <input type="text" class="form-input" id="normalRange" placeholder="e.g. 70–99">
+                </div>
+                <div>
+                  <label class="form-label">Test Date</label>
+                  <input type="date" class="form-input" id="test_date">
+                </div>
+              </div>
+
+              <!-- Remarks -->
+              <div style="margin-bottom:1.5rem;">
+                <label class="form-label">Clinical Remarks <span style="color:#94a3b8;font-weight:400;font-size:.75rem;">(optional)</span></label>
+                <textarea class="form-input" id="notes" rows="2"
+                          placeholder="e.g. Sample was hemolyzed. Patient was fasting for 10 hours."></textarea>
+              </div>
+
+              <!-- Actions -->
+              <div style="display:flex;justify-content:flex-end;gap:.75rem;">
+                <button type="button" onclick="backToList()" class="btn btn-secondary">
+                  <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary btn-lg" id="saveBtn">
+                  <i class="bi bi-check-circle-fill"></i> Save & Notify Patient
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
 
     </main>
   </div>
 </div>
-<footer class="footer"><p><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System &copy; 2026</p></footer>
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System
+    </div>
+    <div class="footer-links">
+      <a href="/templates/patient/dashboard.html">Patient Portal</a>
+      <a href="/templates/doctor/dashboard.html">Doctor Portal</a>
+      <a href="/templates/admin/dashboard.html">Admin</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; 2026 Diabetes Prediction System. All rights reserved.</span>
+    <div class="footer-badges">
+      <span class="footer-badge"><i class="bi bi-shield-check"></i> HIPAA Compliant</span>
+      <span class="footer-badge"><i class="bi bi-lock-fill"></i> Secure</span>
+      <span class="footer-badge"><i class="bi bi-robot"></i> AI Powered</span>
+    </div>
+  </div>
+</footer>
 <script src="../../static/js/auth.js"></script>
 <script src="../../static/js/notifications.js"></script>
 <script src="../../static/js/lab-results.js"></script>

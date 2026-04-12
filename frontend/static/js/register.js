@@ -40,10 +40,13 @@ async function handleRegister(event) {
         if (res.ok && data.success) {
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
-            alert('Registration successful! Redirecting to your dashboard...');
-            window.location.href = DASHBOARDS[data.user.role] || '/login';
+            const box = document.getElementById('alertBox');
+            if (box) box.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> Registration successful! Redirecting...</div>';
+            setTimeout(() => { window.location.href = DASHBOARDS[data.user.role] || '/login'; }, 1000);
         } else {
-            alert(data.message || 'Registration failed');
+            const box = document.getElementById('alertBox');
+            if (box) box.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-circle-fill"></i> ${data.message || 'Registration failed'}</div>`;
+            else alert(data.message || 'Registration failed');
         }
 
     } catch (err) {

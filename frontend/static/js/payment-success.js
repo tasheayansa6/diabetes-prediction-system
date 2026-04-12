@@ -104,7 +104,15 @@ async function loadTransaction() {
 
     // Auto-continue flow for completed online payments (lab/consultation/medication/prediction).
     if (!isPending) {
-        const target = t.returnTo ||
+        const returnMap = {
+            'health_form':  '/templates/patient/health_data_form.html',
+            'health-form':  '/templates/patient/health_data_form.html',
+            'prediction':   '/templates/patient/health_data_form.html',
+        };
+        const rawReturn = t.returnTo || '';
+        const resolvedReturn = returnMap[rawReturn] || (rawReturn.startsWith('/') ? rawReturn : '');
+
+        const target = resolvedReturn ||
             (t.serviceContext === 'prediction' ? '/templates/patient/health_data_form.html' :
             t.serviceContext === 'lab' ? '/templates/patient/lab_results.html?paid=true' :
             t.serviceContext === 'consultation' ? '/templates/patient/appointment.html?paid=true' :

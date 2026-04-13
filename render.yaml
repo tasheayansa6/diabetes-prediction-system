@@ -3,7 +3,9 @@ services:
     name: diabetes-prediction-system
     env: python
     plan: free
-    buildCommand: pip install -r requirements_render.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      python clean_admin.py
     startCommand: gunicorn run:app --workers 1 --threads 2 --timeout 120 --bind 0.0.0.0:$PORT
     autoDeploy: true
     envVars:
@@ -19,4 +21,10 @@ services:
         value: sqlite:///instance/diabetes.db
       - key: SECRET_KEY
         generateValue: true
+      - key: ADMIN_BOOTSTRAP_EMAIL
+        value: admin@system.com
+      - key: ADMIN_BOOTSTRAP_PASSWORD
+        value: Admin@1234
+      - key: ADMIN_BOOTSTRAP_USERNAME
+        value: admin
 

@@ -37,9 +37,32 @@
     <main class="main">
       <div class="flex justify-between items-center mb-4">
         <h2 class="page-title mb-0"><i class="bi bi-people"></i> Manage Users</h2>
-        <button class="btn btn-primary" onclick="document.getElementById('addUserModal').style.display='flex'"><i class="bi bi-person-plus"></i> Add New User</button>
+        <div style="display:flex;gap:.5rem;">
+          <button class="btn btn-outline" onclick="exportData('users')" style="font-size:.82rem;">
+            <i class="bi bi-download"></i> Export CSV
+          </button>
+          <label class="btn btn-outline" style="font-size:.82rem;cursor:pointer;margin:0;">
+            <i class="bi bi-upload"></i> Import CSV
+            <input type="file" accept=".csv" style="display:none;" onchange="importUsers(this)">
+          </label>
+          <button class="btn btn-primary" onclick="document.getElementById('addUserModal').style.display='flex'"><i class="bi bi-person-plus"></i> Add New User</button>
+        </div>
       </div>
       <div class="card">
+        <!-- Search & Filter bar -->
+        <div style="display:flex;gap:.75rem;align-items:center;padding:1rem 1.25rem;border-bottom:1px solid #f0f4f8;flex-wrap:wrap;">
+          <input type="text" id="searchInput" class="form-input" style="flex:1;min-width:180px;" placeholder="Search by name or email..." oninput="applyFilter()">
+          <select id="roleFilter" class="form-input" style="width:auto;" onchange="applyFilter()">
+            <option value="">All Roles</option>
+            <option value="patient">Patient</option>
+            <option value="doctor">Doctor</option>
+            <option value="nurse">Nurse</option>
+            <option value="lab_technician">Lab Technician</option>
+            <option value="pharmacist">Pharmacist</option>
+            <option value="admin">Administrator</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="loadUsersWithFilter()" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+        </div>
         <div class="table-responsive">
           <table class="table">
             <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>

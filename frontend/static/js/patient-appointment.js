@@ -305,7 +305,11 @@ function apptCardHTML(a, canCancel) {
             <div class="appt-actions">
                 <span class="${statusClass}">${esc(statusLabel)}</span>
                 ${canCancel && a.status !== 'cancelled' && a.status !== 'completed'
-                    ? `<button onclick="openCancelModal(${a.id}, '${esc(doctorName)} — ${esc(a.appointment_date)}')"
+                    ? `<a href="/templates/payment/payment_page.html?service=consultation&return=appointment"
+                         style="background:#059669;color:#fff;border:none;border-radius:8px;padding:0.3rem 0.7rem;font-size:0.78rem;cursor:pointer;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+                         <i class="bi bi-credit-card"></i> Pay Fee
+                       </a>
+                       <button onclick="openCancelModal(${a.id}, '${esc(doctorName)} — ${esc(a.appointment_date)}')"
                          style="background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:8px;padding:0.3rem 0.7rem;font-size:0.78rem;cursor:pointer;font-weight:600;transition:all 0.2s;"
                          onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='none'">
                          <i class="bi bi-x-circle"></i> Cancel

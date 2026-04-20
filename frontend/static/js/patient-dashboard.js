@@ -68,18 +68,24 @@ function renderStats(dashboard, predictions, prescriptions, appointments) {
             : '';
 
         // Risk alert banner — only for HIGH RISK and VERY HIGH RISK
+        // Hide if patient already has a scheduled appointment (they took action)
         const banner = document.getElementById('riskAlertBanner');
         if (banner && (latest.risk_level === 'HIGH RISK' || latest.risk_level === 'VERY HIGH RISK')) {
-            const isVH = latest.risk_level === 'VERY HIGH RISK';
-            banner.style.display = '';
-            banner.innerHTML = `<div class="risk-alert ${isVH ? 'veryhigh' : 'high'}" style="margin-bottom:1.5rem;">
-                <i class="bi bi-exclamation-triangle-fill" style="font-size:1.5rem;color:${isVH ? '#7b1fa2' : '#c62828'};flex-shrink:0;"></i>
-                <div style="flex:1;">
-                    <div style="font-weight:700;color:${isVH ? '#4a148c' : '#b71c1c'};font-size:.95rem;">${isVH ? 'Very High Risk — See a Doctor Immediately' : 'High Risk — Please Book a Doctor Appointment'}</div>
-                    <div style="font-size:.82rem;color:${isVH ? '#6a1b9a' : '#c62828'};margin-top:.2rem;">Your latest prediction shows ${cfg.label}. ${isVH ? 'Immediate medical attention is required.' : 'Early action can prevent diabetes.'}</div>
-                </div>
-                <a href="/templates/patient/appointment.html" class="btn btn-sm" style="background:${isVH ? '#7b1fa2' : '#c62828'};color:#fff;border:none;white-space:nowrap;flex-shrink:0;">Book Now</a>
-            </div>`;
+            const hasScheduled = appointments.some(a => a.status === 'scheduled');
+            if (hasScheduled) {
+                banner.style.display = 'none';
+            } else {
+                const isVH = latest.risk_level === 'VERY HIGH RISK';
+                banner.style.display = '';
+                banner.innerHTML = `<div class="risk-alert ${isVH ? 'veryhigh' : 'high'}" style="margin-bottom:1.5rem;">
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size:1.5rem;color:${isVH ? '#7b1fa2' : '#c62828'};flex-shrink:0;"></i>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;color:${isVH ? '#4a148c' : '#b71c1c'};font-size:.95rem;">${isVH ? 'Very High Risk — See a Doctor Immediately' : 'High Risk — Please Book a Doctor Appointment'}</div>
+                        <div style="font-size:.82rem;color:${isVH ? '#6a1b9a' : '#c62828'};margin-top:.2rem;">Your latest prediction shows ${cfg.label}. ${isVH ? 'Immediate medical attention is required.' : 'Early action can prevent diabetes.'}</div>
+                    </div>
+                    <a href="/templates/patient/appointment.html" class="btn btn-sm" style="background:${isVH ? '#7b1fa2' : '#c62828'};color:#fff;border:none;white-space:nowrap;flex-shrink:0;">Book Now</a>
+                </div>`;
+            }
         }
 
         // Dynamic health tips

@@ -344,4 +344,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('navUserName').textContent = user.name || user.username;
     togglePaymentFields();
     preselectServices();
+
+    // Auto-fill billing address with username as default
+    const billingEl = document.getElementById('billingAddress');
+    if (billingEl && !billingEl.value) {
+        billingEl.value = (user.name || user.username || '') + ', Addis Ababa, Ethiopia';
+    }
 });

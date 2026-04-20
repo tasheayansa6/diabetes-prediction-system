@@ -118,8 +118,10 @@
 </div><!-- end app-layout -->
 
 <script src="../../static/js/auth.js"></script>
+<script src="../../static/js/notifications.js"></script>
 <script src="../../static/js/patient-report-download.js"></script>
 <script>
+if(typeof initNotifications==='function') initNotifications('patient');
 function downloadPDF() {
     document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
     window.print();

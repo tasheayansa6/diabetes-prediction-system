@@ -339,3 +339,110 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDashboard();
     loadActiveModel();
 });
+
+// ── System Health Monitor ─────────────────────────────────────────────────────
+async function loadSystemHealth() {
+    const el = document.getElementById('systemHealthWidget');
+    if (!el) return;
+    try {
+        const res  = await fetch('/api/admin/system/health', {
+            headers: { 'Authorization': 'Bearer ' + token() }
+        });
+        const data = await res.json();
+        if (!data.success) { el.innerHTML = '<span style="color:#dc2626;">Health check failed</span>'; return; }
+
+        const disk   = data.disk   || {};
+        const mem    = data.memory || {};
+        const cpu    = data.cpu    || {};
+        const db     = data.database || {};
+        const alerts = data.alerts || [];
+
+        const diskPct = disk.used_pct || 0;
+        const memPct  = mem.used_pct  || 0;
+        const cpuPct  = cpu.used_pct  || 0;
+
+        const bar = (pct, color) => `
+            <div style="background:#334155;border-radius:99px;height:6px;overflow:hidden;margin-top:3px;">
+                <div style="width:${Math.min(pct,100)}%;height:100%;background:${color};border-radius:99px;"></div>
+            </div>`;
+
+        const alertHtml = alerts.length
+            ? alerts.map(a => `<div style="background:#7f1d1d;color:#fca5a5;border-radius:6px;padding:4px 8px;font-size:.72rem;margin-top:4px;">⚠️ ${a.message}</div>`).join('')
+            : '<div style="color:#22c55e;font-size:.72rem;margin-top:4px;">✅ All systems normal</div>';
+
+        el.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;font-size:.78rem;">
+                <div>
+                    <div style="color:#94a3b8;margin-bottom:2px;">Disk</div>
+                    <div style="color:#e2e8f0;font-weight:700;">${diskPct}% used</div>
+                    ${bar(diskPct, diskPct > 85 ? '#ef4444' : '#22c55e')}
+                    <div style="color:#64748b;font-size:.7rem;">${disk.free_gb || '?'} GB free</div>
+                </div>
+                <div>
+                    <div style="color:#94a3b8;margin-bottom:2px;">Memory</div>
+                    <div style="color:#e2e8f0;font-weight:700;">${memPct ? memPct + '% used' : 'N/A'}</div>
+                    ${memPct ? bar(memPct, memPct > 85 ? '#ef4444' : '#3b82f6') : ''}
+                    <div style="color:#64748b;font-size:.7rem;">${mem.free_gb ? mem.free_gb + ' GB free' : 'Install psutil'}</div>
+                </div>
+                <div>
+                    <div style="color:#94a3b8;margin-bottom:2px;">Database</div>
+                    <div style="color:#e2e8f0;font-weight:700;">${db.size_mb || 0} MB</div>
+                    <div style="color:#64748b;font-size:.7rem;">${(db.records || {}).users || 0} users · ${(db.records || {}).predictions || 0} predictions</div>
+                </div>
+                <div>
+                    <div style="color:#94a3b8;margin-bottom:2px;">CPU</div>
+                    <div style="color:#e2e8f0;font-weight:700;">${cpuPct ? cpuPct + '%' : 'N/A'}</div>
+                    ${cpuPct ? bar(cpuPct, cpuPct > 85 ? '#ef4444' : '#f59e0b') : ''}
+                    <div style="color:#64748b;font-size:.7rem;">${cpuPct ? 'Current load' : 'Install psutil'}</div>
+                </div>
+            </div>
+            ${alertHtml}`;
+    } catch (e) {
+        el.innerHTML = '<span style="color:#64748b;font-size:.78rem;">Health data unavailable</span>';
+    }
+}
+
+// ── System Health Monitoring ──────────────────────────────────────────────────
+async function loadSystemHealth() {
+    try {
+        const res  = await fetch('/api/admin/system/health', {
+            headers: { 'Authorization': 'Bearer ' + token() }
+        });
+        const data = await res.json();
+        if (!data.success) return;
+
+        // DB status
+        const dbStatus = document.getElementById('dbStatus');
+        const dbDot    = document.getElementById('dbDot');
+        if (dbStatus) {
+            const sizeMb = data.database?.size_mb || 0;
+            dbStatus.textContent = `Connected · ${sizeMb} MB`;
+            dbStatus.className   = sizeMb > 500 ? 'badge badge-yellow' : 'badge badge-green';
+        }
+        if (dbDot) dbDot.className = 'status-dot online';
+
+        // Disk space
+        if (data.disk) {
+            const pct = data.disk.used_pct;
+            const diskEl = document.getElementById('diskStatus');
+            if (diskEl) {
+                diskEl.textContent = `${data.disk.used_gb}GB / ${data.disk.total_gb}GB (${pct}%)`;
+                diskEl.className   = pct > 85 ? 'badge badge-red' : pct > 70 ? 'badge badge-yellow' : 'badge badge-green';
+            }
+        }
+
+        // Alerts
+        if (data.alerts && data.alerts.length) {
+            const alertsEl = document.getElementById('healthAlerts');
+            if (alertsEl) {
+                alertsEl.innerHTML = data.alerts.map(a =>
+                    `<div style="background:#7f1d1d;color:#fca5a5;padding:.5rem .85rem;border-radius:8px;font-size:.78rem;margin-bottom:.4rem;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>${a.message}
+                    </div>`
+                ).join('');
+                alertsEl.style.display = '';
+            }
+        }
+
+    } catch (_) {}
+}

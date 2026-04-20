@@ -10,20 +10,23 @@ class BaseConfig:
     REMEMBER_COOKIE_HTTPONLY = True
     PREFERRED_URL_SCHEME = os.getenv('PREFERRED_URL_SCHEME', 'https')
     # Flask-Mail
-    MAIL_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = int(os.getenv('SMTP_PORT', 587))
+    MAIL_SERVER = os.getenv('SMTP_SERVER', os.getenv('MAIL_SERVER', 'smtp.gmail.com'))
+    MAIL_PORT = int(os.getenv('SMTP_PORT', os.getenv('MAIL_PORT', 587)))
     MAIL_USE_TLS = True
-    MAIL_USERNAME = os.getenv('SMTP_USERNAME')
-    MAIL_PASSWORD = os.getenv('SMTP_PASSWORD')
-    MAIL_DEFAULT_SENDER = os.getenv('SMTP_USERNAME')
-    MAIL_SUPPRESS_SEND = os.getenv('MAIL_SUPPRESS_SEND', 'False').lower() == 'true'
+    MAIL_USERNAME = os.getenv('SMTP_USERNAME', os.getenv('MAIL_USERNAME'))
+    MAIL_PASSWORD = os.getenv('SMTP_PASSWORD', os.getenv('MAIL_PASSWORD'))
+    MAIL_DEFAULT_SENDER = os.getenv('SMTP_USERNAME', os.getenv('MAIL_USERNAME'))
+    MAIL_SUPPRESS_SEND = os.getenv('MAIL_SUPPRESS_SEND', 'True').lower() == 'true'
     # Password reset token expiry (seconds)
     RESET_TOKEN_EXPIRY = 3600  # 1 hour
     OTP_EXPIRY = 900           # 15 minutes
     # Chapa Payment Gateway
     CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY', '')
     CHAPA_PUBLIC_KEY = os.getenv('CHAPA_PUBLIC_KEY', '')
-    CHAPA_BASE_URL = 'https://api.chapa.co/v1'
+    CHAPA_WEBHOOK_SECRET = os.getenv('CHAPA_WEBHOOK_SECRET', '')
+    CHAPA_BASE_URL = os.getenv('CHAPA_BASE_URL', 'https://api.chapa.co/v1')
+    CHAPA_CALLBACK_URL = os.getenv('CHAPA_CALLBACK_URL', 'http://localhost:5000/api/payments/chapa/verify')
+    CHAPA_RETURN_URL = os.getenv('CHAPA_RETURN_URL', 'http://localhost:5000/templates/payment/payment_success.html')
     # Security hardening: public signup must not create admin accounts by default.
     ALLOW_ADMIN_SIGNUP = os.getenv('ALLOW_ADMIN_SIGNUP', 'False').lower() == 'true'
     # Optional hard lock: only this email can login as admin.
@@ -31,9 +34,10 @@ class BaseConfig:
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
+    _db_path = Path(__file__).parent.parent / 'database' / 'diabetes.db'
     SQLALCHEMY_DATABASE_URI = os.getenv(
         'DATABASE_URL',
-        'sqlite:///C:/Users/tashe/diabetes-prediction-system/database/diabetes.db'
+        f'sqlite:///{_db_path.as_posix()}'
     )
     SQLALCHEMY_ENGINE_OPTIONS = {
         'connect_args': {'timeout': 30, 'check_same_thread': False},

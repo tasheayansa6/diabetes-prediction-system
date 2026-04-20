@@ -9,6 +9,7 @@ from backend.extensions import db
 from backend.models.user import User
 from sqlalchemy import text
 from backend.utils.role_accounts import create_polymorphic_user
+from backend.middleware.rate_limiter import rate_limit
 import re
 from datetime import datetime, timedelta
 import jwt
@@ -17,8 +18,33 @@ from functools import wraps
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 # Token blacklist for logout functionality
-# In production, use Redis or database instead of in-memory set
-token_blacklist = set()
+# Store in database for persistence across restarts
+def _is_token_blacklisted(token):
+    """Check if token is blacklisted in database"""
+    try:
+        from backend.models.audit_log import AuditLog
+        exists = AuditLog.query.filter_by(
+            action='token_blacklist',
+            description=token[:100]
+        ).first()
+        return exists is not None
+    except Exception:
+        return False
+
+def _blacklist_token(token):
+    """Add token to blacklist in database"""
+    try:
+        from backend.models.audit_log import AuditLog
+        log = AuditLog(
+            action='token_blacklist',
+            description=token[:100],
+            status='success',
+            created_at=datetime.utcnow()
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception:
+        pass
 
 def token_required(f):
     """
@@ -41,7 +67,7 @@ def token_required(f):
                 token = token[7:]
             
             # Check if token is blacklisted (logged out)
-            if token in token_blacklist:
+            if _is_token_blacklisted(token):
                 return jsonify({
                     "success": False,
                     "message": "Token has been invalidated. Please login again."
@@ -116,6 +142,7 @@ def validate_password(password):
 
 
 @auth_bp.route("/register", methods=["POST"])
+@rate_limit(max_requests=5, window_seconds=60)  # Max 5 registrations per minute per IP
 def register():
     """
     Register a new user with role-based creation
@@ -259,7 +286,11 @@ def register():
         }), 500
 
 
+from backend.middleware.rate_limiter import rate_limit
+
+
 @auth_bp.route("/login", methods=["POST"])
+@rate_limit(max_requests=10, window_seconds=60)  # Max 10 login attempts per minute per IP
 def login():
     """
     Login user and return JWT token
@@ -305,6 +336,16 @@ def login():
                 "success": False,
                 "message": "Invalid email or password"
             }), 401
+
+        # ── Email verification check ──────────────────────────────────────────
+        require_verification = str(current_app.config.get('REQUIRE_EMAIL_VERIFICATION', 'false')).lower() == 'true'
+        if require_verification and hasattr(user, 'email_verified') and not user.email_verified:
+            return jsonify({
+                "success": False,
+                "message": "Please verify your email before logging in. Check your inbox for the verification code.",
+                "requires_verification": True,
+                "email": email
+            }), 403
         
         # Optional: Validate role if provided
         if requested_role and user.role != requested_role:
@@ -339,6 +380,26 @@ def login():
         from backend.utils.logger import log_security_event
         log_security_event('login', user_id=user.id, username=user.username,
                            ip_address=request.remote_addr, status='success')
+
+        # Send login notification email for admin accounts (security alert)
+        if user.role == 'admin':
+            try:
+                from backend.services.notification_service import _send
+                ip = request.remote_addr
+                time_str = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+                html = f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px;">
+                    <h2 style="color:#1e3a8a;">New Admin Login Detected</h2>
+                    <p>Hello <strong>{user.username}</strong>,</p>
+                    <p>A new login to your admin account was detected:</p>
+                    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+                        <tr><td style="padding:8px;background:#f8fafc;font-weight:600;">Time</td><td style="padding:8px;">{time_str}</td></tr>
+                        <tr><td style="padding:8px;background:#f8fafc;font-weight:600;">IP Address</td><td style="padding:8px;">{ip}</td></tr>
+                    </table>
+                    <p style="color:#dc2626;">If this was not you, change your password immediately.</p>
+                </div>"""
+                _send("Admin Login Alert — Diabetes Prediction System", user.email, html)
+            except Exception:
+                pass
         
         # Generate JWT token
         token = jwt.encode({
@@ -544,6 +605,17 @@ def reset_password():
         return jsonify({"success": False, "message": "Error resetting password", "error": str(e)}), 500
 
 
+@auth_bp.route('/logout', methods=['POST'])
+def logout():
+    """POST /api/auth/logout — blacklist the token in DB"""
+    token = request.headers.get('Authorization', '')
+    if token.startswith('Bearer '):
+        token = token[7:]
+    if token:
+        _blacklist_token(token)
+    return jsonify({'success': True, 'message': 'Logged out successfully'}), 200
+
+
 # ============ SHARED NOTIFICATIONS (all roles) ============
 
 def _get_user_id_from_token():
@@ -565,13 +637,23 @@ def get_notifications():
         return jsonify({'success': False, 'message': 'Invalid token'}), 401
     try:
         from backend.models.notification import Notification
+        limit  = request.args.get('limit', 20, type=int)
+        offset = request.args.get('offset', 0, type=int)
         notifs = Notification.query.filter_by(user_id=user_id)\
-            .order_by(Notification.created_at.desc()).limit(50).all()
+            .order_by(Notification.created_at.desc())\
+            .offset(offset).limit(limit).all()
         unread = Notification.query.filter_by(user_id=user_id, is_read=False).count()
+        total  = Notification.query.filter_by(user_id=user_id).count()
         return jsonify({
             'success': True,
             'notifications': [n.to_dict() for n in notifs],
-            'unread_count': unread
+            'unread_count': unread,
+            'pagination': {
+                'total': total,
+                'limit': limit,
+                'offset': offset,
+                'has_more': (offset + limit) < total
+            }
         }), 200
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500

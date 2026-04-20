@@ -25,9 +25,10 @@ async function loadReport() {
     }
 
     try {
-        const res = await fetch(`${API}/patient/predictions/${id}`, {
+        const res = await fetch(API + '/patient/predictions/' + id, {
             headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
         });
+        if (res.status === 401) { logout(); return; }
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
 

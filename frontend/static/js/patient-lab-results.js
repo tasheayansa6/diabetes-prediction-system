@@ -77,10 +77,15 @@ function renderResults(list) {
                 </div>
             </div>
             ${hasResult && r.results ? `<div class="result-value">${esc(r.results)}<div style="font-size:.65rem;color:#90a4ae;font-weight:400;">${esc(r.unit||'')}</div></div>` : ''}
-            <div>
+            <div style="display:flex;flex-direction:column;gap:.4rem;">
                 <button class="btn btn-sm btn-primary" onclick="viewResult(${r.id})">
                     <i class="bi bi-eye"></i> Details
                 </button>
+                ${r.status === 'pending' ? `
+                <a href="/templates/payment/payment_page.html?service=lab&lab_request_id=${r.id}&lab_cost=${r.cost||75}&lab_name=${encodeURIComponent(r.test_name)}&return=lab"
+                   class="btn btn-sm btn-success" style="white-space:nowrap;">
+                    <i class="bi bi-credit-card"></i> Pay Now
+                </a>` : ''}
             </div>
         </div>`;
     }).join('');

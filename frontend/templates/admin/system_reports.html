@@ -220,6 +220,59 @@
                 </div>
             </div>
 
+            <!-- Audit Log Viewer -->
+            <div class="gen-card" style="margin-top:1.5rem;">
+                <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+                    <span><i class="bi bi-shield-lock-fill"></i> Audit Log Viewer</span>
+                    <div style="display:flex;gap:.5rem;">
+                        <button class="btn btn-sm btn-outline" onclick="exportReport('audit-logs')" style="color:#94a3b8;border-color:#334155;font-size:.75rem;">
+                            <i class="bi bi-download"></i> Export CSV
+                        </button>
+                        <button class="btn btn-sm btn-outline" onclick="loadAuditLogs()" style="color:#94a3b8;border-color:#334155;">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <!-- Filters -->
+                <div style="padding:.75rem 1rem;border-bottom:1px solid #334155;display:flex;gap:.75rem;flex-wrap:wrap;">
+                    <input type="text" id="auditSearch" placeholder="Search user or action..."
+                           style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:.4rem .75rem;font-size:.8rem;width:200px;"
+                           oninput="loadAuditLogs()">
+                    <select id="auditAction" onchange="loadAuditLogs()"
+                            style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:.4rem .75rem;font-size:.8rem;">
+                        <option value="">All Actions</option>
+                        <option value="login">Login</option>
+                        <option value="logout">Logout</option>
+                        <option value="register">Register</option>
+                        <option value="failed_login">Failed Login</option>
+                        <option value="token_blacklist">Token Blacklist</option>
+                    </select>
+                    <select id="auditStatus" onchange="loadAuditLogs()"
+                            style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:.4rem .75rem;font-size:.8rem;">
+                        <option value="">All Status</option>
+                        <option value="success">Success</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="rpt-tbl">
+                        <thead>
+                            <tr><th>Time</th><th>User</th><th>Role</th><th>Action</th><th>IP Address</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="auditLogBody">
+                            <tr><td colspan="6" style="text-align:center;color:#475569;padding:2rem;">Loading audit logs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="padding:.75rem 1rem;border-top:1px solid #334155;display:flex;justify-content:space-between;align-items:center;">
+                    <span id="auditPagInfo" style="font-size:.78rem;color:#64748b;"></span>
+                    <div style="display:flex;gap:.5rem;">
+                        <button id="auditPrevBtn" onclick="auditPage(-1)" class="btn btn-sm btn-outline" style="color:#94a3b8;border-color:#334155;" disabled>← Prev</button>
+                        <button id="auditNextBtn" onclick="auditPage(1)"  class="btn btn-sm btn-outline" style="color:#94a3b8;border-color:#334155;">Next →</button>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 

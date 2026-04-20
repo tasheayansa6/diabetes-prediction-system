@@ -120,6 +120,9 @@ async function loadPatients() {
                         <a href="/templates/doctor/prescribe_medication.html?patient_id=${p.id}" class="btn btn-sm btn-success" style="margin-left:4px;">
                             <i class="bi bi-capsule"></i> Prescribe
                         </a>
+                        <a href="/templates/doctor/lab_requests.html?patient_id=${p.id}" class="btn btn-sm btn-outline" style="margin-left:4px;">
+                            <i class="bi bi-flask"></i> Lab Test
+                        </a>
                         <button class="btn btn-sm btn-outline quick-approve-btn" data-patient-id="${p.id}" style="margin-left:4px;">
                             <i class="bi bi-check2-circle"></i> Approve ML
                         </button>

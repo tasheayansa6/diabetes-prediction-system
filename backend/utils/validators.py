@@ -70,6 +70,28 @@ def validate_health_data(data: dict) -> Tuple[bool, str]:
                 return False, "Pregnancies must be between 0 and 17 (enter 0 if male)"
         except (ValueError, TypeError):
             return False, "Pregnancies must be a valid integer"
+
+    # ── Cross-field validation ────────────────────────────────────────────────
+    try:
+        age = int(data.get('age', 0))
+        pregnancies = int(data.get('pregnancies', 0))
+        glucose = float(data.get('glucose', 0))
+        bmi = float(data.get('bmi', 0))
+
+        # Age vs pregnancies: can't have 10 pregnancies at age 15
+        if pregnancies > 0 and age < 10:
+            return False, "Age and pregnancies combination is not realistic"
+
+        # Glucose vs age: very high glucose in very young patients is unusual
+        if glucose > 250 and age < 10:
+            return False, "Glucose value seems unrealistic for this age"
+
+        # BMI vs age: extreme BMI in young patients
+        if bmi > 60 and age < 15:
+            return False, "BMI value seems unrealistic for this age"
+
+    except (ValueError, TypeError):
+        pass  # Skip cross-validation if values can't be parsed
     
     # Validate glucose (dataset range: 1–199 mg/dL)
     try:

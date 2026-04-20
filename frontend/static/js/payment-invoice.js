@@ -36,7 +36,8 @@ async function loadInvoice() {
     }
 
     try {
-        const res  = await fetch(`/api/payments/invoice/${invoiceId}`, { headers: authHeaders() });
+        const res  = await fetch('/api/payments/invoice/' + invoiceId, { headers: authHeaders() });
+        if (res.status === 401) { logout(); return; }
         const data = await res.json();
         if (!data.success) throw new Error(data.message || 'Invoice not found');
 

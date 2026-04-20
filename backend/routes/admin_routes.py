@@ -238,21 +238,48 @@ def get_roles(current_admin):
 @admin_bp.route('/audit-logs', methods=['GET'])
 @admin_token_required
 def get_audit_logs(current_admin):
-    """Get audit logs"""
+    """Get audit logs with search, filter, and pagination"""
     try:
         from sqlalchemy import text
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 20, type=int)
-        offset = (page - 1) * per_page
+        limit  = request.args.get('limit', 20, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        search = request.args.get('search', '')
+        action = request.args.get('action', '')
+        status = request.args.get('status', '')
+
+        where = "WHERE action != 'token_blacklist'"
+        params = {'limit': limit, 'offset': offset}
+
+        if search:
+            where += " AND (username LIKE :search OR action LIKE :search)"
+            params['search'] = f'%{search}%'
+        if action:
+            where += " AND action = :action"
+            params['action'] = action
+        if status:
+            where += " AND status = :status"
+            params['status'] = status
+
         rows = db.session.execute(text(
-            'SELECT id, username, user_role, action, resource, status, created_at '
-            'FROM audit_logs ORDER BY created_at DESC LIMIT :limit OFFSET :offset'
-        ), {'limit': per_page, 'offset': offset}).fetchall()
-        total = db.session.execute(text('SELECT COUNT(*) FROM audit_logs')).scalar() or 0
-        logs = [{'id': r[0], 'username': r[1], 'role': r[2], 'action': r[3],
-                 'resource': r[4], 'status': r[5], 'created_at': str(r[6])} for r in rows]
-        return jsonify({'success': True, 'audit_logs': logs,
-                        'pagination': {'page': page, 'per_page': per_page, 'total': total}}), 200
+            f'SELECT id, username, user_role, action, resource, status, ip_address, created_at '
+            f'FROM audit_logs {where} ORDER BY created_at DESC LIMIT :limit OFFSET :offset'
+        ), params).fetchall()
+
+        total = db.session.execute(text(
+            f'SELECT COUNT(*) FROM audit_logs {where}'
+        ), {k: v for k, v in params.items() if k not in ('limit', 'offset')}).scalar() or 0
+
+        logs = [{
+            'id': r[0], 'username': r[1] or '—', 'user_role': r[2] or '—',
+            'action': r[3], 'resource': r[4], 'status': r[5] or 'success',
+            'ip_address': r[6] or '—', 'created_at': str(r[7])
+        } for r in rows]
+
+        return jsonify({
+            'success': True,
+            'audit_logs': logs,
+            'pagination': {'total': total, 'limit': limit, 'offset': offset}
+        }), 200
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -836,25 +863,77 @@ def get_reports_summary(current_admin):
 
 
 @admin_bp.route('/system/health', methods=['GET'])
-def system_health():
-    """Public endpoint for system health check"""
+@admin_token_required
+def system_health(current_admin):
+    """Admin system health monitoring — CPU, memory, disk, DB stats"""
     try:
-        # Fix: Use text() for raw SQL in SQLAlchemy 2.0
+        import os, shutil
         from sqlalchemy import text
+
+        # DB connectivity
         db.session.execute(text('SELECT 1')).fetchone()
-        
+
+        # DB file size
+        db_path = None
+        db_uri = str(db.engine.url)
+        if 'sqlite' in db_uri:
+            db_path = db_uri.replace('sqlite:///', '').replace('sqlite:////', '/')
+        db_size_mb = round(os.path.getsize(db_path) / 1024 / 1024, 2) if db_path and os.path.exists(db_path) else 0
+
+        # Disk space
+        total, used, free = shutil.disk_usage('.')
+        disk = {
+            'total_gb': round(total / 1024**3, 1),
+            'used_gb':  round(used  / 1024**3, 1),
+            'free_gb':  round(free  / 1024**3, 1),
+            'used_pct': round(used / total * 100, 1)
+        }
+
+        # Memory & CPU (optional — psutil)
+        memory = cpu = None
+        try:
+            import psutil
+            mem = psutil.virtual_memory()
+            memory = {
+                'total_gb':  round(mem.total   / 1024**3, 1),
+                'used_gb':   round(mem.used    / 1024**3, 1),
+                'free_gb':   round(mem.available / 1024**3, 1),
+                'used_pct':  mem.percent
+            }
+            cpu = {'used_pct': psutil.cpu_percent(interval=0.1)}
+        except ImportError:
+            pass
+
+        # DB record counts
+        counts = {}
+        for tbl in ['users', 'predictions', 'payments', 'notifications', 'audit_logs']:
+            try:
+                counts[tbl] = db.session.execute(text(f'SELECT COUNT(*) FROM {tbl}')).scalar()
+            except Exception:
+                counts[tbl] = 0
+
+        # Alerts
+        alerts = []
+        if disk['used_pct'] > 85:
+            alerts.append({'level': 'warning', 'message': f'Disk usage high: {disk["used_pct"]}%'})
+        if db_size_mb > 500:
+            alerts.append({'level': 'warning', 'message': f'Database size: {db_size_mb} MB'})
+        if memory and memory['used_pct'] > 85:
+            alerts.append({'level': 'warning', 'message': f'Memory usage high: {memory["used_pct"]}%'})
+
         return jsonify({
-            "success": True,
-            "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat()
+            'success': True,
+            'status': 'healthy',
+            'timestamp': datetime.utcnow().isoformat(),
+            'database': {'status': 'connected', 'size_mb': db_size_mb, 'records': counts},
+            'disk': disk,
+            'memory': memory,
+            'cpu': cpu,
+            'alerts': alerts
         }), 200
-        
+
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "status": "unhealthy",
-            "error": str(e)
-        }), 500
+        return jsonify({'success': False, 'status': 'unhealthy', 'error': str(e)}), 500
 
 
 # ============ ADMIN SYSTEM REPORTS ============
@@ -1112,3 +1191,154 @@ def generate_system_report(current_admin):
             "message": "Error generating system report",
             "error": str(e)
         }), 500
+
+
+# ============ DATA EXPORT ============
+
+@admin_bp.route('/export/<string:resource>', methods=['GET'])
+@admin_token_required
+def export_csv(current_admin, resource):
+    """
+    GET /api/admin/export/<resource>?format=csv
+    Export users, predictions, or payments as CSV.
+    """
+    import csv, io
+    from flask import Response
+    from sqlalchemy import text
+
+    try:
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        if resource == 'users':
+            writer.writerow(['ID', 'Username', 'Email', 'Role', 'Active', 'Created At', 'Last Login'])
+            users = User.query.order_by(User.created_at.desc()).all()
+            for u in users:
+                writer.writerow([
+                    u.id, u.username, u.email, u.role,
+                    getattr(u, 'is_active', True),
+                    u.created_at.strftime('%Y-%m-%d %H:%M') if u.created_at else '',
+                    u.last_login.strftime('%Y-%m-%d %H:%M') if getattr(u, 'last_login', None) else ''
+                ])
+            filename = 'users_export.csv'
+
+        elif resource == 'predictions':
+            writer.writerow(['ID', 'Patient ID', 'Risk Level', 'Probability %',
+                             'Glucose', 'BMI', 'Age', 'Model Version', 'Created At'])
+            preds = Prediction.query.order_by(Prediction.created_at.desc()).all()
+            for p in preds:
+                inp = p.input_data or {}
+                writer.writerow([
+                    p.id, p.patient_id, p.risk_level,
+                    round(p.probability_percent, 2) if p.probability_percent else '',
+                    inp.get('glucose', ''), inp.get('bmi', ''), inp.get('age', ''),
+                    p.model_version or '',
+                    p.created_at.strftime('%Y-%m-%d %H:%M') if p.created_at else ''
+                ])
+            filename = 'predictions_export.csv'
+
+        elif resource == 'payments':
+            from backend.models.payment import Payment
+            writer.writerow(['Payment ID', 'Patient ID', 'Amount (ETB)', 'Type',
+                             'Method', 'Status', 'Date'])
+            payments = Payment.query.order_by(Payment.created_at.desc()).all()
+            for p in payments:
+                writer.writerow([
+                    p.payment_id, p.patient_id,
+                    round(float(p.total_amount), 2) if p.total_amount else 0,
+                    p.payment_type or '', p.payment_method or '',
+                    p.payment_status or '',
+                    p.created_at.strftime('%Y-%m-%d %H:%M') if p.created_at else ''
+                ])
+            filename = 'payments_export.csv'
+
+        elif resource == 'audit-logs':
+            writer.writerow(['ID', 'Username', 'Role', 'Action', 'Resource',
+                             'Status', 'IP Address', 'Created At'])
+            rows = db.session.execute(text(
+                "SELECT id, username, user_role, action, resource, status, ip_address, created_at "
+                "FROM audit_logs WHERE action != 'token_blacklist' ORDER BY created_at DESC LIMIT 5000"
+            )).fetchall()
+            for r in rows:
+                writer.writerow([r[0], r[1] or '', r[2] or '', r[3] or '',
+                                  r[4] or '', r[5] or '', r[6] or '', str(r[7])])
+            filename = 'audit_logs_export.csv'
+
+        else:
+            return jsonify({'success': False, 'message': f'Unknown resource: {resource}'}), 400
+
+        output.seek(0)
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/import/users', methods=['POST'])
+@admin_token_required
+def import_users(current_admin):
+    """
+    POST /api/admin/import/users
+    Import users from CSV. Expected columns: username,email,password,role
+    """
+    import csv, io
+    from werkzeug.security import generate_password_hash
+
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'No file provided'}), 400
+
+    file = request.files['file']
+    if not file.filename.endswith('.csv'):
+        return jsonify({'success': False, 'message': 'Only CSV files accepted'}), 400
+
+    try:
+        content = file.read().decode('utf-8')
+        reader  = csv.DictReader(io.StringIO(content))
+
+        created = 0
+        skipped = 0
+        errors  = []
+
+        for i, row in enumerate(reader, 1):
+            try:
+                username = (row.get('username') or '').strip()
+                email    = (row.get('email')    or '').strip().lower()
+                password = (row.get('password') or '').strip()
+                role     = (row.get('role')     or 'patient').strip().lower()
+
+                if not username or not email or not password:
+                    errors.append(f"Row {i}: missing username/email/password")
+                    continue
+
+                if User.query.filter((User.email == email) | (User.username == username)).first():
+                    skipped += 1
+                    continue
+
+                data = {'username': username, 'email': email}
+                user = create_polymorphic_user(data, generate_password_hash(password), role)
+                if user:
+                    db.session.add(user)
+                    created += 1
+                else:
+                    errors.append(f"Row {i}: invalid role '{role}'")
+
+            except Exception as e:
+                errors.append(f"Row {i}: {str(e)}")
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'created': created,
+            'skipped': skipped,
+            'errors': errors,
+            'message': f"Import complete: {created} created, {skipped} skipped, {len(errors)} errors"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500

@@ -196,7 +196,39 @@ class MLService:
 
             if loaded_model_path is None:
                 logger.error(f"Failed to load any model artifact: {load_error}")
-                return False
+                # Auto-retrain as last resort
+                try:
+                    import subprocess, sys
+                    retrain_script = self.model_dir.parent.parent / 'retrain_all.py'
+                    if retrain_script.exists():
+                        logger.warning("Attempting auto-retrain due to version mismatch...")
+                        result = subprocess.run(
+                            [sys.executable, str(retrain_script)],
+                            capture_output=True, timeout=180, cwd=str(self.model_dir.parent.parent)
+                        )
+                        if result.returncode == 0:
+                            # Retry loading after retrain
+                            for candidate in model_candidates:
+                                try:
+                                    with warnings.catch_warnings():
+                                        warnings.simplefilter("ignore")
+                                        _model  = joblib.load(candidate)
+                                        _scaler = joblib.load(scaler_path)
+                                    self.model  = _model
+                                    self.scaler = _scaler
+                                    loaded_model_path = candidate
+                                    logger.info(f"Auto-retrain succeeded! Loaded: {candidate.name}")
+                                    break
+                                except Exception:
+                                    continue
+                        if loaded_model_path is None:
+                            logger.error("Auto-retrain did not fix the issue.")
+                            return False
+                    else:
+                        return False
+                except Exception as retrain_err:
+                    logger.error(f"Auto-retrain failed: {retrain_err}")
+                    return False
 
             self.active_model_file = loaded_model_path.name
             # Keep active model metadata aligned with the actual loaded file.
@@ -344,6 +376,37 @@ class MLService:
                 'model_algorithm': (self.active_model_entry or {}).get('algorithm', type(self.model).__name__),
                 'model_file': self.active_model_file
             }
+
+            # ── Feature importance (no SHAP needed — use model's built-in) ──
+            try:
+                importance_scores = None
+                if hasattr(self.model, 'feature_importances_'):
+                    # Tree-based: GradientBoosting, RandomForest
+                    importance_scores = self.model.feature_importances_
+                elif hasattr(self.model, 'coef_'):
+                    # Linear: LogisticRegression
+                    importance_scores = np.abs(self.model.coef_[0])
+
+                if importance_scores is not None:
+                    total = importance_scores.sum()
+                    if total > 0:
+                        importance_scores = importance_scores / total
+                    feature_importance = [
+                        {
+                            'feature': name,
+                            'importance': round(float(score) * 100, 1),
+                            'value': round(float(val), 2),
+                            'label': self._feature_label(name)
+                        }
+                        for name, score, val in zip(
+                            self.feature_names, importance_scores, feature_values
+                        )
+                    ]
+                    # Sort by importance descending
+                    feature_importance.sort(key=lambda x: x['importance'], reverse=True)
+                    result['feature_importance'] = feature_importance
+            except Exception:
+                pass
             
             # Add warning if features were missing
             if missing_features:
@@ -359,6 +422,20 @@ class MLService:
                 'error_type': type(e).__name__,
                 'error_code': 'PREDICTION_FAILED'
             }
+
+    def _feature_label(self, feature_name: str) -> str:
+        """Human-readable label for each feature"""
+        labels = {
+            'Pregnancies':              'Pregnancies',
+            'Glucose':                  'Blood Glucose',
+            'BloodPressure':            'Blood Pressure',
+            'SkinThickness':            'Skin Thickness',
+            'Insulin':                  'Insulin Level',
+            'BMI':                      'BMI',
+            'DiabetesPedigreeFunction': 'Family History (DPF)',
+            'Age':                      'Age',
+        }
+        return labels.get(feature_name, feature_name)
 
     def _get_probability(self, feature_scaled: np.ndarray, prediction: Any) -> float:
         """

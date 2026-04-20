@@ -1792,3 +1792,137 @@ def cancel_lab_request(current_doctor, request_id):
             "message": "Error cancelling lab request",
             "error": str(e)
         }), 500
+
+
+# ============ DOCTOR AVAILABILITY SETTINGS ============
+
+@doctor_bp.route('/availability', methods=['GET'])
+@token_required
+def get_availability(current_doctor):
+    """Get doctor's availability settings"""
+    try:
+        doctor = Doctor.query.get(current_doctor['id'])
+        if not doctor:
+            return jsonify({'success': False, 'message': 'Doctor not found'}), 404
+        return jsonify({
+            'success': True,
+            'availability': {
+                'available_days': doctor.available_days or 'Mon-Fri',
+                'available_hours': doctor.available_hours or '08:00-17:00',
+                'consultation_fee': doctor.consultation_fee or 0
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@doctor_bp.route('/availability', methods=['PUT'])
+@token_required
+def update_availability(current_doctor):
+    """Update doctor's availability settings"""
+    try:
+        doctor = Doctor.query.get(current_doctor['id'])
+        if not doctor:
+            return jsonify({'success': False, 'message': 'Doctor not found'}), 404
+
+        data = request.get_json() or {}
+        if 'available_days' in data:
+            doctor.available_days = data['available_days']
+        if 'available_hours' in data:
+            doctor.available_hours = data['available_hours']
+        if 'consultation_fee' in data:
+            doctor.consultation_fee = float(data['consultation_fee'])
+
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': 'Availability updated successfully',
+            'availability': {
+                'available_days': doctor.available_days,
+                'available_hours': doctor.available_hours,
+                'consultation_fee': doctor.consultation_fee
+            }
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ============ PRESCRIPTION REFILL APPROVALS ============
+
+@doctor_bp.route('/prescriptions/refills', methods=['GET'])
+@token_required
+def get_refill_requests(current_doctor):
+    """GET /api/doctor/prescriptions/refills — list pending refill requests"""
+    try:
+        refills = Prescription.query.filter(
+            Prescription.doctor_id == current_doctor['id'],
+            Prescription.status == 'pending',
+            Prescription.notes.like('REFILL REQUEST%')
+        ).order_by(Prescription.created_at.desc()).all()
+
+        result = []
+        for rx in refills:
+            patient = Patient.query.get(rx.patient_id)
+            result.append({
+                'id': rx.id,
+                'prescription_id': rx.prescription_id,
+                'medication': rx.medication,
+                'dosage': rx.dosage,
+                'patient_name': patient.username if patient else '—',
+                'patient_id': rx.patient_id,
+                'notes': rx.notes,
+                'created_at': rx.created_at.isoformat() if rx.created_at else None
+            })
+
+        return jsonify({'success': True, 'refills': result, 'count': len(result)}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@doctor_bp.route('/prescriptions/<int:prescription_id>/approve-refill', methods=['POST'])
+@token_required
+def approve_refill(current_doctor, prescription_id):
+    """POST /api/doctor/prescriptions/<id>/approve-refill — approve or reject refill"""
+    try:
+        rx = Prescription.query.filter_by(
+            id=prescription_id,
+            doctor_id=current_doctor['id']
+        ).first()
+
+        if not rx:
+            return jsonify({'success': False, 'message': 'Prescription not found'}), 404
+
+        data   = request.get_json() or {}
+        action = data.get('action', 'approve')  # approve or reject
+
+        if action == 'approve':
+            rx.status = 'pending'  # ready for pharmacist
+            rx.notes  = rx.notes + f" | Approved by Dr. {current_doctor['username']}"
+            msg_patient = f"Your refill request for {rx.medication} has been approved by Dr. {current_doctor['username']}. Please visit the pharmacy."
+        else:
+            rx.status = 'rejected'
+            rx.notes  = rx.notes + f" | Rejected by Dr. {current_doctor['username']}: {data.get('reason', '')}"
+            msg_patient = f"Your refill request for {rx.medication} was not approved. Please book an appointment."
+
+        rx.updated_at = datetime.utcnow()
+        db.session.flush()
+
+        # Notify patient
+        from backend.models.notification import Notification
+        db.session.add(Notification(
+            user_id=rx.patient_id,
+            title=f'Refill {"Approved" if action == "approve" else "Rejected"}',
+            message=msg_patient,
+            type='prescription',
+            category='general',
+            is_read=False,
+            link='/templates/patient/prescriptions.html',
+            created_at=datetime.utcnow()
+        ))
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': f'Refill {action}d successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500

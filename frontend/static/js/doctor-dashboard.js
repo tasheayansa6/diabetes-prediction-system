@@ -216,3 +216,44 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDashboard();
     initCharts();
 });
+
+// ── Doctor Availability ───────────────────────────────────────────────────────
+async function loadAvailability() {
+    try {
+        const res  = await fetch('/api/doctor/availability', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await res.json();
+        if (!data.success) return;
+        const a = data.availability;
+        const daysEl  = document.getElementById('availDays');
+        const hoursEl = document.getElementById('availHours');
+        const feeEl   = document.getElementById('consultFee');
+        if (daysEl  && a.available_days)  daysEl.value  = a.available_days;
+        if (hoursEl && a.available_hours) hoursEl.value = a.available_hours;
+        if (feeEl   && a.consultation_fee) feeEl.value  = a.consultation_fee;
+    } catch (_) {}
+}
+
+async function saveAvailability() {
+    const days  = document.getElementById('availDays')?.value;
+    const hours = document.getElementById('availHours')?.value;
+    const fee   = parseFloat(document.getElementById('consultFee')?.value) || 0;
+    try {
+        const res  = await fetch('/api/doctor/availability', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+            body: JSON.stringify({ available_days: days, available_hours: hours, consultation_fee: fee })
+        });
+        const data = await res.json();
+        const msg  = document.getElementById('availSaveMsg');
+        if (msg) {
+            msg.style.display = data.success ? '' : 'none';
+            msg.style.color   = data.success ? '#059669' : '#dc2626';
+            msg.innerHTML     = data.success
+                ? '<i class="bi bi-check-circle-fill"></i> Saved successfully'
+                : '<i class="bi bi-x-circle-fill"></i> ' + (data.message || 'Save failed');
+            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+        }
+    } catch (_) {}
+}

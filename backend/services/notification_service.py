@@ -9,6 +9,15 @@ from backend.extensions import mail
 def _send(subject, recipient, html_body):
     """Send an email. Returns (success, error_message)."""
     try:
+        from flask import current_app
+        # If suppressed, log what would be sent
+        if current_app.config.get('MAIL_SUPPRESS_SEND', True):
+            current_app.logger.info(
+                f"[EMAIL SUPPRESSED] To: {recipient} | Subject: {subject} "
+                f"| Set MAIL_SUPPRESS_SEND=False in .env to send real emails"
+            )
+            return True, None
+
         msg = Message(
             subject=subject,
             recipients=[recipient],
@@ -169,3 +178,50 @@ def send_payment_confirmation(recipient_email, recipient_name, amount, payment_i
     """
     html = _base_template("Payment Confirmed", "✅", "#059669,#10b981", content)
     return _send("Payment Confirmation – Diabetes Prediction System", recipient_email, html)
+
+
+def send_sms(recipient_phone: str, message: str) -> tuple:
+    """
+    Send SMS notification.
+    Requires AFRICASTALKING_API_KEY and AFRICASTALKING_USERNAME in .env
+    Or TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
+    Falls back to logging if not configured.
+    """
+    try:
+        from flask import current_app
+        import os
+
+        # Try Africa's Talking
+        at_key  = os.getenv('AFRICASTALKING_API_KEY', '')
+        at_user = os.getenv('AFRICASTALKING_USERNAME', '')
+        if at_key and at_user and 'your-' not in at_key:
+            import africastalking
+            africastalking.initialize(at_user, at_key)
+            sms = africastalking.SMS
+            response = sms.send(message, [recipient_phone])
+            return True, None
+
+        # Try Twilio
+        tw_sid  = os.getenv('TWILIO_ACCOUNT_SID', '')
+        tw_auth = os.getenv('TWILIO_AUTH_TOKEN', '')
+        tw_from = os.getenv('TWILIO_FROM_NUMBER', '')
+        if tw_sid and tw_auth and tw_from and 'your-' not in tw_sid:
+            from twilio.rest import Client
+            client = Client(tw_sid, tw_auth)
+            client.messages.create(body=message, from_=tw_from, to=recipient_phone)
+            return True, None
+
+        # Fallback: log the SMS
+        current_app.logger.info(
+            f"[SMS SUPPRESSED] To: {recipient_phone} | Message: {message} "
+            f"| Set AFRICASTALKING_API_KEY or TWILIO_ACCOUNT_SID in .env to send real SMS"
+        )
+        return True, None
+
+    except Exception as e:
+        try:
+            from flask import current_app
+            current_app.logger.error(f"SMS send failed to {recipient_phone}: {e}")
+        except Exception:
+            pass
+        return False, str(e)

@@ -164,10 +164,12 @@ async function loadResult() {
         return;
     }
 
-    const res = await fetch(API + '/patient/predictions/' + predId, {
-        headers: { 'Authorization': 'Bearer ' + getToken() }
-    });
-    const data = await res.json();
+    try {
+        const res = await fetch(API + '/patient/predictions/' + predId, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        if (res.status === 401) { logout(); return; }
+        const data = await res.json();
 
     if (!data.success) {
         document.querySelector('.main').innerHTML = '<div class="alert alert-danger m-4">Could not load prediction. <a href="/templates/patient/prediction_history.html">View history</a>.</div>';
@@ -231,6 +233,38 @@ async function loadResult() {
     // Context-aware action panel
     const actionPanel = document.getElementById('actionPanel');
     if (actionPanel) actionPanel.innerHTML = cfg.alertHtml;
+
+    // Feature importance chart
+    if (p.feature_importance && p.feature_importance.length) {
+        let fiCard = document.getElementById('featureImportanceCard');
+        if (!fiCard) {
+            fiCard = document.createElement('div');
+            fiCard.id = 'featureImportanceCard';
+            fiCard.className = 'card mb-4';
+            fiCard.innerHTML = `
+                <div class="card-header" style="background:linear-gradient(90deg,#1e3a8a,#2563eb);">
+                    <h5 style="color:#fff;margin:0;"><i class="bi bi-bar-chart-fill me-2"></i>Why This Result? — Feature Contribution</h5>
+                </div>
+                <div class="p-4" id="featureImportance"></div>`;
+            const downloadSection = document.querySelector('.alert.alert-success');
+            if (downloadSection) downloadSection.before(fiCard);
+        }
+        const colors = ['#2563eb','#7c3aed','#059669','#d97706','#dc2626','#0891b2','#6d28d9','#065f46'];
+        document.getElementById('featureImportance').innerHTML = p.feature_importance.map((f, i) => `
+            <div style="margin-bottom:.85rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;">
+                    <span style="font-weight:600;color:#1e293b;font-size:.875rem;">${f.label}</span>
+                    <div style="display:flex;align-items:center;gap:.75rem;">
+                        <span style="font-size:.78rem;color:#64748b;">Your value: <strong>${f.value}</strong></span>
+                        <span style="font-weight:700;color:${colors[i % colors.length]};font-size:.875rem;min-width:42px;text-align:right;">${f.importance}%</span>
+                    </div>
+                </div>
+                <div style="background:#f1f5f9;border-radius:99px;height:10px;overflow:hidden;">
+                    <div style="width:${f.importance}%;height:100%;background:${colors[i % colors.length]};
+                                border-radius:99px;transition:width 1s ease;"></div>
+                </div>
+            </div>`).join('');
+    }
 
     localStorage.setItem('currentPredictionId', predId);
 }

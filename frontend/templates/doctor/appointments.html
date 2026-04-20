@@ -99,8 +99,18 @@
         </div>
       </div>
 
+      <!-- View Toggle -->
+      <div style="display:flex;gap:.5rem;margin-bottom:1rem;">
+        <button class="btn btn-primary btn-sm" id="btnTableView" onclick="switchView('table')">
+          <i class="bi bi-table"></i> List View
+        </button>
+        <button class="btn btn-outline btn-sm" id="btnCalView" onclick="switchView('calendar')">
+          <i class="bi bi-calendar3"></i> Calendar View
+        </button>
+      </div>
+
       <!-- Filters -->
-      <div class="card mb-4" style="padding:1rem;">
+      <div class="card mb-4" style="padding:1rem;" id="filterBar">
         <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
           <div style="position:relative;flex:1;min-width:180px;">
             <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;"></i>
@@ -123,6 +133,33 @@
       <div class="card mb-4" id="todayCard" style="display:none;">
         <div class="card-header yellow"><i class="bi bi-calendar-day"></i> Today's Appointments</div>
         <div id="todayList" style="padding:0;"></div>
+      </div>
+
+      <!-- Calendar View -->
+      <div id="calendarView" style="display:none;">
+        <div class="card mb-4">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <button class="btn btn-sm btn-outline" onclick="calPrev()"><i class="bi bi-chevron-left"></i></button>
+            <span id="calTitle" style="font-weight:700;font-size:1rem;"></span>
+            <button class="btn btn-sm btn-outline" onclick="calNext()"><i class="bi bi-chevron-right"></i></button>
+          </div>
+          <div style="padding:1rem;">
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">
+              <div style="text-align:center;font-size:.72rem;font-weight:700;color:#64748b;padding:4px;">Sun</div>
+              <div style="text-align:center;font-size:.72rem;font-weight:700;color:#64748b;padding:4px;">Mon</div>
+              <div style="text-align:center;font-size:.72rem;font-weight:700;color:#64748b;padding:4px;">Tue</div>
+              <div style="text-align:center;font-size:.72rem;font-weight:700;color:#64748b;padding:4px;">Wed</div>
+              <div style="text-align:center;font-size:.72rem;font-weight:700;color:#64748b;padding:4px;">Thu</div>
+              <div style="text-align:center;font-size:.72rem;font-weight:700;color:#64748b;padding:4px;">Fri</div>
+              <div style="text-align:center;font-size:.72rem;font-weight:700;color:#64748b;padding:4px;">Sat</div>
+            </div>
+            <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+          </div>
+        </div>
+        <div id="calDayDetail" style="display:none;" class="card mb-4">
+          <div class="card-header"><i class="bi bi-calendar-day"></i> <span id="calDayTitle"></span></div>
+          <div id="calDayList" style="padding:0;"></div>
+        </div>
       </div>
 
       <!-- Full Table -->

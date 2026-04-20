@@ -387,6 +387,13 @@
                         <div class="mini-stat">
                             <span class="mini-stat-label">
                                 <span class="status-dot online"></span>
+                                <i class="bi bi-hdd-fill"></i> Disk Space
+                            </span>
+                            <span class="badge badge-green" id="diskStatus">Checking…</span>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="mini-stat-label">
+                                <span class="status-dot online"></span>
                                 <i class="bi bi-cpu"></i> ML Model: <span id="mlModelName">Loading...</span>
                             </span>
                             <span class="badge badge-green" id="mlStatus">Active</span>
@@ -483,5 +490,13 @@
 
 <script src="../../static/js/auth.js"></script>
 <script src="../../static/js/admin-dashboard.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof loadSystemHealth === 'function') loadSystemHealth();
+    setInterval(function() {
+        if (typeof loadSystemHealth === 'function') loadSystemHealth();
+    }, 60000); // refresh every 60s
+});
+</script>
 </body>
 </html>

@@ -92,37 +92,42 @@ async function loadPredictions() {
     const sb = document.getElementById('sidebarName');
     if (sb) sb.textContent = user.name || user.username;
 
-    const res  = await fetch(API + '/patient/predictions?limit=100', {
-        headers: { 'Authorization': 'Bearer ' + getToken() }
-    });
-    const data = await res.json();
+    try {
+        const res  = await fetch(API + '/patient/predictions?limit=100', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        if (res.status === 401) { logout(); return; }
+        const data = await res.json();
 
-    if (!data.success || !data.predictions.length) {
-        document.getElementById('predictionsList').innerHTML = `<div class="empty-state">
-            <i class="bi bi-clipboard-x"></i>
-            <h4>No predictions yet</h4>
-            <p>Complete a nurse check-up and lab tests, then <a href="/templates/patient/health_data_form.html" style="color:#1565c0;">create your first prediction</a>.</p>
-        </div>`;
-        return;
+        if (!data.success || !data.predictions.length) {
+            document.getElementById('predictionsList').innerHTML = `<div class="empty-state">
+                <i class="bi bi-clipboard-x"></i>
+                <h4>No predictions yet</h4>
+                <p>Complete a nurse check-up and lab tests, then <a href="/templates/patient/health_data_form.html" style="color:#1565c0;">create your first prediction</a>.</p>
+            </div>`;
+            return;
+        }
+
+        allPredictions = data.predictions;
+
+        // Summary counts
+        const counts = { low: 0, mod: 0, high: 0 };
+        allPredictions.forEach(p => {
+            if (p.risk_level === 'LOW RISK')       counts.low++;
+            else if (p.risk_level === 'MODERATE RISK') counts.mod++;
+            else counts.high++;
+        });
+        document.getElementById('sumTotal').textContent = allPredictions.length;
+        document.getElementById('sumLow').textContent   = counts.low;
+        document.getElementById('sumMod').textContent   = counts.mod;
+        document.getElementById('sumHigh').textContent  = counts.high;
+        document.getElementById('summaryStrip').style.display = '';
+        document.getElementById('filterBar').style.display    = '';
+
+        renderCards(allPredictions);
+    } catch (e) {
+        document.getElementById('predictionsList').innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-circle"></i><h4>Failed to load predictions</h4><p>' + e.message + '</p></div>';
     }
-
-    allPredictions = data.predictions;
-
-    // Summary counts
-    const counts = { low: 0, mod: 0, high: 0 };
-    allPredictions.forEach(p => {
-        if (p.risk_level === 'LOW RISK')       counts.low++;
-        else if (p.risk_level === 'MODERATE RISK') counts.mod++;
-        else counts.high++;
-    });
-    document.getElementById('sumTotal').textContent = allPredictions.length;
-    document.getElementById('sumLow').textContent   = counts.low;
-    document.getElementById('sumMod').textContent   = counts.mod;
-    document.getElementById('sumHigh').textContent  = counts.high;
-    document.getElementById('summaryStrip').style.display = '';
-    document.getElementById('filterBar').style.display    = '';
-
-    renderCards(allPredictions);
 }
 
 document.addEventListener('DOMContentLoaded', loadPredictions);

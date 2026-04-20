@@ -364,6 +364,24 @@ def enter_results(current_technician):
                 "message": f"Cannot enter results for test with status '{test.status}'"
             }), 400
 
+        # ── Payment check: patient must have paid for lab service ────────────
+        try:
+            from backend.models.payment import Payment
+            paid = Payment.query.filter(
+                Payment.patient_id == test.patient_id,
+                Payment.payment_type.in_(['lab', 'services', 'general']),
+                Payment.payment_status == 'completed'
+            ).first()
+            if not paid:
+                return jsonify({
+                    "success": False,
+                    "message": "Payment required. The patient has not paid for lab services yet. Please ask the patient to pay at the cashier before proceeding.",
+                    "requires_payment": True,
+                    "patient_id": test.patient_id
+                }), 402
+        except Exception as pay_err:
+            current_app.logger.warning(f"Lab payment check error (allowing): {pay_err}")
+
         # Prevent write conflicts: if another technician already started this test,
         # only that technician can finalize it.
         if (

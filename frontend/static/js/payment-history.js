@@ -13,6 +13,7 @@ async function loadPaymentHistory() {
             fetch('/api/payments/history?limit=100', { headers: authHeaders() }),
             fetch('/api/payments/summary', { headers: authHeaders() })
         ]);
+        if (histRes.status === 401) { logout(); return; }
         const histData = await histRes.json();
         const sumData = await sumRes.json();
 

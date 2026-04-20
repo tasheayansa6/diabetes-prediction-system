@@ -38,18 +38,20 @@ async function handleRegister(event) {
         const data = await res.json();
 
         if (res.ok && data.success) {
+            // Save token + user
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
+
             const box = document.getElementById('alertBox');
-            if (box) box.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> Registration successful! Redirecting...</div>';
-            setTimeout(() => { window.location.href = DASHBOARDS[data.user.role] || '/login'; }, 1000);
+            if (box) box.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> Account created! Redirecting to your dashboard...</div>';
+
+            // Email verification is optional (controlled by server config)
+            // If server requires it, login will redirect to verify page automatically
+            setTimeout(() => { window.location.href = DASHBOARDS[data.user.role] || '/login'; }, 1200);
         } else {
             const box = document.getElementById('alertBox');
             if (box) box.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-circle-fill"></i> ${data.message || 'Registration failed'}</div>`;
-            else alert(data.message || 'Registration failed');
-        }
-
-    } catch (err) {
+        }    } catch (err) {
         console.error(err);
         alert('Cannot connect to server. Is Flask running?');
     }

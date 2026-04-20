@@ -12,7 +12,7 @@
     "trainingSamples": 1068,
     "features": 8,
     "date": "2026-04-10",
-    "status": "archived",
+    "status": "active",
     "notes": "Retrained on 1068 samples."
   },
   {
@@ -44,7 +44,7 @@
     "trainingSamples": 1068,
     "features": 8,
     "date": "2026-04-10",
-    "status": "active",
+    "status": "archived",
     "notes": "Best model. Retrained on Pima (768) + Frankfurt (300) = 1068 samples. Accuracy 88.79%, ROC-AUC 97.26%."
   }
 ]

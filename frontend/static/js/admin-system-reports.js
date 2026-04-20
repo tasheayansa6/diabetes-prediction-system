@@ -186,6 +186,78 @@ function generateReport(event) {
     if (_summary) showReport(type);
 }
 
+function exportReport(resource) {
+    const token = localStorage.getItem('token');
+    fetch(`/api/admin/export/${resource}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+    }).then(r => r.blob()).then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${resource}_export.csv`; a.click();
+        URL.revokeObjectURL(url);
+    }).catch(() => showToast('Export failed', 'danger'));
+}
+
+// ===== Audit Log Viewer =====
+let _auditOffset = 0;
+const AUDIT_LIMIT = 20;
+
+async function loadAuditLogs() {
+    const tbody   = document.getElementById('auditLogBody');
+    const search  = document.getElementById('auditSearch')?.value || '';
+    const action  = document.getElementById('auditAction')?.value || '';
+    const status  = document.getElementById('auditStatus')?.value || '';
+
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#475569;padding:1.5rem;">Loading...</td></tr>';
+
+    try {
+        const params = new URLSearchParams({ limit: AUDIT_LIMIT, offset: _auditOffset });
+        if (search) params.append('search', search);
+        if (action) params.append('action', action);
+        if (status) params.append('status', status);
+
+        const res  = await fetch('/api/admin/audit-logs?' + params, { headers: authHeaders() });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        const logs = data.audit_logs || data.logs || [];
+        const total = data.pagination?.total || logs.length;
+
+        if (!logs.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#475569;padding:2rem;">No audit logs found.</td></tr>';
+        } else {
+            tbody.innerHTML = logs.map(l => {
+                const statusColor = l.status === 'failed' ? '#ef4444' : '#22c55e';
+                const actionColor = l.action === 'failed_login' ? '#f59e0b' : l.action === 'token_blacklist' ? '#8b5cf6' : '#94a3b8';
+                const time = l.created_at ? new Date(l.created_at).toLocaleString() : '—';
+                return `<tr>
+                    <td style="font-size:.75rem;color:#64748b;">${esc(time)}</td>
+                    <td style="font-weight:600;">${esc(l.username || '—')}</td>
+                    <td><span style="background:#1e293b;color:#94a3b8;padding:.15rem .5rem;border-radius:4px;font-size:.72rem;">${esc(l.user_role || '—')}</span></td>
+                    <td><span style="color:${actionColor};font-weight:600;font-size:.8rem;">${esc(l.action || '—')}</span></td>
+                    <td style="font-size:.75rem;color:#64748b;">${esc(l.ip_address || '—')}</td>
+                    <td><span style="color:${statusColor};font-weight:700;font-size:.75rem;">${esc(l.status || '—').toUpperCase()}</span></td>
+                </tr>`;
+            }).join('');
+        }
+
+        // Pagination info
+        const from = _auditOffset + 1;
+        const to   = Math.min(_auditOffset + AUDIT_LIMIT, total);
+        document.getElementById('auditPagInfo').textContent = `Showing ${from}–${to} of ${total} logs`;
+        document.getElementById('auditPrevBtn').disabled = _auditOffset === 0;
+        document.getElementById('auditNextBtn').disabled = to >= total;
+
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#ef4444;padding:1.5rem;">Error: ${esc(e.message)}</td></tr>`;
+    }
+}
+
+function auditPage(dir) {
+    _auditOffset = Math.max(0, _auditOffset + dir * AUDIT_LIMIT);
+    loadAuditLogs();
+}
+
 // ===== Init =====
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -194,4 +266,5 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('navUserName').textContent = user.name || user.username;
     loadSummary();
     renderReportsTable();
+    loadAuditLogs();
 });

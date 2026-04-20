@@ -6,7 +6,10 @@ function apiFetch(path, options = {}) {
     return fetch(API + path, {
         ...options,
         headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json', ...(options.headers || {}) }
-    }).then(r => r.json());
+    }).then(r => {
+        if (r.status === 401) { logout(); return { success: false, message: 'Session expired' }; }
+        return r.json();
+    });
 }
 
 function showAlert(msg, type = 'success') {

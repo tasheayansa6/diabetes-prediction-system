@@ -1,7 +1,7 @@
 ﻿import os
 from pathlib import Path
 from dotenv import load_dotenv
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 # Load .env file FIRST - before anything else
 env_path = Path(__file__).parent.parent / '.env'
@@ -61,6 +61,23 @@ def create_app(config_name="development"):
     setup_security_headers(app)
     setup_cors_manually(app)
 
+    # Global free-text sanitization for POST/PUT requests
+    from backend.middleware.security_middleware import strip_html
+    FREE_TEXT_FIELDS = ['notes', 'remarks', 'description', 'reason', 'instructions',
+                        'content', 'message', 'observations', 'clinical_notes']
+
+    @app.before_request
+    def sanitize_request_body():
+        if request.method in ('POST', 'PUT', 'PATCH') and request.is_json:
+            try:
+                data = request.get_json(silent=True)
+                if data and isinstance(data, dict):
+                    for field in FREE_TEXT_FIELDS:
+                        if field in data and isinstance(data[field], str):
+                            data[field] = strip_html(data[field])
+            except Exception:
+                pass
+
     # Register blueprints
     from backend.routes.auth_routes import auth_bp
     from backend.routes.patient_routes import patient_bp
@@ -100,6 +117,33 @@ def create_app(config_name="development"):
     @app.route("/health")
     def health_check():
         return jsonify({"status": "healthy"}), 200
+
+    # Auto-create default admin on first run if no admin exists
+    with app.app_context():
+        try:
+            from backend.models.user import User
+            from backend.utils.role_accounts import create_polymorphic_user
+            from werkzeug.security import generate_password_hash, check_password_hash
+
+            default_email    = os.getenv('ADMIN_BOOTSTRAP_EMAIL',    'admin@system.com')
+            default_password = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', 'Admin@1234')
+            default_username = os.getenv('ADMIN_BOOTSTRAP_USERNAME', 'admin')
+
+            existing = User.query.filter_by(email=default_email).first()
+            if not existing:
+                data = {'username': default_username, 'email': default_email}
+                user = create_polymorphic_user(data, generate_password_hash(default_password), 'admin')
+                db.session.add(user)
+                db.session.commit()
+                print(f"[BOOTSTRAP] Admin created: {default_email} / {default_password}")
+            else:
+                if not check_password_hash(existing.password_hash, default_password):
+                    existing.password_hash = generate_password_hash(default_password)
+                    existing.is_active = True
+                    db.session.commit()
+                    print(f"[BOOTSTRAP] Admin password synced: {default_email}")
+        except Exception as e:
+            app.logger.warning(f"SQLite bootstrap skipped: {e}")
 
     # Force ML model reload (fixes startup load failures)
     @app.route("/api/ml/reload", methods=["POST"])

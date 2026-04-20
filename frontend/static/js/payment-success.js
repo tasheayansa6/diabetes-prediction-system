@@ -12,35 +12,41 @@ const METHOD_NAMES = {
 };
 
 // ── User-scoped key helpers (mirrors payment-page.js) ─────────────────────────
+// Keys are scoped to user ID so different users on the same browser
+// never see each other's payment data.
 function _uid() {
     try {
         const u = JSON.parse(localStorage.getItem('user') || '{}');
-        return u.id || u.user_id || 'anon';
+        // id is a number from the server — convert to string for consistent key
+        const id = u.id || u.user_id;
+        return id != null ? String(id) : 'anon';
     } catch (_) { return 'anon'; }
 }
 function txKey()  { return 'lastTransaction_' + _uid(); }
 function ctxKey() { return 'chapaPendingContext_' + _uid(); }
 
-// Read transaction: prefer user-scoped key, fall back to legacy key
+// Read transaction for the CURRENT user only.
+// Never falls back to legacy unscoped keys — that caused cross-user data leaks.
 function readTransaction() {
     try {
-        const scoped = localStorage.getItem(txKey());
-        if (scoped) return JSON.parse(scoped);
-        // Legacy fallback (old payments before scoping was added)
-        const legacy = localStorage.getItem('lastTransaction');
-        if (legacy) return JSON.parse(legacy);
-    } catch (_) {}
-    return {};
+        const raw = localStorage.getItem(txKey());
+        if (!raw) return {};
+        const t = JSON.parse(raw);
+        // Extra safety: if the stored record has a userId that doesn't match, discard it
+        if (t.userId != null && String(t.userId) !== _uid()) {
+            localStorage.removeItem(txKey());
+            return {};
+        }
+        return t;
+    } catch (_) { return {}; }
 }
 
 function readContext() {
     try {
-        const scoped = localStorage.getItem(ctxKey());
-        if (scoped) return JSON.parse(scoped);
-        const legacy = localStorage.getItem('chapaPendingContext');
-        if (legacy) return JSON.parse(legacy);
-    } catch (_) {}
-    return {};
+        const raw = localStorage.getItem(ctxKey());
+        if (!raw) return {};
+        return JSON.parse(raw);
+    } catch (_) { return {}; }
 }
 
 // ── Chapa verification ────────────────────────────────────────────────────────
@@ -91,12 +97,13 @@ async function verifyChapaIfNeeded() {
             userId: _uid(),
         };
 
-        // Write back to both scoped and legacy keys
+        // Write back to scoped key only — never write to legacy unscoped keys
         const merged_str = JSON.stringify(merged);
         localStorage.setItem(txKey(), merged_str);
-        localStorage.setItem('lastTransaction', merged_str);
-        localStorage.removeItem(ctxKey());
+        // Clean up legacy keys to prevent future cross-user leaks
+        localStorage.removeItem('lastTransaction');
         localStorage.removeItem('chapaPendingContext');
+        localStorage.removeItem(ctxKey());
 
         if (merged.serviceContext === 'prediction' ||
             (merged.services || []).some(s => (s.name || '').toLowerCase().includes('prediction'))) {

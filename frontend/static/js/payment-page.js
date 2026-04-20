@@ -203,6 +203,9 @@ async function processPayment(event) {
             referenceNumber: data.payment.is_pending ? data.payment.payment_id : null,
             userId: _uid(),
         }));
+        // Clean up legacy keys
+        localStorage.removeItem('lastTransaction');
+        localStorage.removeItem('chapaPendingContext');
 
         if (data.payment.payment_type === 'prediction' || serviceContext === 'prediction') {
             localStorage.setItem(paidKey('predictionPaid'), 'true');
@@ -259,7 +262,7 @@ async function initiateChapaPayment() {
             return;
         }
 
-        // Store transaction data scoped to this user
+        // Store transaction data scoped to this user ONLY — no legacy keys
         localStorage.setItem(txKey(), JSON.stringify({
             id: data.payment_id, invoice_id: data.invoice_id, tx_ref: data.tx_ref,
             services: selectedServices, paymentMethod: 'chapa',
@@ -274,10 +277,9 @@ async function initiateChapaPayment() {
             userId: _uid(),
         }));
 
-        // Also write legacy keys so payment_success.js can find them
-        // (in case the user comes back on a fresh page load without user context)
-        localStorage.setItem('lastTransaction', localStorage.getItem(txKey()));
-        localStorage.setItem('chapaPendingContext', localStorage.getItem(ctxKey()));
+        // Clean up any legacy unscoped keys from previous sessions
+        localStorage.removeItem('lastTransaction');
+        localStorage.removeItem('chapaPendingContext');
 
         window.location.href = data.checkout_url;
 

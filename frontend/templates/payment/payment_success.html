@@ -91,16 +91,16 @@
   </div>
 </footer>
 <script src="/static/js/auth.js"></script>
-<script src="/static/js/payment-success.js?v=3"></script>
+<script src="/static/js/payment-success.js?v=4"></script>
 <script>
 function downloadReceiptPDF() {
     const token = localStorage.getItem('token');
-    // Try scoped key first, fall back to legacy
     let tx = {};
     try {
         const u = JSON.parse(localStorage.getItem('user') || '{}');
-        const uid = u.id || u.user_id || 'anon';
-        tx = JSON.parse(localStorage.getItem('lastTransaction_' + uid) || localStorage.getItem('lastTransaction') || '{}');
+        const uid = u.id != null ? String(u.id) : (u.user_id != null ? String(u.user_id) : 'anon');
+        const raw = localStorage.getItem('lastTransaction_' + uid);
+        if (raw) tx = JSON.parse(raw);
     } catch (_) {}
     const paymentId = tx.id;
     if (!token || !paymentId) { alert('No payment found.'); return; }

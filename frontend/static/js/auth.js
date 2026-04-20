@@ -21,17 +21,20 @@ function checkAuth(requiredRole) {
     }
 
     // Validate token expiry client-side before any API call
+    // JWT uses URL-safe base64 — must convert before atob()
     try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const b64 = token.split('.')[1]
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+        const payload = JSON.parse(atob(b64));
         if (payload.exp && payload.exp * 1000 < Date.now()) {
             // Token expired — clean up and redirect to login
             logout();
             return null;
         }
     } catch (_) {
-        // Malformed token — clear and redirect
-        logout();
-        return null;
+        // Could not decode token — leave it alone, let the server validate
+        // Do NOT logout here: a decode error doesn't mean the token is invalid
     }
 
     if (requiredRole) {

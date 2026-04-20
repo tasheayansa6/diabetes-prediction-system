@@ -491,8 +491,15 @@ def predict(current_user):
                 "message": err
             }), 500
 
-        # Create prediction record
+        # Create prediction record — store model_comparison in input_data
         try:
+            # Attach model comparison to input_data for later retrieval
+            input_data_with_comparison = dict(data)
+            if prediction_result.get('model_comparison'):
+                input_data_with_comparison['_model_comparison'] = prediction_result['model_comparison']
+            if prediction_result.get('feature_importance'):
+                input_data_with_comparison['_feature_importance'] = prediction_result['feature_importance']
+
             prediction = Prediction(
                 patient_id=current_user['id'],
                 health_record_id=health_record.id,
@@ -502,7 +509,7 @@ def predict(current_user):
                 risk_level=prediction_result.get('risk_level', 'UNKNOWN'),
                 model_version=prediction_result.get('model_version', '1.0.0'),
                 explanation=prediction_result.get('interpretation', ''),
-                input_data=data,
+                input_data=input_data_with_comparison,
                 created_at=datetime.utcnow()
             )
             db.session.add(prediction)
@@ -573,6 +580,10 @@ def predict(current_user):
                 "interpretation": prediction_result.get('interpretation', ''),
                 "action": prediction_result.get('action', ''),
                 "recommendation": prediction_result.get('recommendation', ''),
+                "feature_importance": prediction_result.get('feature_importance'),
+                "model_comparison":   prediction_result.get('model_comparison'),
+                "model_version":      prediction_result.get('model_version', '1.0.0'),
+                "model_algorithm":    prediction_result.get('model_algorithm', ''),
                 "created_at": prediction.created_at.isoformat() if prediction.created_at else None
             },
             "health_record": {
@@ -668,7 +679,9 @@ def get_prediction(current_user, prediction_id):
                 "explanation": prediction.explanation,
                 "model_version": prediction.model_version,
                 "confidence": round(50.0 + (max(prediction.probability, 1 - prediction.probability) - 0.5) * 90.0, 1) if prediction.probability else 0,
-                "input_data": prediction.input_data,
+                "input_data": {k: v for k, v in (prediction.input_data or {}).items() if not k.startswith('_')},
+                "feature_importance": (prediction.input_data or {}).get('_feature_importance'),
+                "model_comparison":   (prediction.input_data or {}).get('_model_comparison'),
                 "review": _extract_prediction_review(prediction),
                 "created_at": prediction.created_at.isoformat() if prediction.created_at else None,
                 "health_record_id": prediction.health_record_id

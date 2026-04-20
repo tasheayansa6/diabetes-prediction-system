@@ -514,6 +514,83 @@ class MLService:
                 'recommendation': 'Consult doctor within 1 week'
             }
     
+    def predict_all_models(self, features: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Run prediction with ALL available models and return comparison.
+        The active model's result is the primary result.
+        Other models run in parallel for comparison.
+        """
+        import warnings
+
+        # Map of algorithm name → filename
+        model_files = {
+            'Logistic Regression': 'logistic_regression.pkl',
+            'Random Forest':       'random_forest.pkl',
+            'Gradient Boosting':   'gradient_boosting.pkl',
+        }
+
+        # Load registry to know which models exist
+        registry_path = self.model_dir.parent / 'model_registry.json'
+        registry = []
+        if registry_path.exists():
+            try:
+                with open(registry_path, 'r') as f:
+                    registry = json.load(f)
+            except Exception:
+                pass
+
+        results_by_model = {}
+        primary_result = None
+
+        for entry in registry:
+            fname = entry.get('filename') or model_files.get(entry.get('algorithm', ''))
+            if not fname:
+                continue
+            fpath = self.model_dir / fname
+            if not fpath.exists():
+                continue
+
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore')
+                    model = joblib.load(fpath)
+
+                # Temporarily swap model
+                orig_model = self.model
+                orig_entry = self.active_model_entry
+                orig_file  = self.active_model_file
+                self.model = model
+                self.active_model_entry = entry
+                self.active_model_file  = fname
+
+                result = self.predict(features)
+
+                self.model = orig_model
+                self.active_model_entry = orig_entry
+                self.active_model_file  = orig_file
+
+                if result.get('success'):
+                    results_by_model[entry.get('algorithm', fname)] = {
+                        'algorithm':         entry.get('algorithm', fname),
+                        'version':           entry.get('version', '?'),
+                        'accuracy':          entry.get('accuracy', 0),
+                        'risk_level':        result['risk_level'],
+                        'probability_percent': result['probability_percent'],
+                        'prediction':        result['prediction'],
+                        'is_active':         entry.get('status') == 'active',
+                    }
+                    if entry.get('status') == 'active':
+                        primary_result = result
+
+            except Exception as e:
+                logger.warning(f'Multi-model prediction failed for {fname}: {e}')
+
+        if primary_result is None:
+            primary_result = self.predict(features)
+
+        primary_result['model_comparison'] = list(results_by_model.values())
+        return primary_result
+
     def get_model_info(self) -> Dict[str, Any]:
         """Get information about the loaded model"""
         if self.model is None:

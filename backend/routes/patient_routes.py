@@ -461,17 +461,17 @@ def predict(current_user):
             current_app.logger.error(f'HealthRecord create error: {hr_err}')
             return jsonify({"success": False, "message": f"Health record error: {str(hr_err)}"}), 500
 
-        # Make prediction using ML service — force reload if not ready
+        # Make prediction using ML service — run all 3 models for comparison
         try:
             from backend.services.ml_service import get_ml_service, MLService
             ml = get_ml_service()
             if not ml.is_ready():
-                # Model failed at startup — try reloading now
                 ml = get_ml_service(force_reload=True)
             if not ml.is_ready():
                 db.session.rollback()
                 return jsonify({"success": False, "message": "ML model failed to load. Please contact admin."}), 500
-            prediction_result = ml.predict(data)
+            # Use predict_all_models to run all 3 and return comparison
+            prediction_result = ml.predict_all_models(data)
         except Exception as ml_err:
             db.session.rollback()
             current_app.logger.error(f'ML prediction error: {ml_err}')

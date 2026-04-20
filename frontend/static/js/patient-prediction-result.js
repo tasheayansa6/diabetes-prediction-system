@@ -230,6 +230,41 @@ async function loadResult() {
     const modelEl = document.getElementById('modelUsed');
     if (modelEl) modelEl.textContent = p.model_version || 'v1.0';
 
+    // ── Model comparison panel ────────────────────────────────────────────────
+    if (p.model_comparison && p.model_comparison.length > 1) {
+        let compCard = document.getElementById('modelComparisonCard');
+        if (!compCard) {
+            compCard = document.createElement('div');
+            compCard.id = 'modelComparisonCard';
+            compCard.className = 'card mb-4';
+            compCard.innerHTML = '<div class="card-header" style="background:linear-gradient(90deg,#1e3a8a,#2563eb);">' +
+                '<h5 style="color:#fff;margin:0;"><i class="bi bi-bar-chart-steps me-2"></i>All 3 Models — Comparison</h5></div>' +
+                '<div class="p-4" id="modelComparisonBody"></div>';
+            const actionPanel = document.getElementById('actionPanel');
+            if (actionPanel) actionPanel.after(compCard);
+        }
+        const riskColors = {
+            'LOW RISK': '#16a34a', 'MODERATE RISK': '#d97706',
+            'HIGH RISK': '#dc2626', 'VERY HIGH RISK': '#7c3aed'
+        };
+        document.getElementById('modelComparisonBody').innerHTML =
+            '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">' +
+            p.model_comparison.map(m => {
+                const color = riskColors[m.risk_level] || '#64748b';
+                const border = m.is_active ? '2px solid #2563eb' : '1px solid #e2e8f0';
+                const bg     = m.is_active ? '#eff6ff' : '#f8fafc';
+                return '<div style="border:' + border + ';background:' + bg + ';border-radius:12px;padding:1rem;text-align:center;">' +
+                    (m.is_active ? '<div style="font-size:.65rem;font-weight:700;color:#2563eb;text-transform:uppercase;margin-bottom:.4rem;">✅ Active Model</div>' : '') +
+                    '<div style="font-weight:700;font-size:.9rem;color:#1e293b;margin-bottom:.3rem;">' + m.algorithm + '</div>' +
+                    '<div style="font-size:.75rem;color:#64748b;margin-bottom:.6rem;">Accuracy: ' + m.accuracy + '%</div>' +
+                    '<div style="font-size:1.4rem;font-weight:800;color:' + color + ';">' + (m.probability_percent || 0).toFixed(1) + '%</div>' +
+                    '<div style="font-size:.72rem;font-weight:600;color:' + color + ';margin-top:.2rem;">' + m.risk_level + '</div>' +
+                    '</div>';
+            }).join('') +
+            '</div>' +
+            '<p style="font-size:.75rem;color:#94a3b8;margin-top:.75rem;text-align:center;">Primary result uses the active model. All models trained on the same dataset.</p>';
+    }
+
     // Context-aware action panel
     const actionPanel = document.getElementById('actionPanel');
     if (actionPanel) actionPanel.innerHTML = cfg.alertHtml;

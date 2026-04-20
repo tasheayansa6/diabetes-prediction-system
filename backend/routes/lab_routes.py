@@ -111,7 +111,7 @@ def get_dashboard(current_technician):
         recent_tests_list = []
         for test in recent_tests:
             patient = Patient.query.get(test.patient_id)
-            doctor = Doctor.query.get(test.doctor_id)
+            doctor = User.query.get(test.doctor_id)
             recent_tests_list.append({
                 "id": test.id,
                 "test_id": test.test_id,
@@ -270,7 +270,7 @@ def get_pending_tests(current_technician):
         tests_list = []
         for test in pending_tests:
             patient = Patient.query.get(test.patient_id)
-            doctor = Doctor.query.get(test.doctor_id)
+            doctor = User.query.get(test.doctor_id)
             
             wait_time = None
             if test.created_at:
@@ -456,7 +456,7 @@ def enter_results(current_technician):
 
         # Get patient info for response
         patient = Patient.query.get(test.patient_id)
-        doctor = Doctor.query.get(test.doctor_id)
+        doctor = User.query.get(test.doctor_id)
         
         return jsonify({
             "success": True,
@@ -517,7 +517,7 @@ def get_test_results(current_technician, test_id):
         
         # Get related data
         patient = Patient.query.get(test.patient_id)
-        doctor = Doctor.query.get(test.doctor_id)
+        doctor = User.query.get(test.doctor_id)
         technician = LabTechnician.query.get(test.technician_id) if test.technician_id else None
         
         # Determine if results are abnormal
@@ -789,7 +789,7 @@ def get_completed_tests(current_technician):
         tests_list = []
         for test in tests:
             patient = Patient.query.get(test.patient_id)
-            doctor = Doctor.query.get(test.doctor_id)
+            doctor = User.query.get(test.doctor_id) if test.doctor_id else None
             tests_list.append({
                 "id": test.id,
                 "test_id": test.test_id,
@@ -797,7 +797,11 @@ def get_completed_tests(current_technician):
                 "patient_name": patient.username if patient else "Unknown",
                 "doctor_name": doctor.username if doctor else "Unknown",
                 "completed_at": test.test_completed_at.isoformat() if test.test_completed_at else None,
-                "results": test.results
+                "results": test.results,
+                "unit": test.unit or '',
+                "normal_range": test.normal_range or '',
+                "remarks": test.remarks or '',
+                "status": test.status,
             })
         
         return jsonify({

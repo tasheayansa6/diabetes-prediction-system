@@ -29,7 +29,7 @@ async function loadPrescriptions() {
 
     try {
         const res  = await fetch('/api/patient/prescriptions?limit=100', { headers: authHeaders() });
-        if (res.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/login'; return; }
+        if (res.status === 401) { logout(); return; }
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
         allPrescriptions = data.prescriptions || [];
@@ -93,15 +93,89 @@ function renderPrescriptions(list) {
                 </span>
               </div>
               <!-- Details button -->
-              <div>
+              <div style="display:flex;gap:.4rem;">
                 <button class="btn btn-sm btn-outline" onclick="viewPrescription(${rx.id})">
                   <i class="bi bi-eye"></i> Details
                 </button>
+                ${rx.status === 'dispensed' || rx.status === 'active' ? `
+                <button class="btn btn-sm btn-success" onclick="requestRefill(${rx.id}, '${esc(rx.medication)}')" title="Request Refill">
+                  <i class="bi bi-arrow-repeat"></i> Refill
+                </button>
+                <button class="btn btn-sm btn-outline" onclick="markTaken(${rx.id}, '${esc(rx.medication)}')" title="Mark as taken today"
+                        style="border-color:#059669;color:#059669;">
+                  <i class="bi bi-check2-circle"></i> Taken Today
+                </button>` : ''}
               </div>
+            </div>
+            <!-- Status progress bar -->
+            <div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid #f1f5f9;">
+              ${renderStatusProgress(rx.status)}
             </div>
           </div>
         </div>`;
     }).join('');
+}
+
+function renderStatusProgress(status) {
+    const steps = [
+        { key: 'pending',    label: 'Prescribed',  icon: 'bi-pencil-fill' },
+        { key: 'verified',   label: 'Verified',    icon: 'bi-shield-check' },
+        { key: 'dispensed',  label: 'Dispensed',   icon: 'bi-bag-check-fill' },
+    ];
+    const order = { pending: 0, pending_pharmacist: 0, verified: 1, dispensed: 2, active: 2 };
+    const current = order[status] ?? 0;
+    return `<div style="display:flex;align-items:center;gap:0;font-size:.72rem;">` +
+        steps.map((s, i) => {
+            const done    = i <= current;
+            const active  = i === current;
+            const color   = done ? '#2563eb' : '#e2e8f0';
+            const txtColor = done ? '#1e40af' : '#94a3b8';
+            return `
+            <div style="display:flex;align-items:center;flex:1;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:60px;">
+                    <div style="width:28px;height:28px;border-radius:50%;background:${color};
+                                display:flex;align-items:center;justify-content:center;
+                                color:#fff;font-size:.75rem;
+                                ${active ? 'box-shadow:0 0 0 3px rgba(37,99,235,.2);' : ''}">
+                        <i class="bi ${s.icon}"></i>
+                    </div>
+                    <span style="color:${txtColor};font-weight:${done?'700':'400'};">${s.label}</span>
+                </div>
+                ${i < steps.length - 1 ? `<div style="flex:1;height:2px;background:${i < current ? '#2563eb' : '#e2e8f0'};margin:0 4px;margin-bottom:14px;"></div>` : ''}
+            </div>`;
+        }).join('') + `</div>`;
+}
+
+async function requestRefill(id, medication) {
+    if (!confirm(`Request a refill for ${medication}? Your doctor will be notified.`)) return;
+    try {
+        const res  = await fetch(`/api/patient/prescriptions/${id}/refill`, {
+            method: 'POST', headers: authHeaders()
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        alert(`Refill request submitted for ${medication}. Your doctor will review it.`);
+        loadPrescriptions();
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function markTaken(id, medication) {
+    try {
+        const res  = await fetch(`/api/patient/prescriptions/${id}/taken`, {
+            method: 'POST', headers: authHeaders()
+        });
+        const data = await res.json();
+        if (data.already_taken) {
+            alert(`You already marked ${medication} as taken today.`);
+        } else if (data.success) {
+            alert(`Marked ${medication} as taken today. Keep it up!`);
+            loadPrescriptions();
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (e) { alert('Error: ' + e.message); }
 }
 
 function filterPrescriptions() {
@@ -189,4 +263,7 @@ document.addEventListener('DOMContentLoaded', function () {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
     loadPrescriptions();
+
+    // Auto-refresh every 30 seconds to pick up pharmacist status changes
+    setInterval(loadPrescriptions, 30000);
 });

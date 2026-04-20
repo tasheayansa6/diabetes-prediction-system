@@ -224,7 +224,7 @@ function backToList() {
 async function loadPendingRequests(autoOpenId) {
     try {
         const res  = await fetch('/api/labs/pending?limit=200', { headers: authHeaders() });
-        if (res.status === 401) { window.location.href = '/login'; return; }
+        if (res.status === 401) { logout(); return; }
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
 
@@ -296,6 +296,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
             });
             const data = await res.json();
+
+            // Payment required
+            if (res.status === 402 || data.requires_payment) {
+                showAlert(
+                    `<i class="bi bi-credit-card-fill me-2"></i>
+                    <strong>Payment Required.</strong> The patient has not paid for lab services yet.
+                    Please ask the patient to pay at the cashier
+                    <strong>(ETB 75 — Lab Test Service)</strong> before entering results.`,
+                    'warning'
+                );
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Save & Notify Patient';
+                return;
+            }
+
             if (!data.success) throw new Error(data.message || 'Failed to save');
 
             backToList();

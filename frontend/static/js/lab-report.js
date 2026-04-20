@@ -14,7 +14,7 @@ function isAbnormal(result) {
 
 async function apiFetch(path, options = {}) {
     const res = await fetch('' + path, { ...options, headers: { ...authHeaders(), ...(options.headers || {}) } });
-    if (res.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/login'; return {}; }
+    if (res.status === 401) { logout(); return {}; }
     return res.json();
 }
 

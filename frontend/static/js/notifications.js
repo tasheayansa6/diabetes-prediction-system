@@ -19,7 +19,7 @@ const ICON_MAP = {
 const NOTIF_URLS = {
     'high_risk_alert': '/templates/patient/prediction_history.html',
     'prediction':      '/templates/patient/prediction_history.html',
-    'vitals':          '/templates/doctor/lab_requests.html',
+    'vitals':          '/templates/patient/dashboard.html',
     'lab_result':      '/templates/patient/lab_results.html',
     'lab_order':       '/templates/lab/enter_lab_results.html',
     'prescription':    '/templates/patient/prescriptions.html',
@@ -75,7 +75,7 @@ async function initNotifications() {
 
 async function loadNotifications() {
     try {
-        const res  = await fetch('/api/auth/notifications', {
+        const res  = await fetch('/api/auth/notifications?limit=20&offset=0', {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         const data = await res.json();
@@ -83,7 +83,10 @@ async function loadNotifications() {
         renderNotifications(data.notifications);
         updateBadge(data.unread_count);
         const footer = document.getElementById('notifFooter');
-        if (footer) footer.textContent = data.notifications.length + ' notifications';
+        if (footer) {
+            const total = data.pagination?.total || data.notifications.length;
+            footer.textContent = data.notifications.length + ' of ' + total + ' notifications';
+        }
     } catch (e) { console.warn('loadNotifications error:', e); }
 }
 

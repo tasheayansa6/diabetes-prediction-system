@@ -8,12 +8,7 @@ async function apiFetch(path, options = {}) {
         ...options,
         headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json', ...(options.headers || {}) }
     });
-    if (res.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        return {};
-    }
+    if (res.status === 401) { logout(); return {}; }
     return res.json();
 }
 
@@ -119,7 +114,7 @@ function selectDoctor(id) {
 }
 
 // ── Time Slots ────────────────────────────────────────────────────────────────
-function loadTimeSlots() {
+async function loadTimeSlots() {
     const dateVal = document.getElementById('apptDate').value;
     if (!dateVal || !state.selectedDoctor) return;
     state.selectedDate = dateVal;
@@ -130,17 +125,35 @@ function loadTimeSlots() {
         document.getElementById('timeSlots').innerHTML = '<p style="color:#d97706;font-size:0.8rem;"><i class="bi bi-exclamation-circle"></i> No appointments on Sundays.</p>';
         return;
     }
-    if (dow === 6) {
-        document.getElementById('timeSlots').innerHTML = '<p style="color:#d97706;font-size:0.8rem;"><i class="bi bi-exclamation-circle"></i> Limited slots on Saturdays (morning only).</p>';
-        const morningSlots = ALL_SLOTS.filter(s => s.includes('AM'));
-        document.getElementById('timeSlots').innerHTML += morningSlots.map(slot =>
-            `<button class="time-slot" onclick="selectTime('${slot}')" id="slot-${slot.replace(/[: ]/g,'-')}">${slot}</button>`
-        ).join('');
-        return;
+
+    // Fetch already-booked slots for this doctor on this date
+    let bookedSlots = [];
+    try {
+        const data = await apiFetch(`/patient/doctors/${state.selectedDoctor.id}/booked-slots?date=${dateVal}`);
+        if (data.success) bookedSlots = data.booked_slots || [];
+    } catch (_) {}
+
+    const slots = dow === 6 ? ALL_SLOTS.filter(s => s.includes('AM')) : ALL_SLOTS;
+
+    document.getElementById('timeSlots').innerHTML = slots.map(slot => {
+        const isBooked = bookedSlots.includes(slot);
+        return `<button class="time-slot${isBooked ? ' unavailable' : ''}"
+                    onclick="${isBooked ? '' : `selectTime('${slot}')`}"
+                    id="slot-${slot.replace(/[: ]/g,'-')}"
+                    title="${isBooked ? 'This slot is already booked' : 'Click to select ' + slot}"
+                    ${isBooked ? 'disabled' : ''}>
+                    ${slot}${isBooked ? ' <i class="bi bi-x-circle" style="font-size:.65rem;"></i>' : ''}
+                </button>`;
+    }).join('');
+
+    // Show message if any slots are booked
+    if (bookedSlots.length > 0) {
+        const msg = document.createElement('p');
+        msg.style.cssText = 'font-size:.75rem;color:#d97706;margin-top:.5rem;display:flex;align-items:center;gap:.3rem;';
+        msg.innerHTML = `<i class="bi bi-info-circle-fill"></i> ${bookedSlots.length} slot${bookedSlots.length > 1 ? 's are' : ' is'} already booked (shown with ✕). Please choose an available time.`;
+        document.getElementById('timeSlots').after(msg);
     }
-    document.getElementById('timeSlots').innerHTML = ALL_SLOTS.map(slot =>
-        `<button class="time-slot" onclick="selectTime('${slot}')" id="slot-${slot.replace(/[: ]/g,'-')}">${slot}</button>`
-    ).join('');
+
     updateSummary();
 }
 

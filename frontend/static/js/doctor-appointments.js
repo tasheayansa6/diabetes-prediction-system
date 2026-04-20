@@ -11,12 +11,7 @@ async function apiFetch(path, options = {}) {
         ...options,
         headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json', ...(options.headers || {}) }
     });
-    if (res.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        return {};
-    }
+    if (res.status === 401) { logout(); return {}; }
     return res.json();
 }
 
@@ -269,3 +264,129 @@ window.addEventListener('DOMContentLoaded', () => {
 const style = document.createElement('style');
 style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
 document.head.appendChild(style);
+
+// ── Calendar View ─────────────────────────────────────────────────────────────
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-indexed
+
+function switchView(view) {
+    const tableEls   = ['filterBar', 'todayCard', document.querySelector('.card:has(#apptTableBody)')];
+    const tableView  = document.querySelector('.card:has(#apptTableBody)');
+    const calView    = document.getElementById('calendarView');
+    const btnTable   = document.getElementById('btnTableView');
+    const btnCal     = document.getElementById('btnCalView');
+
+    if (view === 'calendar') {
+        if (tableView) tableView.style.display = 'none';
+        document.getElementById('filterBar').style.display = 'none';
+        document.getElementById('todayCard').style.display = 'none';
+        calView.style.display = '';
+        btnTable.className = 'btn btn-outline btn-sm';
+        btnCal.className   = 'btn btn-primary btn-sm';
+        renderCalendar();
+    } else {
+        if (tableView) tableView.style.display = '';
+        document.getElementById('filterBar').style.display = '';
+        calView.style.display = 'none';
+        btnTable.className = 'btn btn-primary btn-sm';
+        btnCal.className   = 'btn btn-outline btn-sm';
+        renderTodayCard();
+    }
+}
+
+function renderCalendar() {
+    const months = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+    document.getElementById('calTitle').textContent = `${months[calMonth]} ${calYear}`;
+
+    const firstDay = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const today = new Date().toISOString().split('T')[0];
+
+    // Build date → appointments map
+    const apptMap = {};
+    allAppointments.forEach(a => {
+        const d = a.appointment_date;
+        if (!apptMap[d]) apptMap[d] = [];
+        apptMap[d].push(a);
+    });
+
+    let html = '';
+    // Empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+        html += '<div style="min-height:70px;"></div>';
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const appts   = apptMap[dateStr] || [];
+        const isToday = dateStr === today;
+        const hasPending = appts.some(a => a.status === 'scheduled');
+
+        html += `<div onclick="showCalDay('${dateStr}')" style="
+            min-height:70px; border-radius:10px; padding:6px;
+            background:${isToday ? '#eff6ff' : '#f8fafc'};
+            border:${isToday ? '2px solid #2563eb' : '1px solid #e2e8f0'};
+            cursor:pointer; transition:all .15s;
+            ${appts.length ? 'box-shadow:0 2px 8px rgba(37,99,235,.1);' : ''}
+        " onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${isToday ? '#eff6ff' : '#f8fafc'}'">
+            <div style="font-weight:${isToday ? '800' : '600'};font-size:.82rem;color:${isToday ? '#2563eb' : '#374151'};margin-bottom:3px;">${day}</div>
+            ${appts.slice(0,3).map(a => `
+                <div style="font-size:.65rem;padding:2px 5px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                    background:${a.status==='scheduled'?'#dbeafe':a.status==='completed'?'#dcfce7':'#fee2e2'};
+                    color:${a.status==='scheduled'?'#1e40af':a.status==='completed'?'#166534':'#991b1b'};">
+                    ${a.appointment_time ? a.appointment_time.substring(0,5) + ' ' : ''}${esc(a.patient_name || 'Patient')}
+                </div>`).join('')}
+            ${appts.length > 3 ? `<div style="font-size:.62rem;color:#64748b;">+${appts.length-3} more</div>` : ''}
+        </div>`;
+    }
+    document.getElementById('calGrid').innerHTML = html;
+}
+
+function showCalDay(dateStr) {
+    const appts = allAppointments.filter(a => a.appointment_date === dateStr);
+    const detail = document.getElementById('calDayDetail');
+    const list   = document.getElementById('calDayList');
+    const title  = document.getElementById('calDayTitle');
+
+    const d = new Date(dateStr + 'T00:00:00');
+    title.textContent = d.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
+
+    if (!appts.length) {
+        list.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#94a3b8;"><i class="bi bi-calendar-x"></i> No appointments this day</div>';
+    } else {
+        list.innerHTML = appts.map(a => `
+            <div style="display:flex;align-items:center;gap:1rem;padding:.85rem 1.25rem;border-bottom:1px solid #f1f5f9;">
+                <div style="font-size:1.5rem;color:#2563eb;flex-shrink:0;"><i class="bi bi-person-circle"></i></div>
+                <div style="flex:1;">
+                    <div style="font-weight:700;font-size:.9rem;">${esc(a.patient_name || 'Patient #'+a.patient_id)}</div>
+                    <div style="font-size:.78rem;color:#64748b;">
+                        <i class="bi bi-clock"></i> ${esc(a.appointment_time || 'TBD')}
+                        &nbsp;·&nbsp; ${esc(a.reason || 'Consultation')}
+                    </div>
+                </div>
+                <span class="status-badge status-${esc(a.status)}">${esc(a.status)}</span>
+                ${a.status === 'scheduled' ? `
+                <div style="display:flex;gap:.4rem;">
+                    <button class="action-icon-btn done" onclick="promptAction(${a.id},'completed')" title="Complete"><i class="bi bi-check-lg"></i></button>
+                    <button class="action-icon-btn cancel" onclick="promptAction(${a.id},'cancelled')" title="Cancel"><i class="bi bi-x-lg"></i></button>
+                </div>` : ''}
+            </div>`).join('');
+    }
+    detail.style.display = '';
+    detail.scrollIntoView({ behavior: 'smooth' });
+}
+
+function calPrev() {
+    calMonth--;
+    if (calMonth < 0) { calMonth = 11; calYear--; }
+    renderCalendar();
+    document.getElementById('calDayDetail').style.display = 'none';
+}
+
+function calNext() {
+    calMonth++;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    renderCalendar();
+    document.getElementById('calDayDetail').style.display = 'none';
+}

@@ -12,10 +12,25 @@ const ROLE_DASHBOARDS = {
 
 // Check if user is authenticated and has correct role
 function checkAuth(requiredRole) {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user  = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
 
-    if (!user.username || !user.role) {
+    if (!user.username || !user.role || !token) {
         window.location.href = '/login';
+        return null;
+    }
+
+    // Validate token expiry client-side before any API call
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+            // Token expired — clean up and redirect to login
+            logout();
+            return null;
+        }
+    } catch (_) {
+        // Malformed token — clear and redirect
+        logout();
         return null;
     }
 

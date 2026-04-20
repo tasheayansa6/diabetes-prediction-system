@@ -185,9 +185,9 @@ async function loadTransaction() {
         showRefRow(t.referenceNumber);
     }
 
-    // Show "Continue" button pointing to the right page — NO auto-redirect.
-    // Auto-redirect was causing checkAuth on the target page to bounce users
-    // to unexpected dashboards. The user clicks Continue when ready.
+    // Show "Continue" button — check if user is logged in first.
+    // If logged in as the correct user, go directly to the target page.
+    // If not logged in (or different user), go to login with a next= redirect.
     if (t.id) {
         const returnMap = {
             'health_form':  '/templates/patient/health_data_form.html',
@@ -201,17 +201,35 @@ async function loadTransaction() {
             (t.serviceContext === 'prediction'   ? '/templates/patient/health_data_form.html' :
              t.serviceContext === 'lab'          ? '/templates/patient/lab_results.html?paid=true' :
              t.serviceContext === 'consultation' ? '/templates/patient/appointment.html?paid=true' :
-             t.serviceContext === 'medication'   ? '/templates/patient/prescriptions.html?paid=true' : '');
+             t.serviceContext === 'medication'   ? '/templates/patient/prescriptions.html?paid=true' :
+             '/templates/patient/dashboard.html');
 
         const continueBtn = document.getElementById('continueBtn');
         const countdownEl = document.getElementById('redirectCountdown');
+        if (countdownEl) countdownEl.style.display = 'none';
 
-        if (target && continueBtn) {
-            continueBtn.href = target;
+        if (continueBtn) {
+            // Check if a valid token exists for the correct user
+            const token = localStorage.getItem('token');
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            let isLoggedIn = false;
+            if (token && storedUser.role) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    isLoggedIn = payload.exp && payload.exp * 1000 > Date.now();
+                } catch (_) {}
+            }
+
+            if (isLoggedIn) {
+                // User is logged in — go straight to the target
+                continueBtn.href = target;
+            } else {
+                // Not logged in — go to login, then redirect to target after sign-in
+                continueBtn.href = '/login?next=' + encodeURIComponent(target);
+                continueBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Sign In to Continue';
+            }
             continueBtn.style.display = 'inline-flex';
         }
-        // Hide the countdown — no auto-redirect
-        if (countdownEl) countdownEl.style.display = 'none';
     }
 }
 

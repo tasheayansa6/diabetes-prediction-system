@@ -55,7 +55,13 @@ async function handleLogin(event) {
         if (res.ok && data.success) {
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
-            redirectToDashboard(data.user.role);
+            // If a next= param exists, go there after login
+            const next = new URLSearchParams(window.location.search).get('next');
+            if (next && next.startsWith('/')) {
+                window.location.href = next;
+            } else {
+                redirectToDashboard(data.user.role);
+            }
             return;
         }
 
@@ -103,29 +109,16 @@ function redirectToDashboard(role) {
     window.location.href = dashboards[role] || '/login';
 }
 
-// Auto-redirect if already logged in
+// Auto-redirect if already logged in — DISABLED.
+// We never auto-redirect on the login page. The user must always
+// enter their credentials explicitly. This prevents one user's
+// session from silently logging in as another user.
 window.addEventListener('DOMContentLoaded', function () {
-    const token = localStorage.getItem('token');
-    const user  = JSON.parse(localStorage.getItem('user') || '{}');
-    if (!token || !user.role) return;
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.exp && payload.exp * 1000 > Date.now()) {
-            // If coming back from Chapa, go to payment success instead of dashboard
-            const ref = document.referrer || '';
-            const params = new URLSearchParams(window.location.search);
-            const txRef = params.get('tx_ref') || params.get('trx_ref');
-            if (txRef) {
-                window.location.href = '/templates/payment/payment_success.html?tx_ref=' + encodeURIComponent(txRef);
-                return;
-            }
-            redirectToDashboard(user.role);
-        } else {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-        }
-    } catch {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+    // Only pre-fill email if coming back from a Chapa payment redirect
+    // (tx_ref in URL means Chapa sent the user here — show a message)
+    const params = new URLSearchParams(window.location.search);
+    const txRef = params.get('tx_ref') || params.get('trx_ref');
+    if (txRef) {
+        showInfo('Your payment was processed. Please sign in to view your receipt.');
     }
 });

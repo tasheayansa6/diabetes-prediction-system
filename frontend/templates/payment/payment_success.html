@@ -61,8 +61,10 @@
           <div class="flex gap-3 justify-center">
             <button onclick="downloadReceiptPDF()" class="btn btn-primary"><i class="bi bi-file-earmark-pdf"></i> Download Receipt PDF</button>
             <a href="/templates/payment/invoice.html" class="btn btn-secondary"><i class="bi bi-download"></i> View Invoice</a>
+            <a id="continueBtn" href="/templates/patient/dashboard.html" class="btn btn-success" style="display:none;"><i class="bi bi-arrow-right-circle"></i> Continue</a>
             <a href="/templates/patient/dashboard.html" class="btn btn-outline"><i class="bi bi-house"></i> Dashboard</a>
           </div>
+          <p id="redirectCountdown" style="display:none;margin-top:1rem;color:#64748b;font-size:.85rem;"></p>
         </div>
       </div>
     </main>

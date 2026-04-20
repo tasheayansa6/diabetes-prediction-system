@@ -119,7 +119,29 @@ async function loadTransaction() {
             t.serviceContext === 'medication' ? '/templates/patient/prescriptions.html?paid=true' : '');
 
         if (target) {
-            setTimeout(() => { window.location.href = target; }, 1200);
+            // Show countdown so user can see the success page before redirect
+            let secs = 5;
+            const countdownEl = document.getElementById('redirectCountdown');
+            const continueBtn = document.getElementById('continueBtn');
+            if (continueBtn) {
+                continueBtn.style.display = 'inline-flex';
+                continueBtn.href = target;
+            }
+            if (countdownEl) {
+                countdownEl.style.display = 'block';
+                countdownEl.textContent = 'Redirecting in ' + secs + 's...';
+                const timer = setInterval(() => {
+                    secs--;
+                    if (secs <= 0) {
+                        clearInterval(timer);
+                        window.location.href = target;
+                    } else {
+                        countdownEl.textContent = 'Redirecting in ' + secs + 's...';
+                    }
+                }, 1000);
+            } else {
+                setTimeout(() => { window.location.href = target; }, 5000);
+            }
         }
     }
 }

@@ -240,7 +240,12 @@ def get_last_health_data(current_user):
             'data': {
                 'pregnancies':       d.get('pregnancies', 0),
                 'diabetes_pedigree': d.get('diabetes_pedigree', 0.5),
-                'age':               d.get('age')
+                'age':               d.get('age'),
+                'glucose':           d.get('glucose'),
+                'blood_pressure':    d.get('blood_pressure'),
+                'bmi':               d.get('bmi'),
+                'insulin':           d.get('insulin', 0),
+                'skin_thickness':    d.get('skin_thickness', 0),
             }
         }), 200
 

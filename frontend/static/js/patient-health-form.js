@@ -473,7 +473,7 @@ async function refreshLabResultsIfNeeded() {
     evaluateFormAccess();
 }
 
-// ── Step 3: Last prediction data — auto-fill Age, Pregnancies, Pedigree ─────
+// ── Step 3: Last prediction data — auto-fill all fields not yet filled ───────
 async function checkLastPredictionData() {
     try {
         const res  = await fetch(API + '/patient/health-data/last', {
@@ -485,27 +485,86 @@ async function checkLastPredictionData() {
         const d = data.data;
         const filled = [];
 
-        if (d.age != null) {
-            const el = document.getElementById('age');
-            if (el && !el.readOnly) { el.value = d.age; filled.push('Age: ' + d.age); }
+        // Helper: fill a field only if it's not already auto-filled
+        const fill = (id, val, label, makeReadOnly) => {
+            if (val == null) return;
+            const el = document.getElementById(id);
+            if (!el || el.readOnly) return; // already filled by vitals/lab
+            el.value = val;
+            if (makeReadOnly) {
+                el.readOnly = true;
+                el.classList.add('field-autofilled');
+            }
+            filled.push(label + ': ' + val);
+        };
+
+        fill('age',              d.age,               'Age',         true);
+        fill('pregnancies',      d.pregnancies,        'Pregnancies', true);
+        fill('diabetesPedigree', d.diabetes_pedigree,  'Pedigree',    true);
+
+        // Fill glucose from last prediction if not already filled from lab/vitals
+        if (d.glucose != null) {
+            const el = document.getElementById('glucose');
+            if (el && !el.readOnly && !el.value) {
+                el.value = d.glucose;
+                el.readOnly = true;
+                el.classList.add('field-autofilled');
+                const badge = document.getElementById('glucoseBadge');
+                if (badge) { badge.style.display = 'inline'; badge.textContent = '📋 From Last Visit'; }
+                const hint = document.getElementById('glucoseHint');
+                if (hint) hint.innerHTML = '📋 Auto-filled from your last prediction. Normal fasting: 70–99 mg/dL.';
+                filled.push('Glucose: ' + d.glucose + ' mg/dL');
+            }
         }
-        if (d.pregnancies != null) {
-            const el = document.getElementById('pregnancies');
-            if (el && !el.readOnly) { el.value = d.pregnancies; filled.push('Pregnancies: ' + d.pregnancies); }
+
+        // Fill blood pressure if not already filled
+        if (d.blood_pressure != null) {
+            const el = document.getElementById('bloodPressure');
+            if (el && !el.readOnly && !el.value) {
+                el.value = d.blood_pressure;
+                el.readOnly = true;
+                el.classList.add('field-autofilled');
+                const hint = document.getElementById('bpHint');
+                if (hint) hint.innerHTML = '📋 Auto-filled from your last prediction.';
+                filled.push('BP: ' + d.blood_pressure);
+            }
         }
-        if (d.diabetes_pedigree != null) {
-            const el = document.getElementById('diabetesPedigree');
-            if (el && !el.readOnly) { el.value = d.diabetes_pedigree; filled.push('Pedigree: ' + d.diabetes_pedigree); }
+
+        // Fill BMI if not already filled
+        if (d.bmi != null) {
+            const el = document.getElementById('bmi');
+            if (el && !el.readOnly && !el.value) {
+                el.value = d.bmi;
+                el.readOnly = true;
+                el.classList.add('field-autofilled');
+                filled.push('BMI: ' + d.bmi);
+            }
+        }
+
+        // Fill insulin if not already filled
+        if (d.insulin != null) {
+            const el = document.getElementById('insulin');
+            if (el && !el.readOnly && !el.value) {
+                el.value = d.insulin;
+                el.readOnly = true;
+                el.classList.add('field-autofilled');
+                filled.push('Insulin: ' + d.insulin);
+            }
         }
 
         if (filled.length) {
             const banner = document.getElementById('autofillBanner');
             const text   = document.getElementById('autofillText');
             if (banner && text) {
-                text.textContent += ' | From last visit: ' + filled.join(', ') + '.';
+                if (!text.textContent) {
+                    text.textContent = 'Auto-filled from last visit: ' + filled.join(', ') + '.';
+                    banner.style.cssText = 'display:block;background:#f0fdf4;border:1px solid #86efac;color:#166534;padding:.75rem 1rem;border-radius:10px;margin-bottom:1rem;';
+                } else {
+                    text.textContent += ' | From last visit: ' + filled.join(', ') + '.';
+                }
             }
         }
-    } catch { /* no previous prediction — that is fine */ }
+    } catch (_) { /* no previous prediction — that is fine */ }
 }
 
 // ── Autofill banner ───────────────────────────────────────────────────────────
@@ -563,16 +622,18 @@ function evaluateFormAccess() {
         if (formSection) formSection.style.display = 'block';
         if (blockedMsg)  blockedMsg.style.display  = 'none';
         if (submitBtn)   submitBtn.disabled = false;
-        // Default insulin to 0
+        // Default insulin to 0 if not already filled
         const insulinEl = document.getElementById('insulin');
         if (insulinEl && !insulinEl.readOnly) {
             insulinEl.value = '0';
             insulinEl.readOnly = true;
             insulinEl.classList.add('field-autofilled');
         }
+        // Only show manual glucose hint if glucose is truly empty (not filled from last prediction)
+        const glucoseEl = document.getElementById('glucose');
         const glucoseHint = document.getElementById('glucoseHint');
-        if (glucoseHint && !document.getElementById('glucose')?.readOnly) {
-            glucoseHint.innerHTML = '🔬 Auto-filled from lab test. Normal fasting: 70–99 mg/dL.';
+        if (glucoseHint && glucoseEl && !glucoseEl.readOnly && !glucoseEl.value) {
+            glucoseHint.innerHTML = '✍️ Enter your latest fasting glucose reading (mg/dL).';
         }
     }
     updateLiveRiskHint();

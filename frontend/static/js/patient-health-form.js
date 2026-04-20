@@ -545,9 +545,9 @@ function evaluateFormAccess() {
         if (formSection) formSection.style.display = 'block';
         if (blockedMsg)  blockedMsg.style.display  = 'none';
         if (submitBtn)   submitBtn.disabled = false;
-        // Glucose editable only if not already auto-filled from vitals/previous record
+        // Only show manual entry hint if glucose is truly empty and not auto-filled
         const glucoseEl = document.getElementById('glucose');
-        if (glucoseEl && !glucoseEl.readOnly) {
+        if (glucoseEl && !glucoseEl.readOnly && !glucoseEl.value) {
             const hint = document.getElementById('glucoseHint');
             if (hint) hint.innerHTML = '✍️ No recent lab result found. Enter your latest fasting glucose reading manually.';
         }

@@ -403,9 +403,17 @@ def predict(current_user):
                     "message": "Payment required. Please pay for the Diabetes Prediction service before running a prediction.",
                     "requires_payment": True
                 }), 402
+        except AttributeError as pay_err:
+            # Only degrade if prediction_consumed column is missing (schema migration issue)
+            current_app.logger.warning(f'Payment check column missing (allowing): {pay_err}')
         except Exception as pay_err:
-            # If payment table/column missing, allow (graceful degradation)
-            current_app.logger.warning(f'Payment check error (allowing): {pay_err}')
+            # Any other DB error — block the prediction, don't silently allow
+            current_app.logger.error(f'Payment check error (blocking): {pay_err}')
+            return jsonify({
+                "success": False,
+                "message": "Could not verify payment. Please try again.",
+                "requires_payment": True
+            }), 402
 
         # Create health record first
         try:

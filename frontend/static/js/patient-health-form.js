@@ -5,6 +5,41 @@ function authHeaders() {
     return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() };
 }
 
+// ── User-scoped localStorage helpers ─────────────────────────────────────────
+function _uid() {
+    try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const id = u.id || u.user_id;
+        return id != null ? String(id) : 'anon';
+    } catch (_) { return 'anon'; }
+}
+function _paidKey()    { return 'predictionPaid_' + _uid(); }
+function _pendingKey() { return 'pendingHealthData_' + _uid(); }
+
+// Read predictionPaid — check scoped key first, then legacy
+function isPredictionPaid() {
+    return localStorage.getItem(_paidKey()) === 'true' ||
+           localStorage.getItem('predictionPaid') === 'true';
+}
+// Clear predictionPaid from both scoped and legacy keys
+function clearPredictionPaid() {
+    localStorage.removeItem(_paidKey());
+    localStorage.removeItem('predictionPaid');
+}
+// Read pending health data — scoped first, then legacy
+function _getPendingData() {
+    const scoped = localStorage.getItem(_pendingKey());
+    if (scoped) { try { return JSON.parse(scoped); } catch (_) {} }
+    const legacy = localStorage.getItem('pendingHealthData');
+    if (legacy) { try { return JSON.parse(legacy); } catch (_) {} }
+    return null;
+}
+// Clear pending health data from both keys
+function _clearPendingData() {
+    localStorage.removeItem(_pendingKey());
+    localStorage.removeItem('pendingHealthData');
+}
+
 // Robustly parse a lab result value — handles plain numbers, JSON objects, and strings
 function parseLabValue(raw) {
     if (raw == null) return NaN;
@@ -545,18 +580,16 @@ function evaluateFormAccess() {
 
 // ── Payment redirect — uses localStorage (persists across page navigations) ───
 function goToPayment(body) {
-    // Store form data in localStorage so it survives the payment page redirect
+    // Store form data scoped to this user so it survives the payment page redirect
+    localStorage.setItem(_pendingKey(), JSON.stringify(body));
+    // Also write legacy key for backward compat with payment-page.js
     localStorage.setItem('pendingHealthData', JSON.stringify(body));
     window.location.href = '/templates/payment/payment_page.html?service=prediction&return=health_form';
 }
 
 // ── Restore pending form data after returning from payment ────────────────────
 function restorePendingData() {
-    const saved = localStorage.getItem('pendingHealthData');
-    if (!saved) return null;
-    try {
-        return JSON.parse(saved);
-    } catch { return null; }
+    return _getPendingData();
 }
 
 function applyRestoredData(d) {
@@ -607,9 +640,9 @@ async function runPrediction(body) {
             method: 'POST', headers: authHeaders()
         }).catch(() => {});
 
-        // Clean up localStorage
-        localStorage.removeItem('pendingHealthData');
-        localStorage.removeItem('predictionPaid');
+        // Clean up localStorage — both scoped and legacy keys
+        _clearPendingData();
+        clearPredictionPaid();
 
         window.location.href = '/templates/patient/prediction_result.html?id=' + data.prediction.id;
 
@@ -716,7 +749,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     // Check if returning from payment page
-    const paid    = localStorage.getItem('predictionPaid');
+    const paid    = isPredictionPaid();
     const pending = restorePendingData();
 
     if (pending) {
@@ -724,9 +757,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         applyRestoredData(pending);
     }
 
-    if (paid === 'true' && pending) {
-        localStorage.removeItem('predictionPaid');
-        localStorage.removeItem('pendingHealthData');
+    if (paid && pending) {
+        clearPredictionPaid();
+        _clearPendingData();
         const body = collectFormData();
         const err  = validateForm(body);
         if (!err) {

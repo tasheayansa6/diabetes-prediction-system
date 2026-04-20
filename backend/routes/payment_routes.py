@@ -314,10 +314,27 @@ def check_prediction_access(current_user):
             'message': 'Payment required to run prediction.',
         }), 200
 
-    except Exception:
-        # Graceful degradation if prediction_consumed column missing
-        return jsonify({'success': True, 'has_access': True,
-                        'message': 'Access granted (fallback)'}), 200
+    except AttributeError:
+        # prediction_consumed column missing — degrade gracefully
+        # Fall back to checking any completed prediction payment
+        try:
+            payment = Payment.query.filter(
+                Payment.patient_id == current_user['id'],
+                Payment.payment_type == 'prediction',
+                Payment.payment_status == 'completed',
+            ).order_by(Payment.created_at.desc()).first()
+            return jsonify({
+                'success': True,
+                'has_access': payment is not None,
+                'message': 'Payment verified (fallback).' if payment else 'Payment required.',
+            }), 200
+        except Exception:
+            return jsonify({'success': True, 'has_access': False,
+                            'message': 'Payment required.'}), 200
+    except Exception as e:
+        current_app.logger.error(f'check-prediction-access error: {e}')
+        return jsonify({'success': False, 'has_access': False,
+                        'message': 'Could not verify payment. Please try again.'}), 500
 
 
 @payment_bp.route('/consume-prediction-payment', methods=['POST'])

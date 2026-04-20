@@ -185,8 +185,10 @@ async function loadTransaction() {
         showRefRow(t.referenceNumber);
     }
 
-    // Auto-continue for completed payments — 5s countdown
-    if (!isPending && t.id) {
+    // Show "Continue" button pointing to the right page — NO auto-redirect.
+    // Auto-redirect was causing checkAuth on the target page to bounce users
+    // to unexpected dashboards. The user clicks Continue when ready.
+    if (t.id) {
         const returnMap = {
             'health_form':  '/templates/patient/health_data_form.html',
             'health-form':  '/templates/patient/health_data_form.html',
@@ -201,30 +203,15 @@ async function loadTransaction() {
              t.serviceContext === 'consultation' ? '/templates/patient/appointment.html?paid=true' :
              t.serviceContext === 'medication'   ? '/templates/patient/prescriptions.html?paid=true' : '');
 
-        if (target) {
-            let secs = 5;
-            const countdownEl = document.getElementById('redirectCountdown');
-            const continueBtn = document.getElementById('continueBtn');
-            if (continueBtn) {
-                continueBtn.style.display = 'inline-flex';
-                continueBtn.href = target;
-            }
-            if (countdownEl) {
-                countdownEl.style.display = 'block';
-                countdownEl.textContent = 'Redirecting in ' + secs + 's...';
-                const timer = setInterval(() => {
-                    secs--;
-                    if (secs <= 0) {
-                        clearInterval(timer);
-                        window.location.href = target;
-                    } else {
-                        countdownEl.textContent = 'Redirecting in ' + secs + 's...';
-                    }
-                }, 1000);
-            } else {
-                setTimeout(() => { window.location.href = target; }, 5000);
-            }
+        const continueBtn = document.getElementById('continueBtn');
+        const countdownEl = document.getElementById('redirectCountdown');
+
+        if (target && continueBtn) {
+            continueBtn.href = target;
+            continueBtn.style.display = 'inline-flex';
         }
+        // Hide the countdown — no auto-redirect
+        if (countdownEl) countdownEl.style.display = 'none';
     }
 }
 

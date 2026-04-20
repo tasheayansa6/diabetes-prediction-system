@@ -48,6 +48,21 @@ function updateUserDisplay(user) {
 
 // Logout — no confirm dialog, clean and direct
 function logout() {
+    // Clear all user-scoped payment keys before removing user object
+    try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const uid = u.id || u.user_id || 'anon';
+        ['lastTransaction_', 'chapaPendingContext_', 'predictionPaid_', 'labPaid_', 'lab_request_id_'].forEach(prefix => {
+            localStorage.removeItem(prefix + uid);
+        });
+    } catch (_) {}
+    // Clear legacy unscoped keys too
+    localStorage.removeItem('lastTransaction');
+    localStorage.removeItem('chapaPendingContext');
+    localStorage.removeItem('predictionPaid');
+    localStorage.removeItem('labPaid');
+    localStorage.removeItem('lab_request_id');
+    localStorage.removeItem('pendingHealthData');
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     window.location.href = '/login';

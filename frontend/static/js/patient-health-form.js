@@ -346,7 +346,7 @@ async function checkLabResults() {
         const data = await res.json();
 
         if (!data.success || !data.lab_results || data.lab_results.length === 0) {
-            updateStepUI('step2', 'missing');
+            updateStepUI('step2', 'missing', 'No lab tests ordered yet. Ask your doctor to order a glucose test.');
             Steps.labResults = false;
             return false;
         }
@@ -354,12 +354,15 @@ async function checkLabResults() {
         const thirtyDaysAgo = Date.now() - (90 * 24 * 3600000); // 90 days window
         const isDone = r => {
             const s = (r.status || '').toLowerCase();
-            // Accept completed, validated, or any non-pending status with results
             return (s === 'completed' || s === 'validated' || (s !== 'pending' && s !== 'cancelled')) && r.results;
+        };
+        const isPending = r => {
+            const s = (r.status || '').toLowerCase();
+            return s === 'pending' || s === 'in_progress';
         };
         const getResultTime = r => {
             const ts = r.test_completed_at || r.created_at;
-            if (!ts) return Date.now(); // if no timestamp, assume recent
+            if (!ts) return Date.now();
             try {
                 const t = new Date(ts).getTime();
                 return Number.isFinite(t) ? t : Date.now();
@@ -386,10 +389,7 @@ async function checkLabResults() {
                 range.includes('mg/dl')
             );
         };
-        const isInsulinLike = r => {
-            const name = normalize(r.test_name);
-            return name.includes('insulin');
-        };
+        const isInsulinLike = r => normalize(r.test_name).includes('insulin');
 
         const completedRecent = data.lab_results
             .filter(r => isDone(r) && isRecent(r))
@@ -398,15 +398,31 @@ async function checkLabResults() {
         const glucoseTest = completedRecent.find(isGlucoseLike);
         const insulinTest = completedRecent.find(isInsulinLike);
 
+        // Check if there are pending glucose tests (lab tech hasn't entered results yet)
+        const pendingGlucoseTests = data.lab_results.filter(r => isPending(r) && isGlucoseLike(r));
+
         if (!glucoseTest) {
-            updateStepUI('step2', 'missing', 'No recent glucose lab result found. Enter glucose manually below.');
-            const insulinEl = document.getElementById('insulin');
-            if (insulinEl && !insulinEl.readOnly) {
-                insulinEl.value = '0';
-                insulinEl.readOnly = true;
-                insulinEl.classList.add('field-autofilled');
-                const hint = document.getElementById('insulinHint');
-                if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong> — this is the standard default used by the ML model when insulin is not measured.</span>';
+            if (pendingGlucoseTests.length > 0) {
+                // Lab test ordered but results not entered yet — show waiting message
+                const testNames = pendingGlucoseTests.map(r => r.test_name).join(', ');
+                updateStepUI('step2', 'checking', '⏳ Lab result pending: ' + testNames + '. Waiting for lab technician to enter results...');
+                // Set glucose hint to show waiting state
+                const glucoseHint = document.getElementById('glucoseHint');
+                if (glucoseHint) {
+                    glucoseHint.innerHTML = '⏳ <strong>Lab result pending</strong> — ' + testNames + '. The form will auto-fill when the lab technician enters your result. Please wait.';
+                }
+                // Don't show the manual entry message — keep polling
+                const insulinEl = document.getElementById('insulin');
+                if (insulinEl && !insulinEl.readOnly) {
+                    insulinEl.value = '0';
+                    insulinEl.readOnly = true;
+                    insulinEl.classList.add('field-autofilled');
+                    const hint = document.getElementById('insulinHint');
+                    if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong>.</span>';
+                }
+            } else {
+                // No glucose lab test at all
+                updateStepUI('step2', 'missing', 'No glucose lab result found.');
             }
             Steps.labResults = false;
             return false;
@@ -421,10 +437,9 @@ async function checkLabResults() {
             const badge = document.getElementById('glucoseBadge');
             if (badge) badge.style.display = 'inline';
             const hint = document.getElementById('glucoseHint');
-            if (hint) hint.innerHTML = `🔬 Auto-filled from lab: <strong>${glucoseTest.test_name}</strong>. Normal fasting: 70–99 mg/dL.`;
+            if (hint) hint.innerHTML = '🔬 Auto-filled from lab: <strong>' + glucoseTest.test_name + '</strong>. Normal fasting: 70–99 mg/dL.';
             filled.push('Glucose: ' + glucoseVal + ' mg/dL');
         } else {
-            // parseLabValue failed — try raw string
             const raw = String(glucoseTest.results || '').trim();
             const fallback = parseFloat(raw);
             if (!isNaN(fallback) && fallback > 0) {
@@ -451,7 +466,7 @@ async function checkLabResults() {
                 el.readOnly = true;
                 el.classList.add('field-autofilled');
                 const hint = document.getElementById('insulinHint');
-                if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong> — this is the standard default used by the ML model when insulin is not measured.</span>';
+                if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong> — standard ML model default.</span>';
             }
         }
 
@@ -604,18 +619,21 @@ function evaluateFormAccess() {
         if (formSection) formSection.style.display = 'block';
         if (blockedMsg)  blockedMsg.style.display  = 'none';
         if (submitBtn)   submitBtn.disabled = false;
-        // Only show manual entry hint if glucose is truly empty and not auto-filled
+        // Only update glucose hint if glucose is truly empty and not auto-filled
         const glucoseEl = document.getElementById('glucose');
         if (glucoseEl && !glucoseEl.readOnly && !glucoseEl.value) {
             const hint = document.getElementById('glucoseHint');
-            if (hint) hint.innerHTML = '✍️ No recent lab result found. Enter your latest fasting glucose reading manually.';
+            if (hint && !hint.innerHTML.includes('pending')) {
+                // Don't overwrite the "pending" message set by checkLabResults
+                hint.innerHTML = '🔬 Glucose will be auto-filled from your lab result. Normal fasting: 70–99 mg/dL.';
+            }
         }
         const insulinEl = document.getElementById('insulin');
         if (insulinEl && !insulinEl.readOnly) {
             insulinEl.value = '0';
-            insulinEl.placeholder = '0 (no lab test — leave as 0)';
+            insulinEl.placeholder = '0 (no lab test)';
             const hint = document.getElementById('insulinHint');
-            if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong> — this is the standard default used by the ML model when insulin is not measured.</span>';
+            if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong>.</span>';
         }
     } else {
         // No nurse vitals at all — still show form, all fields editable
@@ -629,11 +647,13 @@ function evaluateFormAccess() {
             insulinEl.readOnly = true;
             insulinEl.classList.add('field-autofilled');
         }
-        // Only show manual glucose hint if glucose is truly empty (not filled from last prediction)
+        // Only show glucose hint if glucose is truly empty (not filled from last prediction)
         const glucoseEl = document.getElementById('glucose');
         const glucoseHint = document.getElementById('glucoseHint');
         if (glucoseHint && glucoseEl && !glucoseEl.readOnly && !glucoseEl.value) {
-            glucoseHint.innerHTML = '✍️ Enter your latest fasting glucose reading (mg/dL).';
+            if (!glucoseHint.innerHTML.includes('pending')) {
+                glucoseHint.innerHTML = '🔬 Glucose will be auto-filled from your lab result. Normal fasting: 70–99 mg/dL.';
+            }
         }
     }
     updateLiveRiskHint();

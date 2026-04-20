@@ -322,11 +322,7 @@ function showAlert(type, message) {
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function handleLogout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/';
-}
+function handleLogout() { if(typeof logout==='function') logout(); else { localStorage.clear(); window.location.href='/login'; } }
 
 document.addEventListener('DOMContentLoaded', function () {
     const user = checkAuth('doctor');

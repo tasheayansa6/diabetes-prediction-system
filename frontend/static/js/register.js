@@ -38,15 +38,14 @@ async function handleRegister(event) {
         const data = await res.json();
 
         if (res.ok && data.success) {
-            // Save token + user
+            // Clear ALL previous user data before storing new session
+            if (typeof _clearAllStorage === 'function') _clearAllStorage();
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
 
             const box = document.getElementById('alertBox');
             if (box) box.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> Account created! Redirecting to your dashboard...</div>';
 
-            // Email verification is optional (controlled by server config)
-            // If server requires it, login will redirect to verify page automatically
             setTimeout(() => { window.location.href = DASHBOARDS[data.user.role] || '/login'; }, 1200);
         } else {
             const box = document.getElementById('alertBox');
@@ -57,18 +56,24 @@ async function handleRegister(event) {
     }
 }
 
-// Auto-redirect only if token is still valid
+// Auto-redirect only if token is still valid (no auto-redirect — user must register or login)
 window.addEventListener('DOMContentLoaded', () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    // Do NOT auto-redirect on register page — user is here to create a new account
+    // Just clear any stale session so the form starts fresh
     const token = localStorage.getItem('token');
-    if (!user.username || !token) return;
+    const user  = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!token || !user.username) return;
     try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
+        const payload = JSON.parse(atob(padded));
         if (payload.exp && payload.exp * 1000 > Date.now()) {
+            // Valid session exists — redirect to their dashboard
             window.location.href = DASHBOARDS[user.role] || '/login';
         } else {
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
+            if (typeof _clearAllStorage === 'function') _clearAllStorage();
         }
-    } catch { localStorage.removeItem('user'); localStorage.removeItem('token'); }
+    } catch {
+        if (typeof _clearAllStorage === 'function') _clearAllStorage();
+    }
 });

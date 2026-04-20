@@ -1,5 +1,5 @@
 // Authentication and User Management
-// Common functions used across all pages
+// Single source of truth for all auth logic across every page.
 
 const ROLE_DASHBOARDS = {
     patient:        '/templates/patient/dashboard.html',
@@ -10,37 +10,94 @@ const ROLE_DASHBOARDS = {
     admin:          '/templates/admin/dashboard.html'
 };
 
-// Check if user is authenticated and has correct role
-function checkAuth(requiredRole) {
-    const user  = JSON.parse(localStorage.getItem('user') || '{}');
-    const token = localStorage.getItem('token');
+// ── Full localStorage wipe ────────────────────────────────────────────────────
+// Called on logout AND on login (to clear any previous user's data).
+function _clearAllStorage() {
+    // Clear every known key — both scoped and legacy
+    const keysToRemove = [
+        'token', 'user',
+        'lastTransaction', 'chapaPendingContext',
+        'predictionPaid', 'labPaid', 'lab_request_id',
+        'pendingHealthData', 'pendingHealthData_anon',
+        'lastError', 'currentPredictionId',
+    ];
+    keysToRemove.forEach(k => localStorage.removeItem(k));
 
-    if (!user.username || !user.role || !token) {
-        window.location.href = '/login';
-        return null;
+    // Also clear any user-scoped keys (id 1–999)
+    const toDelete = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+            key.startsWith('lastTransaction_') ||
+            key.startsWith('chapaPendingContext_') ||
+            key.startsWith('predictionPaid_') ||
+            key.startsWith('labPaid_') ||
+            key.startsWith('lab_request_id_') ||
+            key.startsWith('pendingHealthData_')
+        )) {
+            toDelete.push(key);
+        }
     }
+    toDelete.forEach(k => localStorage.removeItem(k));
+}
 
-    // Validate token expiry client-side before any API call
-    // JWT uses URL-safe base64 — must convert before atob()
+// ── Decode JWT payload safely (handles URL-safe base64) ───────────────────────
+function _decodeToken(token) {
     try {
         const b64 = token.split('.')[1]
             .replace(/-/g, '+')
             .replace(/_/g, '/');
-        const payload = JSON.parse(atob(b64));
-        if (payload.exp && payload.exp * 1000 < Date.now()) {
-            // Token expired — clean up and redirect to login
-            logout();
-            return null;
-        }
+        // Pad to multiple of 4
+        const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
+        return JSON.parse(atob(padded));
     } catch (_) {
-        // Could not decode token — leave it alone, let the server validate
-        // Do NOT logout here: a decode error doesn't mean the token is invalid
+        return null;
+    }
+}
+
+// ── checkAuth ─────────────────────────────────────────────────────────────────
+// Call at the top of every page's DOMContentLoaded.
+// Returns the user object if authenticated and role matches, otherwise redirects.
+function checkAuth(requiredRole) {
+    const token = localStorage.getItem('token');
+    const user  = JSON.parse(localStorage.getItem('user') || '{}');
+
+    // No token or no user → go to login
+    if (!token || !user.username || !user.role) {
+        window.location.href = '/login';
+        return null;
     }
 
+    // Decode token and validate
+    const payload = _decodeToken(token);
+
+    if (!payload) {
+        // Malformed token — clear and go to login
+        logout();
+        return null;
+    }
+
+    // Token expired
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+        logout();
+        return null;
+    }
+
+    // Mismatch between stored user and token (different user logged in on same browser)
+    // This is the main cause of "another patient's page"
+    if (payload.user_id && user.id && String(payload.user_id) !== String(user.id)) {
+        // Token belongs to a different user — clear everything and go to login
+        _clearAllStorage();
+        window.location.href = '/login';
+        return null;
+    }
+
+    // Role check
     if (requiredRole) {
         const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
         if (!roles.includes(user.role)) {
-            // Redirect to their correct dashboard silently
+            // User is authenticated but wrong role for this page
+            // Redirect to their own dashboard (not another patient's page)
             window.location.href = ROLE_DASHBOARDS[user.role] || '/login';
             return null;
         }
@@ -49,53 +106,35 @@ function checkAuth(requiredRole) {
     return user;
 }
 
-// Get current logged in user
+// ── logout ────────────────────────────────────────────────────────────────────
+function logout() {
+    _clearAllStorage();
+    window.location.href = '/login';
+}
+
+// ── handleLogout ──────────────────────────────────────────────────────────────
+// Alias used by admin/doctor/nurse pages
+function handleLogout() {
+    logout();
+}
+
+// ── getCurrentUser ────────────────────────────────────────────────────────────
 function getCurrentUser() {
     return JSON.parse(localStorage.getItem('user') || '{}');
 }
 
-// Update user display name in navbar
+// ── updateUserDisplay ─────────────────────────────────────────────────────────
 function updateUserDisplay(user) {
     const displayName = user.name || user.username || 'User';
-    const ids = ['topUserName', 'userName', 'navUserName', 'sidebarName', 'sidebarDoctorName'];
-    ids.forEach(id => {
+    ['topUserName', 'userName', 'navUserName', 'sidebarName', 'sidebarDoctorName'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = displayName;
     });
 }
 
-// Logout — no confirm dialog, clean and direct
-function logout() {
-    // Clear all user-scoped payment keys before removing user object
-    try {
-        const u = JSON.parse(localStorage.getItem('user') || '{}');
-        const uid = u.id || u.user_id || 'anon';
-        ['lastTransaction_', 'chapaPendingContext_', 'predictionPaid_', 'labPaid_', 'lab_request_id_'].forEach(prefix => {
-            localStorage.removeItem(prefix + uid);
-        });
-    } catch (_) {}
-    // Clear legacy unscoped keys too
-    localStorage.removeItem('lastTransaction');
-    localStorage.removeItem('chapaPendingContext');
-    localStorage.removeItem('predictionPaid');
-    localStorage.removeItem('labPaid');
-    localStorage.removeItem('lab_request_id');
-    localStorage.removeItem('pendingHealthData');
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    window.location.href = '/login';
-}
-
-// Alias used by admin pages
-function handleLogout() {
-    logout();
-}
-
-// Initialize authentication on page load
+// ── initAuth ──────────────────────────────────────────────────────────────────
 function initAuth(requiredRole) {
     const user = checkAuth(requiredRole);
-    if (user) {
-        updateUserDisplay(user);
-    }
+    if (user) updateUserDisplay(user);
     return user;
 }

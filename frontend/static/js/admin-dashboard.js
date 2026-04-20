@@ -1,11 +1,7 @@
 const token = () => localStorage.getItem('token');
 
 // ── Auth & Logout ─────────────────────────────────────────────────────────────
-function handleLogout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
-}
+function handleLogout() { if(typeof logout==='function') logout(); else { localStorage.clear(); window.location.href='/login'; } }
 
 // ── Check admin auth ──────────────────────────────────────────────────────────
 function checkAdminAuth() {

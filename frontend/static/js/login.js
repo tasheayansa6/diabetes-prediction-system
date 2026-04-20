@@ -53,6 +53,9 @@ async function handleLogin(event) {
         const data = await res.json();
 
         if (res.ok && data.success) {
+            // Clear ALL previous user data before storing new session
+            // This prevents cross-user data leaks when switching accounts
+            if (typeof _clearAllStorage === 'function') _clearAllStorage();
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             // If a next= param exists, go there after login

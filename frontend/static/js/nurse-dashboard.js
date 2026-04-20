@@ -2,11 +2,7 @@
 
 function getToken() { return localStorage.getItem('token'); }
 
-function handleLogout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/';
-}
+function handleLogout() { if(typeof logout==='function') logout(); else { localStorage.clear(); window.location.href='/login'; } }
 
 function esc(str) {
     const d = document.createElement('div');

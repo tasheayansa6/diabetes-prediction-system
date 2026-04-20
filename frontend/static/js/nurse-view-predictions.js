@@ -4,11 +4,7 @@ let allPredictions = [];
 
 function getToken() { return localStorage.getItem('token'); }
 
-function handleLogout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/';
-}
+function handleLogout() { if(typeof logout==='function') logout(); else { localStorage.clear(); window.location.href='/login'; } }
 
 const RISK_CONFIG = {
     'LOW':       { badge: 'badge-green',  icon: 'bi-check-circle-fill',        label: 'Low Risk' },

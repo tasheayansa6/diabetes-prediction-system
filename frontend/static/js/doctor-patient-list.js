@@ -3,11 +3,7 @@ const PAGE_SIZE = 20;
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
 
-function handleLogout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/';
-}
+function handleLogout() { if(typeof logout==='function') logout(); else { localStorage.clear(); window.location.href='/login'; } }
 
 async function getLatestPrediction(patientId) {
     const token = localStorage.getItem('token');

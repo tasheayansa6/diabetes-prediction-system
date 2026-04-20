@@ -20,11 +20,7 @@ function showToast(msg, type) {
     setTimeout(() => t.remove(), 3500);
 }
 
-function handleLogout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/';
-}
+function handleLogout() { if(typeof logout==='function') logout(); else { localStorage.clear(); window.location.href='/login'; } }
 
 async function loadPatients() {
     const select = document.getElementById('patient_id');

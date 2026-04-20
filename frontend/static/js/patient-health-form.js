@@ -254,6 +254,31 @@ async function checkNurseVitals() {
             filled.push('Age: ' + v.age);
         }
 
+        // Auto-fill glucose from previous health record if no lab result yet
+        if (v.glucose != null) {
+            const el = document.getElementById('glucose');
+            if (el && !el.readOnly) {
+                el.value = v.glucose;
+                el.readOnly = true;
+                el.classList.add('field-autofilled');
+            }
+            const badge = document.getElementById('glucoseBadge');
+            if (badge) { badge.style.display = 'inline'; badge.textContent = '📋 From Record'; }
+            const hint = document.getElementById('glucoseHint');
+            if (hint) hint.innerHTML = '📋 Auto-filled from your last health record. Normal fasting: 70–99 mg/dL.';
+            filled.push('Glucose: ' + v.glucose + ' mg/dL');
+        }
+
+        // Auto-fill insulin from previous health record if no lab result yet
+        if (v.insulin != null) {
+            const el = document.getElementById('insulin');
+            if (el && !el.readOnly) {
+                el.value = v.insulin;
+                el.readOnly = true;
+                el.classList.add('field-autofilled');
+            }
+        }
+
         // Unlock form if at least one vital field was filled
         const hasBMI  = document.getElementById('bmi')?.readOnly;
         const hasBP   = v.blood_pressure_diastolic != null;
@@ -291,20 +316,27 @@ async function checkLabResults() {
             return false;
         }
 
-        const thirtyDaysAgo = Date.now() - (30 * 24 * 3600000);
-        const isDone = r => ['completed', 'validated'].includes((r.status || '').toLowerCase()) && r.results;
+        const thirtyDaysAgo = Date.now() - (90 * 24 * 3600000); // 90 days window
+        const isDone = r => {
+            const s = (r.status || '').toLowerCase();
+            // Accept completed, validated, or any non-pending status with results
+            return (s === 'completed' || s === 'validated' || (s !== 'pending' && s !== 'cancelled')) && r.results;
+        };
         const getResultTime = r => {
             const ts = r.test_completed_at || r.created_at;
-            const t = ts ? new Date(ts).getTime() : 0;
-            return Number.isFinite(t) ? t : 0;
+            if (!ts) return Date.now(); // if no timestamp, assume recent
+            try {
+                const t = new Date(ts).getTime();
+                return Number.isFinite(t) ? t : Date.now();
+            } catch { return Date.now(); }
         };
         const isRecent = r => getResultTime(r) > thirtyDaysAgo;
         const normalize = s => String(s || '').toLowerCase();
 
         const isGlucoseLike = r => {
             const name = normalize(r.test_name);
-            const unit = normalize(r.unit);
-            const range = normalize(r.normal_range);
+            const unit = normalize(r.unit || '');
+            const range = normalize(r.normal_range || '');
             return (
                 name.includes('glucose') ||
                 name.includes('blood sugar') ||
@@ -312,6 +344,9 @@ async function checkLabResults() {
                 name.includes('fbs') ||
                 name.includes('hba1c') ||
                 name.includes('sugar') ||
+                name.includes('ogtt') ||
+                name.includes('postprandial') ||
+                name.includes('random blood') ||
                 unit.includes('mg/dl') ||
                 range.includes('mg/dl')
             );
@@ -345,12 +380,25 @@ async function checkLabResults() {
         const filled = [];
 
         const glucoseVal = parseLabValue(glucoseTest.results);
-        if (!isNaN(glucoseVal)) {
+        if (!isNaN(glucoseVal) && glucoseVal > 0) {
             const el = document.getElementById('glucose');
             if (el) { el.value = glucoseVal; el.readOnly = true; el.classList.add('field-autofilled'); }
             const badge = document.getElementById('glucoseBadge');
             if (badge) badge.style.display = 'inline';
+            const hint = document.getElementById('glucoseHint');
+            if (hint) hint.innerHTML = `🔬 Auto-filled from lab: <strong>${glucoseTest.test_name}</strong>. Normal fasting: 70–99 mg/dL.`;
             filled.push('Glucose: ' + glucoseVal + ' mg/dL');
+        } else {
+            // parseLabValue failed — try raw string
+            const raw = String(glucoseTest.results || '').trim();
+            const fallback = parseFloat(raw);
+            if (!isNaN(fallback) && fallback > 0) {
+                const el = document.getElementById('glucose');
+                if (el) { el.value = fallback; el.readOnly = true; el.classList.add('field-autofilled'); }
+                const badge = document.getElementById('glucoseBadge');
+                if (badge) badge.style.display = 'inline';
+                filled.push('Glucose: ' + fallback + ' mg/dL');
+            }
         }
         if (insulinTest) {
             const insulinVal = parseLabValue(insulinTest.results);
@@ -462,7 +510,7 @@ function evaluateFormAccess() {
         if (formSection) formSection.style.display = 'block';
         if (blockedMsg)  blockedMsg.style.display  = 'none';
         if (submitBtn)   submitBtn.disabled = false;
-        // Glucose editable, insulin defaults to 0
+        // Glucose editable only if not already auto-filled from vitals/previous record
         const glucoseEl = document.getElementById('glucose');
         if (glucoseEl && !glucoseEl.readOnly) {
             const hint = document.getElementById('glucoseHint');
@@ -488,7 +536,9 @@ function evaluateFormAccess() {
             insulinEl.classList.add('field-autofilled');
         }
         const glucoseHint = document.getElementById('glucoseHint');
-        if (glucoseHint) glucoseHint.innerHTML = '✍️ Enter your latest fasting glucose reading manually.';
+        if (glucoseHint && !document.getElementById('glucose')?.readOnly) {
+            glucoseHint.innerHTML = '🔬 Auto-filled from lab test. Normal fasting: 70–99 mg/dL.';
+        }
     }
     updateLiveRiskHint();
 }
@@ -539,6 +589,11 @@ async function runPrediction(body) {
 
         if (!data.success) {
             hideOverlay();
+            // Payment required — redirect to payment page
+            if (res.status === 402 || data.requires_payment) {
+                goToPayment(body);
+                return;
+            }
             showAlert(data.message || 'Prediction failed. Please try again.');
             resetBtn();
             return;
@@ -623,8 +678,8 @@ async function handleSubmit(e) {
             goToPayment(body);
         }
     } catch {
-        resetBtn();
-        showAlert('Could not verify payment status. Please try again.');
+        // If payment check fails, still redirect to payment to be safe
+        goToPayment(body);
     }
 }
 

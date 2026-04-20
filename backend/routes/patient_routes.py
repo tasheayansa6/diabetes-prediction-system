@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 import jwt
 from functools import wraps
 import re
-from sqlalchemy import text, inspect
+from sqlalchemy import text, inspect, func
 
 patient_bp = Blueprint('patient', __name__, url_prefix='/api/patient')
 prediction_service = PredictionService()
@@ -179,6 +179,20 @@ def get_my_latest_vitals(current_user):
                 if age is None:
                     age = d.get('age')
 
+        # Try to get glucose and insulin from the most recent health record
+        # (used as fallback when no lab test result is available)
+        glucose  = None
+        insulin  = None
+        glucose_source = None
+        last_hr = HealthRecord.query.filter_by(patient_id=current_user['id'])\
+            .order_by(HealthRecord.created_at.desc()).first()
+        if last_hr:
+            if last_hr.glucose:
+                glucose = last_hr.glucose
+                glucose_source = 'previous_record'
+            if last_hr.insulin:
+                insulin = last_hr.insulin
+
         return jsonify({
             'success': True,
             'vitals': {
@@ -192,6 +206,9 @@ def get_my_latest_vitals(current_user):
                 'pregnancies':              pregnancies,
                 'diabetes_pedigree':        diabetes_pedigree,
                 'age':                      age,
+                'glucose':                  glucose,
+                'glucose_source':           glucose_source,
+                'insulin':                  insulin,
                 'recorded_at':              vital.recorded_at.isoformat() if vital.recorded_at else None
             }
         }), 200
@@ -369,23 +386,63 @@ def predict(current_user):
                 "success": False,
                 "message": message
             }), 400
-        
+
+        # ── Enforce payment before prediction ────────────────────────────────
+        try:
+            from backend.models.payment import Payment
+            # No date filter — an unconsumed paid slot is valid regardless of when it was purchased
+            paid = Payment.query.filter(
+                Payment.patient_id == current_user['id'],
+                Payment.payment_type == 'prediction',
+                Payment.payment_status == 'completed',
+                Payment.prediction_consumed == False,
+            ).order_by(Payment.created_at.desc()).first()
+            if not paid:
+                return jsonify({
+                    "success": False,
+                    "message": "Payment required. Please pay for the Diabetes Prediction service before running a prediction.",
+                    "requires_payment": True
+                }), 402
+        except Exception as pay_err:
+            # If payment table/column missing, allow (graceful degradation)
+            current_app.logger.warning(f'Payment check error (allowing): {pay_err}')
+
         # Create health record first
         try:
-            health_record = HealthRecord(
-                patient_id=current_user['id'],
-                pregnancies=data.get('pregnancies', 0),
-                glucose=float(data['glucose']),
-                blood_pressure=float(data['blood_pressure']),
-                skin_thickness=float(data.get('skin_thickness', 0)),
-                insulin=float(data.get('insulin', 0)),
-                bmi=float(data['bmi']),
-                diabetes_pedigree=float(data.get('diabetes_pedigree', 0.5)),
-                age=int(data['age']),
-                created_at=datetime.utcnow()
-            )
-            db.session.add(health_record)
-            db.session.flush()
+            # Check for duplicate health record today
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            existing_today = HealthRecord.query.filter(
+                HealthRecord.patient_id == current_user['id'],
+                HealthRecord.created_at >= today_start
+            ).first()
+            if existing_today:
+                # Reuse today's health record instead of creating duplicate
+                health_record = existing_today
+                # Update with new values
+                health_record.pregnancies     = data.get('pregnancies', 0)
+                health_record.glucose         = float(data['glucose'])
+                health_record.blood_pressure  = float(data['blood_pressure'])
+                health_record.skin_thickness  = float(data.get('skin_thickness', 0))
+                health_record.insulin         = float(data.get('insulin', 0))
+                health_record.bmi             = float(data['bmi'])
+                health_record.diabetes_pedigree = float(data.get('diabetes_pedigree', 0.5))
+                health_record.age             = int(data['age'])
+                db.session.flush()
+            else:
+                health_record = HealthRecord(
+                    patient_id=current_user['id'],
+                    pregnancies=data.get('pregnancies', 0),
+                    glucose=float(data['glucose']),
+                    blood_pressure=float(data['blood_pressure']),
+                    skin_thickness=float(data.get('skin_thickness', 0)),
+                    insulin=float(data.get('insulin', 0)),
+                    bmi=float(data['bmi']),
+                    diabetes_pedigree=float(data.get('diabetes_pedigree', 0.5)),
+                    age=int(data['age']),
+                    created_at=datetime.utcnow()
+                )
+                db.session.add(health_record)
+                db.session.flush()
         except Exception as hr_err:
             db.session.rollback()
             current_app.logger.error(f'HealthRecord create error: {hr_err}')
@@ -792,6 +849,86 @@ def get_prescription(current_user, prescription_id):
             "message": "An error occurred",
             "error": str(e)
         }), 500
+
+
+# ============ PRESCRIPTION REFILL REQUEST ============
+
+@patient_bp.route('/prescriptions/<int:prescription_id>/refill', methods=['POST'])
+@token_required
+def request_refill(current_user, prescription_id):
+    """
+    POST /api/patient/prescriptions/<id>/refill
+    Patient requests a refill for a dispensed prescription.
+    Creates a new pending prescription and notifies the doctor.
+    """
+    try:
+        original = Prescription.query.filter_by(
+            id=prescription_id,
+            patient_id=current_user['id']
+        ).first()
+
+        if not original:
+            return jsonify({"success": False, "message": "Prescription not found"}), 404
+
+        if original.status not in ('dispensed', 'active'):
+            return jsonify({
+                "success": False,
+                "message": f"Cannot request refill for a prescription with status '{original.status}'. Only dispensed prescriptions can be refilled."
+            }), 400
+
+        import uuid
+        new_id = f"RX{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+
+        refill = Prescription(
+            prescription_id=new_id,
+            doctor_id=original.doctor_id,
+            patient_id=current_user['id'],
+            medication=original.medication,
+            dosage=original.dosage,
+            frequency=original.frequency,
+            duration=original.duration,
+            instructions=original.instructions,
+            notes=f"REFILL REQUEST — Original: {original.prescription_id}",
+            status='pending',
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        db.session.add(refill)
+        db.session.flush()
+
+        # Notify the doctor
+        try:
+            from backend.models.notification import Notification
+            patient_name = current_user.get('username', 'A patient')
+            db.session.add(Notification(
+                user_id=original.doctor_id,
+                title='Prescription Refill Request',
+                message=f'{patient_name} is requesting a refill for {original.medication} (Original: {original.prescription_id}).',
+                type='prescription',
+                category='general',
+                is_read=False,
+                link='/templates/doctor/prescribe_medication.html',
+                created_at=datetime.utcnow()
+            ))
+        except Exception:
+            pass
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": f"Refill request submitted for {original.medication}. Your doctor will review it.",
+            "prescription": {
+                "id": refill.id,
+                "prescription_id": refill.prescription_id,
+                "medication": refill.medication,
+                "status": refill.status
+            }
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 # ============ LAB RESULTS ENDPOINTS ============
@@ -1337,7 +1474,6 @@ def get_doctors(current_user):
         for u in doctor_users:
             doc = Doctor.query.get(u.id)
             if not doc:
-                # Auto-create missing doctors table row
                 doc = Doctor(id=u.id, doctor_id=f"DOC{u.id:04d}")
                 db.session.add(doc)
                 db.session.commit()
@@ -1352,6 +1488,35 @@ def get_doctors(current_user):
         return jsonify({"success": True, "doctors": result}), 200
     except Exception as e:
         return jsonify({"success": False, "message": "Error fetching doctors", "error": str(e)}), 500
+
+
+@patient_bp.route('/doctors/<int:doctor_id>/booked-slots', methods=['GET'])
+@token_required
+def get_booked_slots(current_user, doctor_id):
+    """
+    GET /api/patient/doctors/<id>/booked-slots?date=YYYY-MM-DD
+    Returns list of already-booked time slots for a doctor on a given date.
+    Used to prevent double-booking.
+    """
+    try:
+        date_str = request.args.get('date')
+        if not date_str:
+            return jsonify({'success': False, 'message': 'date parameter required'}), 400
+
+        from datetime import date as date_type
+        appt_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        booked = Appointment.query.filter(
+            Appointment.doctor_id == doctor_id,
+            Appointment.appointment_date == appt_date,
+            Appointment.status.in_(['scheduled', 'confirmed'])
+        ).all()
+
+        booked_times = [a.appointment_time for a in booked if a.appointment_time]
+        return jsonify({'success': True, 'booked_slots': booked_times}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ============ CHANGE PASSWORD ENDPOINT ============
@@ -1963,3 +2128,170 @@ def report_access_check(current_user):
         'has_access': paid,
         'message': 'Access granted.' if paid else 'Payment required to download your report.'
     }), 200
+
+
+# ============ MEDICATION ADHERENCE TRACKING ============
+
+@patient_bp.route('/prescriptions/<int:prescription_id>/taken', methods=['POST'])
+@token_required
+def mark_medication_taken(current_user, prescription_id):
+    """
+    POST /api/patient/prescriptions/<id>/taken
+    Patient marks that they took their medication today.
+    Stored as a note on the prescription.
+    """
+    try:
+        from backend.models.note import Note
+        import uuid
+
+        rx = Prescription.query.filter_by(
+            id=prescription_id,
+            patient_id=current_user['id']
+        ).first()
+
+        if not rx:
+            return jsonify({"success": False, "message": "Prescription not found"}), 404
+
+        today = datetime.utcnow().date().isoformat()
+
+        # Check if already marked today
+        existing = Note.query.filter(
+            Note.patient_id == current_user['id'],
+            Note.category == 'medication_taken',
+            Note.title == f"Taken: {rx.prescription_id} on {today}"
+        ).first()
+
+        if existing:
+            return jsonify({"success": True, "message": "Already marked as taken today", "already_taken": True}), 200
+
+        note = Note(
+            note_id=f"ADH{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
+            patient_id=current_user['id'],
+            doctor_id=rx.doctor_id,
+            title=f"Taken: {rx.prescription_id} on {today}",
+            content=f"Patient marked {rx.medication} as taken on {today}",
+            category='medication_taken',
+            is_private=False,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        db.session.add(note)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": f"Marked {rx.medication} as taken today"}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@patient_bp.route('/prescriptions/<int:prescription_id>/adherence', methods=['GET'])
+@token_required
+def get_adherence(current_user, prescription_id):
+    """
+    GET /api/patient/prescriptions/<id>/adherence
+    Returns how many days the patient has taken their medication.
+    """
+    try:
+        from backend.models.note import Note
+
+        rx = Prescription.query.filter_by(
+            id=prescription_id,
+            patient_id=current_user['id']
+        ).first()
+
+        if not rx:
+            return jsonify({"success": False, "message": "Prescription not found"}), 404
+
+        taken_notes = Note.query.filter(
+            Note.patient_id == current_user['id'],
+            Note.category == 'medication_taken',
+            Note.title.like(f"Taken: {rx.prescription_id}%")
+        ).order_by(Note.created_at.desc()).all()
+
+        taken_dates = [n.title.split(' on ')[-1] for n in taken_notes]
+
+        return jsonify({
+            "success": True,
+            "medication": rx.medication,
+            "days_taken": len(taken_dates),
+            "taken_dates": taken_dates,
+            "today_taken": datetime.utcnow().date().isoformat() in taken_dates
+        }), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+# ============ MESSAGING (Doctor ↔ Patient) ============
+
+@patient_bp.route('/messages', methods=['GET'])
+@token_required
+def get_messages(current_user):
+    """GET /api/patient/messages — get all messages for this patient"""
+    try:
+        from backend.models.note import Note
+        msgs = Note.query.filter(
+            Note.patient_id == current_user['id'],
+            Note.category == 'message'
+        ).order_by(Note.created_at.desc()).limit(50).all()
+
+        return jsonify({'success': True, 'messages': [{
+            'id': m.id,
+            'from': 'Doctor' if m.doctor_id else 'Patient',
+            'doctor_id': m.doctor_id,
+            'content': m.content,
+            'created_at': m.created_at.isoformat() if m.created_at else None,
+            'is_read': not m.is_important  # reuse is_important as unread flag
+        } for m in msgs]}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@patient_bp.route('/messages', methods=['POST'])
+@token_required
+def send_message(current_user):
+    """POST /api/patient/messages — patient sends message to doctor"""
+    try:
+        from backend.models.note import Note
+        import uuid
+        data = request.get_json() or {}
+        content   = (data.get('content') or '').strip()
+        doctor_id = data.get('doctor_id')
+
+        if not content:
+            return jsonify({'success': False, 'message': 'Message content required'}), 400
+        if not doctor_id:
+            return jsonify({'success': False, 'message': 'Doctor ID required'}), 400
+
+        note = Note(
+            note_id=f"MSG{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
+            patient_id=current_user['id'],
+            doctor_id=doctor_id,
+            title=f"Message from {current_user['username']}",
+            content=content,
+            category='message',
+            is_important=True,  # unread
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        db.session.add(note)
+
+        # Notify doctor
+        from backend.models.notification import Notification
+        db.session.add(Notification(
+            user_id=doctor_id,
+            title=f'Message from {current_user["username"]}',
+            message=content[:100],
+            type='info',
+            category='general',
+            is_read=False,
+            link='/templates/doctor/patient_list.html',
+            created_at=datetime.utcnow()
+        ))
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Message sent'}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500

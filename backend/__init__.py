@@ -101,6 +101,43 @@ def create_app(config_name="development"):
             with app.app_context():
                 db.create_all()
                 _repair_sqlite_polymorphic_user_integrity(app)
+                # Clean orphaned lab tests (patient deleted but lab test remains)
+                try:
+                    from sqlalchemy import text as _text
+                    deleted = db.session.execute(_text(
+                        "DELETE FROM lab_tests WHERE patient_id NOT IN (SELECT id FROM patients)"
+                    )).rowcount
+                    if deleted:
+                        db.session.commit()
+                        app.logger.info(f"Cleaned {deleted} orphaned lab tests on startup")
+                except Exception:
+                    db.session.rollback()
+
+                # Add consent + deletion columns if missing (safe ALTER TABLE)
+                try:
+                    from sqlalchemy import text as _text, inspect as _inspect
+                    inspector = _inspect(db.engine)
+                    patient_cols = [c['name'] for c in inspector.get_columns('patients')]
+                    pred_cols    = [c['name'] for c in inspector.get_columns('predictions')]
+                    idx_names    = [i['name'] for i in inspector.get_indexes('audit_logs')]
+                    with db.engine.connect() as conn:
+                        for col, defn in [
+                            ('consent_given',              'INTEGER NOT NULL DEFAULT 0'),
+                            ('consent_given_at',           'DATETIME'),
+                            ('data_deletion_requested',    'INTEGER NOT NULL DEFAULT 0'),
+                            ('data_deletion_requested_at', 'DATETIME'),
+                        ]:
+                            if col not in patient_cols:
+                                conn.execute(_text(f'ALTER TABLE patients ADD COLUMN {col} {defn}'))
+                        if 'ip_address' not in pred_cols:
+                            conn.execute(_text('ALTER TABLE predictions ADD COLUMN ip_address VARCHAR(50)'))
+                        if 'ix_audit_logs_action' not in idx_names:
+                            conn.execute(_text('CREATE INDEX IF NOT EXISTS ix_audit_logs_action ON audit_logs(action)'))
+                        if 'ix_audit_logs_created_at' not in idx_names:
+                            conn.execute(_text('CREATE INDEX IF NOT EXISTS ix_audit_logs_created_at ON audit_logs(created_at)'))
+                        conn.commit()
+                except Exception as _me:
+                    app.logger.warning(f'Schema migration skipped: {_me}')
         except Exception as e:
             app.logger.warning(f"SQLite bootstrap skipped: {e}")
 
@@ -165,10 +202,32 @@ def create_app(config_name="development"):
     
     app.register_blueprint(payment_bp)
 
-    # Health check route
+    # Health check route — real check, not just a static response
     @app.route("/health")
     def health_check():
-        return jsonify({"status": "healthy"}), 200
+        status = {"status": "healthy", "checks": {}}
+        http_code = 200
+        # DB check
+        try:
+            db.session.execute(text("SELECT 1"))
+            status["checks"]["database"] = "ok"
+        except Exception as e:
+            status["checks"]["database"] = f"error: {type(e).__name__}"
+            status["status"] = "degraded"
+            http_code = 503
+        # ML model check
+        try:
+            from backend.services.ml_service import get_ml_service
+            ml = get_ml_service()
+            status["checks"]["ml_model"] = "ok" if ml.is_ready() else "not_loaded"
+            if not ml.is_ready():
+                status["status"] = "degraded"
+                http_code = 503
+        except Exception as e:
+            status["checks"]["ml_model"] = f"error: {type(e).__name__}"
+            status["status"] = "degraded"
+            http_code = 503
+        return jsonify(status), http_code
 
     # Auto-create default admin on first run if no admin exists
     with app.app_context():
@@ -197,9 +256,21 @@ def create_app(config_name="development"):
         except Exception as e:
             app.logger.warning(f"SQLite bootstrap skipped: {e}")
 
-    # Force ML model reload (fixes startup load failures)
+    # Secure ML model reload — admin auth required
     @app.route("/api/ml/reload", methods=["POST"])
     def reload_ml_model():
+        # Require admin token
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            try:
+                import jwt as _jwt
+                payload = _jwt.decode(auth[7:], app.config['SECRET_KEY'], algorithms=['HS256'])
+                if payload.get('role') != 'admin':
+                    return jsonify({"success": False, "message": "Admin access required"}), 403
+            except Exception:
+                return jsonify({"success": False, "message": "Invalid token"}), 401
+        else:
+            return jsonify({"success": False, "message": "Token required"}), 401
         try:
             from backend.services.ml_service import get_ml_service
             ml = get_ml_service(force_reload=True)
@@ -208,7 +279,7 @@ def create_app(config_name="development"):
             else:
                 return jsonify({"success": False, "message": "Model reload failed"}), 500
         except Exception as e:
-            return jsonify({"success": False, "message": str(e)}), 500
+            return jsonify({"success": False, "message": "Reload error"}), 500
 
     # Public model info route (no auth required)
     @app.route("/api/model/info")

@@ -29,6 +29,15 @@ payment_bp = Blueprint('payment', __name__, url_prefix='/api/payments')
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+
+def _safe_error(e):
+    """Return error detail only in development."""
+    from flask import current_app
+    if current_app.config.get('EXPOSE_ERRORS', False):
+        return str(e)
+    return None
+
+
 def _is_chapa_configured():
     key = current_app.config.get('CHAPA_SECRET_KEY', '')
     return bool(key) and 'your-' not in key.lower()

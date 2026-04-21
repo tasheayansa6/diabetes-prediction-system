@@ -106,6 +106,7 @@ function renderTable() {
                 <div style="display:flex;gap:0.35rem;">
                     <button class="action-icon-btn view" onclick="openDetail(${a.id})" title="View Details"><i class="bi bi-eye"></i></button>
                     ${a.status === 'scheduled' ? `
+                    <button class="action-icon-btn" style="color:#2563eb;border-color:#bfdbfe;" onclick="promptAction(${a.id},'confirmed')" title="Confirm"><i class="bi bi-calendar-check"></i></button>
                     <button class="action-icon-btn done"   onclick="promptAction(${a.id},'completed')" title="Mark Complete"><i class="bi bi-check-lg"></i></button>
                     <button class="action-icon-btn cancel" onclick="promptAction(${a.id},'cancelled')" title="Cancel"><i class="bi bi-x-lg"></i></button>
                     ` : ''}
@@ -166,6 +167,7 @@ function openDetail(id) {
     if (a.status === 'scheduled') {
         footer.innerHTML = `
             <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+            <button class="btn btn-primary"   onclick="closeModal();promptAction(${a.id},'confirmed')" style="background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;"><i class="bi bi-calendar-check"></i> Confirm</button>
             <button class="btn btn-warning" onclick="closeModal();promptAction(${a.id},'no-show')" style="background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;"><i class="bi bi-person-x"></i> No Show</button>
             <button class="btn btn-danger"   onclick="closeModal();promptAction(${a.id},'cancelled')"><i class="bi bi-x-circle"></i> Cancel</button>
             <button class="btn btn-success"  onclick="closeModal();promptAction(${a.id},'completed')"><i class="bi bi-check-circle"></i> Complete</button>
@@ -185,6 +187,7 @@ function promptAction(id, action) {
     const patient = a ? (a.patient_name || 'Patient #' + a.patient_id) : `Appointment #${id}`;
 
     const configs = {
+        confirmed:  { title:'Confirm Appointment', color:'#2563eb', bg:'#2563eb', btnClass:'btn-primary', btnText:'<i class="bi bi-calendar-check"></i> Confirm', msg:`Confirm appointment with <strong>${esc(patient)}</strong>? The patient will be notified.` },
         completed: { title:'Mark as Completed', color:'#059669', bg:'#059669', btnClass:'btn-success', btnText:'<i class="bi bi-check-circle"></i> Mark Complete', msg:`Mark appointment with <strong>${esc(patient)}</strong> as completed?` },
         cancelled:  { title:'Cancel Appointment', color:'#dc2626', bg:'#dc2626', btnClass:'btn-danger',  btnText:'<i class="bi bi-x-circle"></i> Yes, Cancel',    msg:`Cancel appointment with <strong>${esc(patient)}</strong>? The patient will be notified.` },
         'no-show':  { title:'Mark as No Show',    color:'#d97706', bg:'#d97706', btnClass:'btn-warning', btnText:'<i class="bi bi-person-x"></i> Mark No Show',   msg:`Mark <strong>${esc(patient)}</strong> as no-show for this appointment?` },

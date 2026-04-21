@@ -13,6 +13,11 @@ class Patient(User):
     allergies = db.Column(db.Text)
     current_medications = db.Column(db.Text)
     registered_by = db.Column(db.Integer, db.ForeignKey('nurses.id'), nullable=True)
+    # Consent & GDPR/HIPAA compliance
+    consent_given = db.Column(db.Boolean, default=False, nullable=False)
+    consent_given_at = db.Column(db.DateTime, nullable=True)
+    data_deletion_requested = db.Column(db.Boolean, default=False, nullable=False)
+    data_deletion_requested_at = db.Column(db.DateTime, nullable=True)
     
     # Relationships
     health_records = db.relationship(

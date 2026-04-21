@@ -1,5 +1,20 @@
 ﻿import os
 from pathlib import Path
+import sqlite3 as _sqlite3
+
+
+def _make_sqlite_wal_connection():
+    """Create a SQLite connection with WAL mode enabled.
+    WAL allows concurrent reads + one writer, preventing 'database is locked' errors
+    under Gunicorn multi-worker deployments."""
+    db_path = os.getenv('DATABASE_URL', '').replace('sqlite:///', '') or \
+        str(Path(__file__).parent.parent / 'database' / 'diabetes.db')
+    conn = _sqlite3.connect(db_path, check_same_thread=False, timeout=30)
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA synchronous=NORMAL')
+    conn.execute('PRAGMA cache_size=-64000')  # 64MB cache
+    conn.execute('PRAGMA foreign_keys=ON')
+    return conn
 
 class BaseConfig:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
@@ -9,6 +24,10 @@ class BaseConfig:
     SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
     REMEMBER_COOKIE_HTTPONLY = True
     PREFERRED_URL_SCHEME = os.getenv('PREFERRED_URL_SCHEME', 'https')
+    # JWT expiry: 24h in dev, override with JWT_EXPIRY_SECONDS env var
+    JWT_EXPIRY_SECONDS = int(os.getenv('JWT_EXPIRY_SECONDS', '86400'))
+    # Never expose internal error details to clients
+    EXPOSE_ERRORS = os.getenv('FLASK_ENV', 'development') == 'development'
     # Flask-Mail
     MAIL_SERVER = os.getenv('SMTP_SERVER', os.getenv('MAIL_SERVER', 'smtp.gmail.com'))
     MAIL_PORT = int(os.getenv('SMTP_PORT', os.getenv('MAIL_PORT', 587)))
@@ -44,6 +63,7 @@ class DevelopmentConfig(BaseConfig):
         'pool_pre_ping': True,
         'pool_size': 1,
         'max_overflow': 0,
+        'creator': _make_sqlite_wal_connection,
     }
 
     @staticmethod
@@ -76,7 +96,13 @@ class ProductionConfig(BaseConfig):
         'pool_recycle': 3600,
         'pool_timeout': 30,
     }
-    
+    # Session timeout: 30 minutes of inactivity
+    PERMANENT_SESSION_LIFETIME = 1800
+    JWT_EXPIRY_SECONDS = int(os.getenv('JWT_EXPIRY_SECONDS', '1800'))  # 30 min default in prod
+    # Expose internal errors to client: never in production
+    PROPAGATE_EXCEPTIONS = False
+    EXPOSE_ERRORS = False
+
     # PostgreSQL specific settings
     POSTGRES_SSL_MODE = os.getenv('POSTGRES_SSL_MODE', 'require')
     POSTGRES_SSL_CERT = os.getenv('POSTGRES_SSL_CERT')
@@ -95,6 +121,14 @@ class ProductionConfig(BaseConfig):
         if not db_uri:
             raise RuntimeError('DATABASE_URL is required in production.')
 
+        # HTTPS redirect enforcement
+        from flask import request as _req, redirect
+        @app.before_request
+        def _enforce_https():
+            if not _req.is_secure and _req.headers.get('X-Forwarded-Proto', 'http') != 'https':
+                if _req.url.startswith('http://'):
+                    return redirect(_req.url.replace('http://', 'https://', 1), code=301)
+
         # If using sqlite in production-like environments (e.g. Render free tier),
         # normalize to an absolute writable path and apply sqlite-safe engine options.
         if db_uri.startswith('sqlite:///'):
@@ -105,6 +139,7 @@ class ProductionConfig(BaseConfig):
             app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
                 'connect_args': {'check_same_thread': False, 'timeout': 30},
                 'pool_pre_ping': True,
+                'creator': _make_sqlite_wal_connection,
             }
 
 class PostgreSQLConfig(BaseConfig):

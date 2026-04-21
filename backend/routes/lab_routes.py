@@ -19,6 +19,15 @@ lab_bp = Blueprint('lab', __name__, url_prefix='/api/labs')
 
 # ============ TOKEN DECORATOR ============
 
+
+def _safe_error(e):
+    """Return error detail only in development."""
+    from flask import current_app
+    if current_app.config.get('EXPOSE_ERRORS', False):
+        return str(e)
+    return None
+
+
 def token_required(f):
     """Decorator for lab routes using JWT token"""
     @wraps(f)
@@ -31,6 +40,14 @@ def token_required(f):
         try:
             if token.startswith('Bearer '):
                 token = token[7:]
+
+            # Check blacklist (logout invalidation)
+            try:
+                from backend.models.audit_log import AuditLog
+                if AuditLog.query.filter_by(action='token_blacklist', description=token[:100]).first():
+                    return jsonify({"success": False, "message": "Token has been invalidated. Please login again."}), 401
+            except Exception:
+                pass
             
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             
@@ -64,7 +81,14 @@ def token_required(f):
             return jsonify({"success": False, "message": "Token has expired!"}), 401
         except jwt.InvalidTokenError:
             return jsonify({"success": False, "message": "Invalid token!"}), 401
-            
+        except Exception as e:
+            current_app.logger.error(f"token_required error: {type(e).__name__}: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            return jsonify({"success": False, "message": "Authentication error", "error": _safe_error(e)}), 500
+
         return f(current_technician, *args, **kwargs)
     
     return decorated
@@ -154,7 +178,7 @@ def get_dashboard(current_technician):
         return jsonify({
             "success": False,
             "message": "Error fetching dashboard",
-            "error": str(e),
+            "error": _safe_error(e),
             "error_type": type(e).__name__
         }), 500
 
@@ -171,7 +195,7 @@ def get_test_types(current_technician):
         types = TestType.query.order_by(TestType.created_at.desc()).all()
         return jsonify({"success": True, "test_types": [t.to_dict() for t in types]}), 200
     except Exception as e:
-        return jsonify({"success": False, "message": "Error fetching test types", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "Error fetching test types", "error": _safe_error(e)}), 500
 
 
 @lab_bp.route('/test-types', methods=['POST'])
@@ -206,7 +230,7 @@ def add_test_type(current_technician):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": "Error adding test type", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "Error adding test type", "error": _safe_error(e)}), 500
 
 
 @lab_bp.route('/test-types/<int:type_id>', methods=['GET'])
@@ -236,7 +260,7 @@ def delete_test_type(current_technician, type_id):
         return jsonify({"success": True, "message": "Test type deleted successfully"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": "Error deleting test type", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "Error deleting test type", "error": _safe_error(e)}), 500
 
 
 # ============ STEP 91: GET PENDING TESTS ============
@@ -292,12 +316,12 @@ def get_pending_tests(current_technician):
                 "patient": {
                     "id": patient.id,
                     "name": patient.username,
-                    "patient_id": patient.patient_id
+                    "patient_id": getattr(patient, "patient_id", None)
                 } if patient else None,
                 "doctor": {
                     "id": doctor.id,
                     "name": doctor.username,
-                    "doctor_id": doctor.doctor_id
+                    "doctor_id": getattr(doctor, "doctor_id", None)
                 } if doctor else None,
                 "created_at": test.created_at.isoformat() if test.created_at else None,
                 "wait_time": wait_time
@@ -318,7 +342,7 @@ def get_pending_tests(current_technician):
         return jsonify({
             "success": False,
             "message": "Error fetching pending tests",
-            "error": str(e),
+            "error": _safe_error(e),
             "error_type": type(e).__name__
         }), 500
 
@@ -364,23 +388,17 @@ def enter_results(current_technician):
                 "message": f"Cannot enter results for test with status '{test.status}'"
             }), 400
 
-        # ── Payment check: patient must have paid for lab service ────────────
+        # Validate result is numeric for quantitative tests
+        result_str = str(data['results']).strip()
         try:
-            from backend.models.payment import Payment
-            paid = Payment.query.filter(
-                Payment.patient_id == test.patient_id,
-                Payment.payment_type.in_(['lab', 'services', 'general']),
-                Payment.payment_status == 'completed'
-            ).first()
-            if not paid:
-                return jsonify({
-                    "success": False,
-                    "message": "Payment required. The patient has not paid for lab services yet. Please ask the patient to pay at the cashier before proceeding.",
-                    "requires_payment": True,
-                    "patient_id": test.patient_id
-                }), 402
-        except Exception as pay_err:
-            current_app.logger.warning(f"Lab payment check error (allowing): {pay_err}")
+            result_val = float(result_str)
+            if result_val < 0:
+                return jsonify({"success": False, "message": "Result value cannot be negative."}), 400
+        except ValueError:
+            return jsonify({
+                "success": False,
+                "message": "Result must be a numeric value (e.g. 95, 6.2, 120)."
+            }), 400
 
         # Prevent write conflicts: if another technician already started this test,
         # only that technician can finalize it.
@@ -468,7 +486,7 @@ def enter_results(current_technician):
                 "patient": {
                     "id": patient.id,
                     "name": patient.username,
-                    "patient_id": patient.patient_id
+                    "patient_id": getattr(patient, "patient_id", None)
                 } if patient else None,
                 "doctor": {
                     "id": doctor.id,
@@ -488,7 +506,7 @@ def enter_results(current_technician):
         return jsonify({
             "success": False,
             "message": "Error entering results",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -541,19 +559,19 @@ def get_test_results(current_technician, test_id):
                 "patient": {
                     "id": patient.id,
                     "name": patient.username,
-                    "patient_id": patient.patient_id,
+                    "patient_id": getattr(patient, "patient_id", None),
                     "age": patient.get_age() if hasattr(patient, 'get_age') else None,
                     "gender": patient.gender if hasattr(patient, 'gender') else None
                 } if patient else None,
                 "doctor": {
                     "id": doctor.id,
                     "name": doctor.username,
-                    "doctor_id": doctor.doctor_id
+                    "doctor_id": getattr(doctor, "doctor_id", None)
                 } if doctor else None,
                 "technician": {
                     "id": technician.id,
                     "name": technician.username,
-                    "technician_id": technician.technician_id
+                    "technician_id": getattr(technician, "technician_id", None)
                 } if technician else None,
                 "status": test.status,
                 "priority": test.priority,
@@ -576,7 +594,7 @@ def get_test_results(current_technician, test_id):
         return jsonify({
             "success": False,
             "message": "Error fetching test results",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -643,7 +661,7 @@ def validate_results(current_technician, test_id):
                 "validated_by": {
                     "id": technician.id,
                     "name": technician.username,
-                    "technician_id": technician.technician_id
+                    "technician_id": getattr(technician, "technician_id", None)
                 },
                 "validated_at": (test.validated_at if hasattr(test, 'validated_at') and test.validated_at else datetime.utcnow()).isoformat(),
                 "status": validation_status,
@@ -656,7 +674,7 @@ def validate_results(current_technician, test_id):
         return jsonify({
             "success": False,
             "message": "Error validating results",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -719,7 +737,7 @@ def get_test_statistics(current_technician):
         return jsonify({
             "success": False,
             "message": "Error fetching statistics",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -767,7 +785,7 @@ def start_test(current_technician, test_id):
         return jsonify({
             "success": False,
             "message": "Error starting test",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -819,7 +837,7 @@ def get_completed_tests(current_technician):
         return jsonify({
             "success": False,
             "message": "Error fetching completed tests",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -868,7 +886,7 @@ def get_dashboard_simple(current_technician):
         return jsonify({
             "success": False,
             "message": "Dashboard error",
-            "error": str(e),
+            "error": _safe_error(e),
             "error_type": type(e).__name__
         }), 500
 
@@ -945,5 +963,5 @@ def test_all_endpoints(current_technician):
         return jsonify({
             "success": False,
             "message": "Error testing endpoints",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500

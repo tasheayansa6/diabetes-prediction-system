@@ -23,6 +23,15 @@ doctor_bp = Blueprint('doctor', __name__, url_prefix='/api/doctor')
 
 # ============ TOKEN DECORATOR (MUST BE DEFINED FIRST) ============
 
+
+def _safe_error(e):
+    """Return error detail only in development."""
+    from flask import current_app
+    if current_app.config.get('EXPOSE_ERRORS', False):
+        return str(e)
+    return None
+
+
 def token_required(f):
     """Decorator for doctor routes using JWT token"""
     @wraps(f)
@@ -35,6 +44,14 @@ def token_required(f):
         try:
             if token.startswith('Bearer '):
                 token = token[7:]
+
+            # Check blacklist (logout invalidation)
+            try:
+                from backend.models.audit_log import AuditLog
+                if AuditLog.query.filter_by(action='token_blacklist', description=token[:100]).first():
+                    return jsonify({"success": False, "message": "Token has been invalidated. Please login again."}), 401
+            except Exception:
+                pass
             
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             
@@ -62,7 +79,7 @@ def token_required(f):
                 'username': doctor.username,
                 'email': doctor.email,
                 'role': doctor.role,
-                'doctor_id': doctor.doctor_id,
+                'doctor_id': getattr(doctor, 'doctor_id', None),
                 'specialization': doctor.specialization
             }
             
@@ -147,7 +164,7 @@ def get_dashboard(current_doctor):
                 pu = User.query.get(patient.id)
                 recent_patients_list.append({
                     "id": patient.id,
-                    "patient_id": patient.patient_id,
+                    "patient_id": getattr(patient, 'patient_id', None),
                     "username": pu.username if pu else f"Patient #{patient.id}",
                     "email": pu.email if pu else None,
                     "last_visit": prescription.created_at.isoformat() if prescription.created_at else None
@@ -204,7 +221,7 @@ def get_dashboard(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error fetching dashboard",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -285,7 +302,7 @@ def get_patients(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error fetching patients",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -308,7 +325,7 @@ def get_patient(current_doctor, patient_id):
         patient_user = User.query.get(patient_id)
         patient_data = {
             "id": patient.id,
-            "patient_id": patient.patient_id,
+            "patient_id": getattr(patient, 'patient_id', None),
             "username": patient_user.username if patient_user else f"Patient #{patient_id}",
             "email": patient_user.email if patient_user else None,
             "role": "patient",
@@ -376,7 +393,7 @@ def get_patient(current_doctor, patient_id):
         return jsonify({
             "success": False,
             "message": "Error fetching patient",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -433,7 +450,7 @@ def get_prescriptions(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error fetching prescriptions",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -458,6 +475,26 @@ def create_prescription(current_doctor):
         # Generate unique prescription_id
         import uuid
         presc_id = f"RX{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+
+        # Drug interaction / allergy check (#20)
+        patient_check = Patient.query.get(data['patient_id'])
+        if patient_check:
+            allergies = (getattr(patient_check, 'allergies', '') or '').lower()
+            current_meds = (getattr(patient_check, 'current_medications', '') or '').lower()
+            med_lower = data['medication'].lower()
+            warnings = []
+            if allergies and any(a.strip() in med_lower for a in allergies.split(',') if a.strip()):
+                warnings.append(f"ALLERGY ALERT: Patient has a recorded allergy that may include '{data['medication']}'.")
+            if current_meds and med_lower in current_meds:
+                warnings.append(f"DUPLICATE MEDICATION: Patient is already on '{data['medication']}'.")
+            if warnings:
+                if not data.get('override_warnings'):
+                    return jsonify({
+                        "success": False,
+                        "message": ' | '.join(warnings),
+                        "warnings": warnings,
+                        "requires_override": True
+                    }), 409
         
         # Create prescription WITHOUT any prediction_id field
         prescription = Prescription(
@@ -522,7 +559,7 @@ def create_prescription(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error creating prescription",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 @doctor_bp.route('/prescriptions/<int:prescription_id>', methods=['PUT'])
@@ -564,7 +601,7 @@ def update_prescription(current_doctor, prescription_id):
         return jsonify({
             "success": False,
             "message": "Error updating prescription",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
         # ============ PREDICTIONS MANAGEMENT ============
 
@@ -602,14 +639,14 @@ def get_prediction(current_doctor, prediction_id):
             "id": prediction.id,
             "patient": {
                 "id": patient.id,
-                "patient_id": patient.patient_id,
+                "patient_id": getattr(patient, 'patient_id', None),
                 "username": patient.username,
                 "email": patient.email
             } if patient else None,
             "doctor": {
                 "id": doctor.id,
                 "name": doctor.username,
-                "doctor_id": doctor.doctor_id
+                "doctor_id": getattr(doctor, 'doctor_id', None)
             } if doctor else None,
             "prediction_result": "Diabetic" if prediction.prediction == 1 else "Non-Diabetic",
             "probability": prediction.probability,
@@ -644,7 +681,7 @@ def get_prediction(current_doctor, prediction_id):
         return jsonify({
             "success": False,
             "message": "Error fetching prediction",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -704,7 +741,7 @@ def get_patient_predictions(current_doctor, patient_id):
         return jsonify({
             "success": False,
             "message": "Error fetching patient predictions",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -793,7 +830,7 @@ def review_prediction(current_doctor, prediction_id):
         return jsonify({
             "success": False,
             "message": "Error saving prediction review",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 # ============ DOCTOR NOTES ============
 
@@ -851,7 +888,7 @@ def create_note(current_doctor):
                 "patient": {
                     "id": patient.id,
                     "name": patient.username,
-                    "patient_id": patient.patient_id
+                    "patient_id": getattr(patient, 'patient_id', None)
                 } if patient else None,
                 "title": note.title,
                 "content": note.content,
@@ -867,7 +904,7 @@ def create_note(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error creating note",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -911,7 +948,7 @@ def get_notes(current_doctor):
                 "patient": {
                     "id": patient.id,
                     "name": patient.username,
-                    "patient_id": patient.patient_id
+                    "patient_id": getattr(patient, 'patient_id', None)
                 } if patient else None,
                 "title": n.title,
                 "content": n.content[:200] + "..." if len(n.content) > 200 else n.content,
@@ -936,7 +973,7 @@ def get_notes(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error fetching notes",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -969,7 +1006,7 @@ def get_note(current_doctor, note_id):
         return jsonify({
             "success": False,
             "message": "Error fetching note",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1013,7 +1050,7 @@ def update_note(current_doctor, note_id):
         return jsonify({
             "success": False,
             "message": "Error updating note",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1048,7 +1085,7 @@ def delete_note(current_doctor, note_id):
         return jsonify({
             "success": False,
             "message": "Error deleting note",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1099,7 +1136,7 @@ def get_patient_notes(current_doctor, patient_id):
         return jsonify({
             "success": False,
             "message": "Error fetching patient notes",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 # ============ LAB TEST MANAGEMENT ============
@@ -1158,7 +1195,7 @@ def get_lab_tests(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error fetching lab tests",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1217,7 +1254,7 @@ def order_lab_test(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error ordering lab test",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1283,7 +1320,7 @@ def get_appointments(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error fetching appointments",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1313,16 +1350,43 @@ def update_appointment_status(current_doctor, appointment_id):
                 "message": "Missing status field"
             }), 400
         
-        valid_statuses = ['completed', 'cancelled', 'no-show']
+        valid_statuses = ['completed', 'cancelled', 'no-show', 'confirmed']
         if data['status'] not in valid_statuses:
             return jsonify({
                 "success": False,
                 "message": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
             }), 400
-        
+
         appointment.status = data['status']
         appointment.updated_at = datetime.utcnow()
         db.session.commit()
+
+        # Notify patient of status change
+        try:
+            from backend.models.notification import Notification
+            row = db.session.execute(
+                text("SELECT username FROM users WHERE id = :id"),
+                {"id": appointment.patient_id}
+            ).first()
+            patient_name = row[0] if row else f"Patient #{appointment.patient_id}"
+            status_msgs = {
+                'confirmed': 'Your appointment has been confirmed by the doctor.',
+                'completed': 'Your appointment has been marked as completed.',
+                'cancelled': 'Your appointment has been cancelled by the doctor.',
+                'no-show':   'You were marked as no-show for your appointment.',
+            }
+            db.session.add(Notification(
+                user_id=appointment.patient_id,
+                title=f'Appointment {data["status"].title()}',
+                message=status_msgs.get(data['status'], f'Appointment status updated to {data["status"]}.'),
+                type='appointment', category='appointment', is_read=False,
+                link='/templates/patient/appointment.html',
+                created_at=datetime.utcnow()
+            ))
+            db.session.commit()
+        except Exception:
+            try: db.session.rollback()
+            except Exception: pass
         
         return jsonify({
             "success": True,
@@ -1334,7 +1398,7 @@ def update_appointment_status(current_doctor, appointment_id):
         return jsonify({
             "success": False,
             "message": "Error updating appointment",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1361,7 +1425,7 @@ def get_profile(current_doctor):
             "username": doctor.username,
             "email": doctor.email,
             "role": doctor.role,
-            "doctor_id": doctor.doctor_id,
+            "doctor_id": getattr(doctor, 'doctor_id', None),
             "specialization": doctor.specialization,
             "qualification": doctor.qualification,
             "license_number": doctor.license_number,
@@ -1380,7 +1444,7 @@ def get_profile(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error fetching profile",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1420,7 +1484,7 @@ def update_profile(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error updating profile",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1465,7 +1529,7 @@ def get_prescription(current_doctor, prescription_id):
         return jsonify({
             "success": False,
             "message": "Error fetching prescription",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1570,7 +1634,7 @@ def get_lab_requests(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error fetching lab requests",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 @doctor_bp.route('/lab-requests', methods=['POST'])
 @token_required
@@ -1648,7 +1712,7 @@ def create_lab_request(current_doctor):
                 "patient": {
                     "id": patient.id,
                     "name": patient.username,
-                    "patient_id": patient.patient_id
+                    "patient_id": getattr(patient, 'patient_id', None)
                 } if patient else None,
                 "test_name": lab_request.test_name,
                 "test_type": lab_request.test_type,
@@ -1663,7 +1727,7 @@ def create_lab_request(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error creating lab request",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 @doctor_bp.route('/lab-requests/<int:request_id>', methods=['GET'])
@@ -1692,7 +1756,7 @@ def get_lab_request(current_doctor, request_id):
             "request_id": lab_request.test_id or f"LAB{lab_request.id:04d}",
             "patient": {
                 "id": patient.id,
-                "patient_id": patient.patient_id,
+                "patient_id": getattr(patient, 'patient_id', None),
                 "username": patient.username,
                 "email": patient.email
             } if patient else None,
@@ -1714,7 +1778,7 @@ def get_lab_request(current_doctor, request_id):
         return jsonify({
             "success": False,
             "message": "Error fetching lab request",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1772,7 +1836,7 @@ def get_lab_request_statistics(current_doctor):
         return jsonify({
             "success": False,
             "message": "Error fetching statistics",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1814,7 +1878,7 @@ def cancel_lab_request(current_doctor, request_id):
         return jsonify({
             "success": False,
             "message": "Error cancelling lab request",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 

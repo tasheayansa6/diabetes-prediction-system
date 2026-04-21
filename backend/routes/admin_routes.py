@@ -1,4 +1,4 @@
-﻿"""
+"""
 Admin Routes - Handles admin dashboard, user management, and system statistics
 """
 
@@ -22,6 +22,15 @@ from pathlib import Path
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
 MODEL_REGISTRY_PATH = Path(__file__).parent.parent.parent / 'ml_model' / 'model_registry.json'
+
+
+def _safe_error(e):
+    """Return error detail only in development."""
+    from flask import current_app
+    if current_app.config.get('EXPOSE_ERRORS', False):
+        return str(e)
+    return None
+
 
 def _load_registry():
     if MODEL_REGISTRY_PATH.exists():
@@ -150,7 +159,7 @@ def get_dashboard(current_admin):
         return jsonify({
             "success": False,
             "message": "Error fetching dashboard",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -354,7 +363,7 @@ def get_users(current_admin):
         return jsonify({
             "success": False,
             "message": "Error fetching users",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -400,7 +409,7 @@ def get_user(current_admin, user_id):
         return jsonify({
             "success": False,
             "message": "Error fetching user",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -437,7 +446,7 @@ def delete_user(current_admin, user_id):
         return jsonify({
             "success": False,
             "message": "Error deleting user",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -482,7 +491,7 @@ def toggle_user_status(current_admin, user_id):
         return jsonify({
             "success": False,
             "message": "Error updating user status",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -535,7 +544,7 @@ def change_user_role(current_admin, user_id):
         return jsonify({
             "success": False,
             "message": "Error changing user role",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -577,7 +586,7 @@ def get_statistics(current_admin):
         return jsonify({
             "success": False,
             "message": "Error fetching statistics",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1189,7 +1198,7 @@ def generate_system_report(current_admin):
         return jsonify({
             "success": False,
             "message": "Error generating system report",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 

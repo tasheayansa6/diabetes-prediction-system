@@ -15,6 +15,15 @@ import jwt
 from functools import wraps
 import uuid
 
+
+def _safe_error(e):
+    """Return error detail only in development."""
+    from flask import current_app
+    if current_app.config.get('EXPOSE_ERRORS', False):
+        return str(e)
+    return None
+
+
 def _username(user_id):
     """Raw SQL name lookup — returns full_name if set, else username."""
     if not user_id:
@@ -38,6 +47,15 @@ def token_required(f):
         try:
             if token.startswith('Bearer '):
                 token = token[7:]
+
+            # Check blacklist (logout invalidation)
+            try:
+                from backend.models.audit_log import AuditLog
+                if AuditLog.query.filter_by(action='token_blacklist', description=token[:100]).first():
+                    return jsonify({"success": False, "message": "Token has been invalidated. Please login again."}), 401
+            except Exception:
+                pass
+
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             if data.get('role') != 'pharmacist':
                 return jsonify({"success": False, "message": "Pharmacist access required!"}), 403
@@ -142,7 +160,7 @@ def get_dashboard(current_pharmacist):
         return jsonify({
             "success": False,
             "message": "Error fetching dashboard",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -207,7 +225,7 @@ def get_prescriptions(current_pharmacist):
         return jsonify({
             "success": False,
             "message": "Error fetching prescriptions",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -254,7 +272,7 @@ def get_prescription_details(current_pharmacist, prescription_id):
         return jsonify({
             "success": False,
             "message": "Error fetching prescription details",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -333,7 +351,7 @@ def verify_prescription(current_pharmacist, prescription_id):
         return jsonify({
             "success": False,
             "message": "Error verifying prescription",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -438,7 +456,7 @@ def dispense_medication(current_pharmacist, prescription_id):
         return jsonify({
             "success": False,
             "message": "Error dispensing medication",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -553,7 +571,7 @@ def get_inventory(current_pharmacist):
         return jsonify({
             "success": False,
             "message": "Error fetching inventory",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -608,7 +626,7 @@ def get_prescription_stats(current_pharmacist):
         return jsonify({
             "success": False,
             "message": "Error fetching statistics",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -665,7 +683,7 @@ def get_patient_prescriptions(current_pharmacist, patient_id):
         return jsonify({
             "success": False,
             "message": "Error fetching patient prescriptions",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -731,7 +749,7 @@ def reject_prescription(current_pharmacist, prescription_id):
         }), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": "Error rejecting prescription", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "Error rejecting prescription", "error": _safe_error(e)}), 500
 
 
 # ============ ML-LINKED PRESCRIPTION DETAILS ============
@@ -821,5 +839,5 @@ def test_all_endpoints(current_pharmacist):
         return jsonify({
             "success": False,
             "message": "Error testing endpoints",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500

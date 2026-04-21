@@ -209,12 +209,13 @@ async function processPayment(event) {
 
         if (data.payment.payment_type === 'prediction' || serviceContext === 'prediction') {
             localStorage.setItem(paidKey('predictionPaid'), 'true');
-            // Also write legacy key so health form can read it on return
             localStorage.setItem('predictionPaid', 'true');
         }
-        window.location.href = data.payment.is_pending
+        // Always redirect directly to the target page — never go through login
+        const dest = data.payment.is_pending
             ? '/templates/payment/payment_success.html'
             : nextPageAfterPayment(serviceContext, returnTo);
+        window.location.href = dest;
 
     } catch (err) {
         localStorage.setItem('lastError', JSON.stringify({ code:'PAYMENT_ERROR', message:err.message, date:new Date().toISOString().split('T')[0] }));

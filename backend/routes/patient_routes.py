@@ -15,6 +15,7 @@ from backend.models.lab_test import LabTest
 from backend.models.appointment import Appointment
 from backend.services.prediction_service import PredictionService
 from backend.utils.validators import validate_health_data
+from backend.middleware.rate_limiter import rate_limit
 from datetime import datetime, timedelta
 import jwt
 from functools import wraps
@@ -23,6 +24,32 @@ from sqlalchemy import text, inspect, func
 
 patient_bp = Blueprint('patient', __name__, url_prefix='/api/patient')
 prediction_service = PredictionService()
+
+
+def _safe_error(e):
+    """Return error detail only in development, never in production."""
+    if current_app.config.get('EXPOSE_ERRORS', False):
+        return str(e)
+    return None
+
+
+def _audit(action, resource, resource_id=None, description=None, status='success'):
+    """Write an audit log entry. Silent on failure."""
+    try:
+        from backend.models.audit_log import AuditLog
+        log = AuditLog(
+            action=action,
+            resource=resource,
+            resource_id=resource_id,
+            description=description,
+            ip_address=request.remote_addr,
+            status=status,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(log)
+        db.session.flush()  # don't commit here — caller commits
+    except Exception:
+        pass
 
 
 def _extract_prediction_review(prediction):
@@ -87,6 +114,14 @@ def token_required(f):
         try:
             if token.startswith('Bearer '):
                 token = token[7:]
+
+            # Check blacklist (logout invalidation)
+            try:
+                from backend.models.audit_log import AuditLog
+                if AuditLog.query.filter_by(action='token_blacklist', description=token[:100]).first():
+                    return jsonify({"success": False, "message": "Token has been invalidated. Please login again."}), 401
+            except Exception:
+                pass
             
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             
@@ -179,17 +214,13 @@ def get_my_latest_vitals(current_user):
                 if age is None:
                     age = d.get('age')
 
-        # Try to get glucose and insulin from the most recent health record
-        # (used as fallback when no lab test result is available)
+        # Glucose must come from lab results only — never from previous health records.
+        # The patient health form JS fetches lab results separately via /api/patient/lab-results.
         glucose  = None
         insulin  = None
-        glucose_source = None
         last_hr = HealthRecord.query.filter_by(patient_id=current_user['id'])\
             .order_by(HealthRecord.created_at.desc()).first()
         if last_hr:
-            if last_hr.glucose:
-                glucose = last_hr.glucose
-                glucose_source = 'previous_record'
             if last_hr.insulin:
                 insulin = last_hr.insulin
 
@@ -206,8 +237,8 @@ def get_my_latest_vitals(current_user):
                 'pregnancies':              pregnancies,
                 'diabetes_pedigree':        diabetes_pedigree,
                 'age':                      age,
-                'glucose':                  glucose,
-                'glucose_source':           glucose_source,
+                'glucose':                  None,
+                'glucose_source':           None,
                 'insulin':                  insulin,
                 'recorded_at':              vital.recorded_at.isoformat() if vital.recorded_at else None
             }
@@ -315,7 +346,7 @@ def create_health_record(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -360,7 +391,7 @@ def get_health_records(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -368,29 +399,38 @@ def get_health_records(current_user):
 
 @patient_bp.route('/predict', methods=['POST'])
 @token_required
+@rate_limit(max_requests=10, window_seconds=3600)
 def predict(current_user):
     """
-    Make a diabetes prediction using current health data
+    Make a diabetes prediction using current health data.
+    DISCLAIMER: This is a screening tool only and does not constitute
+    a medical diagnosis. Consult a qualified healthcare professional.
     """
     try:
         data = request.get_json()
-        
+
         # Validate required fields
         required_fields = ['glucose', 'blood_pressure', 'bmi', 'age']
         for field in required_fields:
             if field not in data:
-                return jsonify({
-                    "success": False,
-                    "message": f"Missing required field: {field}"
-                }), 400
-        
+                return jsonify({"success": False, "message": f"Missing required field: {field}"}), 400
+
         # Validate health data
         valid, message = validate_health_data(data)
         if not valid:
-            return jsonify({
-                "success": False,
-                "message": message
-            }), 400
+            return jsonify({"success": False, "message": message}), 400
+
+        # Consent check
+        try:
+            patient_obj = Patient.query.get(current_user['id'])
+            if patient_obj and hasattr(patient_obj, 'consent_given') and not patient_obj.consent_given:
+                return jsonify({
+                    "success": False,
+                    "message": "Informed consent required before running a prediction.",
+                    "requires_consent": True
+                }), 403
+        except Exception:
+            pass
 
         # ── Enforce payment before prediction ────────────────────────────────
         try:
@@ -510,9 +550,13 @@ def predict(current_user):
                 model_version=prediction_result.get('model_version', '1.0.0'),
                 explanation=prediction_result.get('interpretation', ''),
                 input_data=input_data_with_comparison,
+                ip_address=request.remote_addr,
                 created_at=datetime.utcnow()
             )
             db.session.add(prediction)
+            # Audit trail
+            _audit('prediction_created', 'predictions',
+                   description=f"risk={prediction_result.get('risk_level')} prob={round(prediction_result.get('probability_percent',0),1)}%")
             db.session.commit()
         except Exception as pred_err:
             db.session.rollback()
@@ -600,7 +644,7 @@ def predict(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred during prediction",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -646,7 +690,7 @@ def get_predictions(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -692,7 +736,7 @@ def get_prediction(current_user, prediction_id):
         return jsonify({
             "success": False,
             "message": "An error occurred",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -763,7 +807,7 @@ def dashboard(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -825,7 +869,7 @@ def get_prescriptions(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred fetching prescriptions",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -873,7 +917,7 @@ def get_prescription(current_user, prescription_id):
         return jsonify({
             "success": False,
             "message": "An error occurred",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1018,7 +1062,7 @@ def get_lab_results(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred fetching lab results",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1066,7 +1110,7 @@ def get_lab_result(current_user, result_id):
         return jsonify({
             "success": False,
             "message": "An error occurred",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1123,7 +1167,7 @@ def get_appointments(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred fetching appointments",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1230,7 +1274,7 @@ def get_daily_appointment_summary(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred fetching daily appointment summary",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1353,7 +1397,7 @@ def create_appointment(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred creating appointment",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1384,7 +1428,7 @@ def get_appointment(current_user, appointment_id):
         return jsonify({
             "success": False,
             "message": "An error occurred",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1447,7 +1491,7 @@ def update_appointment(current_user, appointment_id):
         return jsonify({
             "success": False,
             "message": "An error occurred updating appointment",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1483,7 +1527,7 @@ def cancel_appointment(current_user, appointment_id):
         return jsonify({
             "success": False,
             "message": "An error occurred cancelling appointment",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1513,7 +1557,7 @@ def get_doctors(current_user):
             })
         return jsonify({"success": True, "doctors": result}), 200
     except Exception as e:
-        return jsonify({"success": False, "message": "Error fetching doctors", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "Error fetching doctors", "error": _safe_error(e)}), 500
 
 
 @patient_bp.route('/doctors/<int:doctor_id>/booked-slots', methods=['GET'])
@@ -1575,7 +1619,7 @@ def change_password(current_user):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": "An error occurred", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "An error occurred", "error": _safe_error(e)}), 500
 
 
 # ============ PATIENT PROFILE ENDPOINTS (FIXED - only existing columns) ============
@@ -1670,7 +1714,7 @@ def get_patient_profile(current_user):
         return jsonify({
             "success": False,
             "message": "An error occurred fetching profile",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1782,7 +1826,7 @@ def update_patient_profile(current_user):
             "username": patient.username,
             "email": patient.email,
             "role": patient.role,
-            "patient_id": patient.patient_id
+            "patient_id": getattr(patient, 'patient_id', None)
         }
         
         # Add optional fields if they exist
@@ -1814,7 +1858,7 @@ def update_patient_profile(current_user):
         return jsonify({
             "success": False,
             "message": "Error updating profile",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1868,7 +1912,7 @@ def generate_patient_report(current_user):
             "generated_at": datetime.utcnow().isoformat(),
             "patient_info": {
                 "id": patient.id,
-                "patient_id": patient.patient_id,
+                "patient_id": getattr(patient, 'patient_id', None),
                 "name": patient.username,
                 "email": patient.email,
                 "blood_group": patient.blood_group if hasattr(patient, 'blood_group') else None
@@ -1923,7 +1967,7 @@ def generate_patient_report(current_user):
         return jsonify({
             "success": False,
             "message": "Error generating report",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -1962,7 +2006,7 @@ def download_patient_pdf(current_user):
             .order_by(Appointment.appointment_date.desc()).limit(10).all()
 
         patient_info = {
-            "patient_id": patient.patient_id,
+            "patient_id": getattr(patient, 'patient_id', None),
             "name": getattr(patient, 'full_name', None) or patient.username,
             "email": patient.email,
             "blood_group": getattr(patient, 'blood_group', None),
@@ -1986,7 +2030,7 @@ def download_patient_pdf(current_user):
 
         pdf_buf = generate_patient_pdf(patient_info, pred_list, rx_list, lab_list, apt_list)
 
-        filename = f"health_report_{patient.patient_id}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
+        filename = f"health_report_{getattr(patient, 'patient_id', None)}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
         return send_file(
             pdf_buf,
             mimetype='application/pdf',
@@ -1995,7 +2039,7 @@ def download_patient_pdf(current_user):
         )
 
     except Exception as e:
-        return jsonify({"success": False, "message": "Error generating PDF", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "Error generating PDF", "error": _safe_error(e)}), 500
 
 
 # ============ PAYMENT LOCK HELPER ============
@@ -2016,75 +2060,52 @@ def _has_paid(patient_id):
 def get_timeline(current_user):
     """
     GET /api/patient/timeline
-    Returns a chronological list of all patient events for the timeline UI.
+    Returns a paginated chronological list of all patient events.
     """
     try:
         patient_id = current_user['id']
+        limit  = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
         events = []
 
-        # Predictions
-        for p in Prediction.query.filter_by(patient_id=patient_id).all():
-            events.append({
-                'type': 'prediction',
-                'icon': '🩺',
-                'title': 'Prediction Completed',
-                'detail': f"{p.risk_level} — {round(p.probability_percent or 0, 1)}%",
-                'status': 'completed',
-                'date': p.created_at.isoformat() if p.created_at else None
-            })
+        for p in Prediction.query.filter_by(patient_id=patient_id).order_by(Prediction.created_at.desc()).limit(100).all():
+            events.append({'type':'prediction','icon':'🩺','title':'Prediction Completed',
+                'detail':f"{p.risk_level} — {round(p.probability_percent or 0,1)}%",
+                'status':'completed','date':p.created_at.isoformat() if p.created_at else None})
 
-        # Appointments
-        for a in Appointment.query.filter_by(patient_id=patient_id).all():
-            events.append({
-                'type': 'appointment',
-                'icon': '📅',
-                'title': 'Appointment ' + a.status.capitalize(),
-                'detail': a.reason or '',
-                'status': a.status,
-                'date': a.created_at.isoformat() if a.created_at else None
-            })
+        for a in Appointment.query.filter_by(patient_id=patient_id).order_by(Appointment.created_at.desc()).limit(100).all():
+            events.append({'type':'appointment','icon':'📅','title':'Appointment '+a.status.capitalize(),
+                'detail':a.reason or '','status':a.status,
+                'date':a.created_at.isoformat() if a.created_at else None})
 
-        # Lab tests
-        for l in LabTest.query.filter_by(patient_id=patient_id).all():
-            events.append({
-                'type': 'lab',
-                'icon': '🔬',
-                'title': f"Lab Test: {l.test_name}",
-                'detail': l.status or 'pending',
-                'status': l.status or 'pending',
-                'date': (l.test_completed_at or l.created_at).isoformat() if (l.test_completed_at or l.created_at) else None
-            })
+        for l in LabTest.query.filter_by(patient_id=patient_id).order_by(LabTest.created_at.desc()).limit(100).all():
+            events.append({'type':'lab','icon':'🔬','title':f"Lab Test: {l.test_name}",
+                'detail':l.status or 'pending','status':l.status or 'pending',
+                'date':(l.test_completed_at or l.created_at).isoformat() if (l.test_completed_at or l.created_at) else None})
 
-        # Prescriptions
-        for rx in Prescription.query.filter_by(patient_id=patient_id).all():
-            events.append({
-                'type': 'prescription',
-                'icon': '💊',
-                'title': f"Prescription: {rx.medication}",
-                'detail': rx.status or 'pending',
-                'status': rx.status or 'pending',
-                'date': (rx.dispensed_at or rx.created_at).isoformat() if (rx.dispensed_at or rx.created_at) else None
-            })
+        for rx in Prescription.query.filter_by(patient_id=patient_id).order_by(Prescription.created_at.desc()).limit(100).all():
+            events.append({'type':'prescription','icon':'💊','title':f"Prescription: {rx.medication}",
+                'detail':rx.status or 'pending','status':rx.status or 'pending',
+                'date':(rx.dispensed_at or rx.created_at).isoformat() if (rx.dispensed_at or rx.created_at) else None})
 
-        # Payments
         from backend.models.payment import Payment
-        for pay in Payment.query.filter_by(patient_id=patient_id).all():
-            events.append({
-                'type': 'payment',
-                'icon': '✅',
-                'title': 'Payment ' + (pay.payment_status or 'pending').capitalize(),
-                'detail': f"ETB {pay.total_amount:.2f}" if pay.total_amount else '',
-                'status': pay.payment_status or 'pending',
-                'date': pay.created_at.isoformat() if pay.created_at else None
-            })
+        for pay in Payment.query.filter_by(patient_id=patient_id).order_by(Payment.created_at.desc()).limit(50).all():
+            events.append({'type':'payment','icon':'✅','title':'Payment '+(pay.payment_status or 'pending').capitalize(),
+                'detail':f"ETB {pay.total_amount:.2f}" if pay.total_amount else '',
+                'status':pay.payment_status or 'pending',
+                'date':pay.created_at.isoformat() if pay.created_at else None})
 
-        # Sort newest first, nulls last
         events.sort(key=lambda e: e['date'] or '', reverse=True)
+        total = len(events)
+        page  = events[offset:offset + limit]
 
-        return jsonify({'success': True, 'timeline': events}), 200
+        return jsonify({'success': True, 'timeline': page,
+                        'pagination': {'total': total, 'limit': limit, 'offset': offset,
+                                       'has_more': (offset + limit) < total}}), 200
 
     except Exception as e:
-        return jsonify({'success': False, 'message': 'Error fetching timeline', 'error': str(e)}), 500
+        return jsonify({'success': False, 'message': 'Error fetching timeline',
+                        'error': _safe_error(e)}), 500
 
 
 # ============ IN-APP NOTIFICATIONS ENDPOINTS ============
@@ -2247,6 +2268,98 @@ def get_adherence(current_user, prescription_id):
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+# ============ CONSENT MANAGEMENT (#6) ============
+
+@patient_bp.route('/consent', methods=['POST'])
+@token_required
+def give_consent(current_user):
+    """POST /api/patient/consent — patient gives informed consent."""
+    try:
+        patient = Patient.query.get(current_user['id'])
+        if not patient:
+            return jsonify({'success': False, 'message': 'Patient not found'}), 404
+        patient.consent_given = True
+        patient.consent_given_at = datetime.utcnow()
+        _audit('consent_given', 'patients', resource_id=patient.id,
+               description='Patient gave informed consent for data processing and ML predictions')
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Consent recorded. You may now run predictions.'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Error recording consent', 'error': _safe_error(e)}), 500
+
+
+@patient_bp.route('/consent', methods=['GET'])
+@token_required
+def get_consent_status(current_user):
+    """GET /api/patient/consent — check if patient has given consent."""
+    try:
+        patient = Patient.query.get(current_user['id'])
+        if not patient:
+            return jsonify({'success': False, 'message': 'Patient not found'}), 404
+        consent = getattr(patient, 'consent_given', False)
+        return jsonify({
+            'success': True,
+            'consent_given': bool(consent),
+            'consent_given_at': patient.consent_given_at.isoformat() if getattr(patient, 'consent_given_at', None) else None
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ============ DATA DELETION / RIGHT TO ERASURE (#7) ============
+
+@patient_bp.route('/account', methods=['DELETE'])
+@token_required
+def delete_account(current_user):
+    """
+    DELETE /api/patient/account
+    GDPR/HIPAA right to erasure: anonymise all patient data.
+    Soft-delete: marks deletion requested, anonymises PII.
+    Hard purge requires admin confirmation for audit compliance.
+    """
+    try:
+        from werkzeug.security import generate_password_hash
+        import uuid
+        patient = Patient.query.get(current_user['id'])
+        if not patient:
+            return jsonify({'success': False, 'message': 'Patient not found'}), 404
+
+        anon_id = f"DELETED_{uuid.uuid4().hex[:8]}"
+
+        # Anonymise PII
+        patient.username          = anon_id
+        patient.email             = f"{anon_id}@deleted.invalid"
+        patient.password_hash     = generate_password_hash(uuid.uuid4().hex)
+        patient.is_active         = False
+        patient.medical_history   = None
+        patient.allergies         = None
+        patient.current_medications = None
+        patient.emergency_contact = None
+        patient.emergency_contact_name = None
+        patient.data_deletion_requested = True
+        patient.data_deletion_requested_at = datetime.utcnow()
+
+        # Anonymise health records
+        HealthRecord.query.filter_by(patient_id=current_user['id']).delete()
+
+        # Audit the deletion
+        _audit('account_deleted', 'patients', resource_id=current_user['id'],
+               description='Patient requested account deletion — PII anonymised')
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Your account has been anonymised and deactivated. '
+                       'Prediction records are retained for clinical audit compliance '
+                       'but all personal identifiers have been removed.'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Error processing deletion request',
+                        'error': _safe_error(e)}), 500
 
 
 # ============ MESSAGING (Doctor ↔ Patient) ============

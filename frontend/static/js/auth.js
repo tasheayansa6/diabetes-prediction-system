@@ -23,7 +23,7 @@ function _clearAllStorage() {
     ];
     keysToRemove.forEach(k => localStorage.removeItem(k));
 
-    // Also clear any user-scoped keys (id 1–999)
+    // Also clear any user-scoped keys
     const toDelete = [];
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -47,7 +47,6 @@ function _decodeToken(token) {
         const b64 = token.split('.')[1]
             .replace(/-/g, '+')
             .replace(/_/g, '/');
-        // Pad to multiple of 4
         const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
         return JSON.parse(atob(padded));
     } catch (_) {
@@ -56,23 +55,18 @@ function _decodeToken(token) {
 }
 
 // ── checkAuth ─────────────────────────────────────────────────────────────────
-// Call at the top of every page's DOMContentLoaded.
-// Returns the user object if authenticated and role matches, otherwise redirects.
 function checkAuth(requiredRole) {
     const token = localStorage.getItem('token');
     const user  = JSON.parse(localStorage.getItem('user') || '{}');
 
-    // No token or no user → go to login
     if (!token || !user.username || !user.role) {
         window.location.href = '/login';
         return null;
     }
 
-    // Decode token and validate
     const payload = _decodeToken(token);
 
     if (!payload) {
-        // Malformed token — clear and go to login
         logout();
         return null;
     }
@@ -83,11 +77,11 @@ function checkAuth(requiredRole) {
         return null;
     }
 
-    // Mismatch between stored user and token (different user logged in on same browser)
-    // This is the main cause of "another patient's page"
+    // Mismatch between stored user and token — only redirect to login,
+    // do NOT wipe storage here. Wiping here causes the logout-on-predict bug
+    // because payment keys get cleared mid-flow on the result page.
+    // The login page already calls _clearAllStorage() before writing new session.
     if (payload.user_id && user.id && String(payload.user_id) !== String(user.id)) {
-        // Token belongs to a different user — clear everything and go to login
-        _clearAllStorage();
         window.location.href = '/login';
         return null;
     }
@@ -96,8 +90,6 @@ function checkAuth(requiredRole) {
     if (requiredRole) {
         const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
         if (!roles.includes(user.role)) {
-            // User is authenticated but wrong role for this page
-            // Redirect to their own dashboard (not another patient's page)
             window.location.href = ROLE_DASHBOARDS[user.role] || '/login';
             return null;
         }

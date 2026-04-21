@@ -22,6 +22,15 @@ nurse_bp = Blueprint('nurse', __name__, url_prefix='/api/nurse')
 # ============ TOKEN DECORATOR ============
 
 
+
+def _safe_error(e):
+    """Return error detail only in development."""
+    from flask import current_app
+    if current_app.config.get('EXPOSE_ERRORS', False):
+        return str(e)
+    return None
+
+
 def _ensure_patient_profile(user):
     """
     Ensure a `patients` row exists for a user with role=patient.
@@ -64,6 +73,14 @@ def token_required(f):
         try:
             if token.startswith('Bearer '):
                 token = token[7:]
+
+            # Check blacklist (logout invalidation)
+            try:
+                from backend.models.audit_log import AuditLog
+                if AuditLog.query.filter_by(action='token_blacklist', description=token[:100]).first():
+                    return jsonify({"success": False, "message": "Token has been invalidated. Please login again."}), 401
+            except Exception:
+                pass
             
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             
@@ -87,7 +104,7 @@ def token_required(f):
                 'username': nurse.username,
                 'email': nurse.email,
                 'role': nurse.role,
-                'nurse_id': nurse.nurse_id,
+                'nurse_id': getattr(nurse, 'nurse_id', None),
                 'department': nurse.department,
                 'shift': nurse.shift
             }
@@ -199,7 +216,7 @@ def get_dashboard(current_nurse):
                 "patient": {
                     "id": patient.id,
                     "name": patient.username,
-                    "patient_id": patient.patient_id
+                    "patient_id": getattr(patient, 'patient_id', None)
                 } if patient else None,
                 "recorded_at": v.recorded_at.isoformat() if v.recorded_at else None
             })
@@ -241,7 +258,7 @@ def get_dashboard(current_nurse):
         return jsonify({
             "success": False,
             "message": "Error fetching dashboard",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -342,7 +359,7 @@ def record_vitals(current_nurse):
                 bp_str = f", BP: {data['blood_pressure_systolic']}/{data['blood_pressure_diastolic']}"
             bmi_str = f", BMI: {bmi}" if bmi else ''
             msg = (f"Nurse {current_nurse['username']} recorded vitals for "
-                   f"{patient.username} (ID: {patient.patient_id}){bp_str}{bmi_str}. "
+                   f"{patient.username} (ID: {getattr(patient, 'patient_id', None)}){bp_str}{bmi_str}. "
                    f"Patient is ready for consultation.")
             doctors = User.query.filter_by(role='doctor', is_active=True).all()
             for doc in doctors:
@@ -380,7 +397,7 @@ def record_vitals(current_nurse):
         return jsonify({
             "success": False,
             "message": "Error recording vital signs",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -477,7 +494,7 @@ def get_queue(current_nurse):
                 "patient": {
                     "id": patient.id,
                     "name": patient.username,
-                    "patient_id": patient.patient_id
+                    "patient_id": getattr(patient, 'patient_id', None)
                 } if patient else None,
                 "priority": q.priority,
                 "priority_label": priority_labels.get(q.priority, "Normal"),
@@ -502,7 +519,7 @@ def get_queue(current_nurse):
         return jsonify({
             "success": False,
             "message": "Error fetching queue",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -544,7 +561,7 @@ def call_patient(current_nurse, queue_id):
         return jsonify({
             "success": False,
             "message": "Error calling patient",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -579,7 +596,7 @@ def complete_queue_item(current_nurse, queue_id):
         return jsonify({
             "success": False,
             "message": "Error completing queue item",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -664,7 +681,7 @@ def register_patient(current_nurse):
         return jsonify({
             "success": False,
             "message": "Error registering patient",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -749,7 +766,7 @@ def update_patient(current_nurse, patient_id):
             "updated_fields": updates,
             "patient": {
                 "id": patient.id,
-                "patient_id": patient.patient_id,
+                "patient_id": getattr(patient, 'patient_id', None),
                 "username": patient.username,
                 "email": patient.email,
                 "blood_group": patient.blood_group
@@ -761,7 +778,7 @@ def update_patient(current_nurse, patient_id):
         return jsonify({
             "success": False,
             "message": "Error updating patient",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -803,7 +820,7 @@ def search_patients(current_nurse):
         return jsonify({
             "success": False,
             "message": "Error searching patients",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -853,7 +870,7 @@ def get_patient_vitals(current_nurse, patient_id):
         return jsonify({
             "success": False,
             "message": "Error fetching vitals",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -935,7 +952,7 @@ def get_all_patients(current_nurse):
         return jsonify({
             "success": False,
             "message": "Error fetching patients",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500
 
 
@@ -980,7 +997,7 @@ def get_predictions(current_nurse):
                 'patient': {
                     'id': patient.id,
                     'name': patient.username,
-                    'patient_id': patient.patient_id
+                    'patient_id': getattr(patient, 'patient_id', None)
                 } if patient else None,
                 'prediction': p.prediction,
                 'prediction_label': 'Diabetic' if p.prediction == 1 else 'Non-Diabetic',
@@ -1037,5 +1054,5 @@ def test_all_endpoints(current_nurse):
         return jsonify({
             "success": False,
             "message": "Error testing endpoints",
-            "error": str(e)
+            "error": _safe_error(e)
         }), 500

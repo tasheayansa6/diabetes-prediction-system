@@ -54,11 +54,13 @@ async function handleLogin(event) {
 
         if (res.ok && data.success) {
             // Clear ALL previous user data before storing new session
-            // This prevents cross-user data leaks when switching accounts
             if (typeof _clearAllStorage === 'function') _clearAllStorage();
+            // Also clear notification widget DOM so previous user's notifications
+            // are not visible for even a moment after login
+            const notifWrapper = document.getElementById('notifWrapper');
+            if (notifWrapper) notifWrapper.remove();
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
-            // If a next= param exists, go there after login
             const next = new URLSearchParams(window.location.search).get('next');
             if (next && next.startsWith('/')) {
                 window.location.href = next;

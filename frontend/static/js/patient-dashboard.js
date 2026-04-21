@@ -71,7 +71,7 @@ function renderStats(dashboard, predictions, prescriptions, appointments) {
         // Hide if patient already has a scheduled appointment (they took action)
         const banner = document.getElementById('riskAlertBanner');
         if (banner && (latest.risk_level === 'HIGH RISK' || latest.risk_level === 'VERY HIGH RISK')) {
-            const hasScheduled = appointments.some(a => a.status === 'scheduled');
+            const hasScheduled = appointments.some(a => ['scheduled', 'confirmed', 'completed'].includes(a.status));
             if (hasScheduled) {
                 banner.style.display = 'none';
             } else {

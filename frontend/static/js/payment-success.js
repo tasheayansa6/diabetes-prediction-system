@@ -216,27 +216,17 @@ async function loadTransaction() {
         if (countdownEl) countdownEl.style.display = 'none';
 
         if (continueBtn) {
-            // Check if a valid token exists for the correct user
-            const token = localStorage.getItem('token');
-            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-            let isLoggedIn = false;
-            if (token && storedUser.role) {
-                try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
-                    isLoggedIn = payload.exp && payload.exp * 1000 > Date.now();
-                } catch (_) {}
-            }
-
-            if (isLoggedIn) {
-                // User is logged in — go straight to the target
-                continueBtn.href = target;
-            } else {
-                // Not logged in — go to login, then redirect to target after sign-in
-                continueBtn.href = '/login?next=' + encodeURIComponent(target);
-                continueBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Sign In to Continue';
-            }
+            continueBtn.href = target;
             continueBtn.style.display = 'inline-flex';
         }
+
+        // Auto-redirect after 3 seconds
+        let secs = 3;
+        const autoRedirect = setInterval(() => {
+            secs--;
+            if (countdownEl) { countdownEl.style.display = ''; countdownEl.textContent = `Redirecting in ${secs}s...`; }
+            if (secs <= 0) { clearInterval(autoRedirect); window.location.href = target; }
+        }, 1000);
     }
 }
 

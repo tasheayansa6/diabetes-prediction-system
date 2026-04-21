@@ -27,9 +27,18 @@ const NOTIF_URLS = {
     'payment':         '/templates/payment/payment_history.html',
 };
 
+let _notifInterval = null;
+
 async function initNotifications() {
     const navRight = document.querySelector('.topbar-right');
     if (!navRight) return;
+
+    // Clear any previous interval (e.g. from a previous user's session on same tab)
+    if (_notifInterval) { clearInterval(_notifInterval); _notifInterval = null; }
+
+    // Remove existing notification widget if present (prevents duplicate on re-init)
+    const existing = document.getElementById('notifWrapper');
+    if (existing) existing.remove();
 
     navRight.insertAdjacentHTML('afterbegin', `
         <div class="notif-wrapper" id="notifWrapper">
@@ -70,14 +79,30 @@ async function initNotifications() {
     });
 
     await loadNotifications();
-    setInterval(loadNotifications, 30000);
+    _notifInterval = setInterval(loadNotifications, 60000);
 }
 
 async function loadNotifications() {
+    // Guard: if no token or user in storage, clear the widget and stop
+    const token = getToken();
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!token || !storedUser.id) {
+        const list = document.getElementById('notifList');
+        if (list) list.innerHTML = '<div class="notif-empty"><i class="bi bi-bell-slash"></i><p>Not signed in</p></div>';
+        updateBadge(0);
+        return;
+    }
     try {
         const res  = await fetch('/api/auth/notifications?limit=20&offset=0', {
-            headers: { 'Authorization': 'Bearer ' + getToken() }
+            headers: { 'Authorization': 'Bearer ' + token }
         });
+        // 401 means token is invalid/expired — clear widget, don't redirect
+        if (res.status === 401) {
+            const list = document.getElementById('notifList');
+            if (list) list.innerHTML = '<div class="notif-empty"><i class="bi bi-bell-slash"></i><p>Session expired</p></div>';
+            updateBadge(0);
+            return;
+        }
         const data = await res.json();
         if (!data.success) return;
         renderNotifications(data.notifications);

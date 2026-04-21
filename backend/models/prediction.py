@@ -28,7 +28,10 @@ class Prediction(db.Model):  # Changed from PredictionResult for consistency
     
     # Input data snapshot (store what was used for prediction)
     input_data = db.Column(db.JSON)  # Stores the health metrics used
-    
+
+    # Audit / compliance
+    ip_address = db.Column(db.String(50), nullable=True)
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     

@@ -289,11 +289,7 @@ async function checkNurseVitals() {
             filled.push('Age: ' + v.age);
         }
 
-        // Auto-fill glucose from previous health record if no lab result yet
-        // NOTE: glucose is intentionally NOT filled here — it must come from
-        // lab results only (checkLabResults step). Health record glucose is
-        // the patient's own previous input, not a clinical measurement.
-        // The lab step (Step 2) will fill glucose from the actual lab test.
+        // Glucose is NEVER filled from nurse vitals — lab results only.
 
         // Auto-fill insulin from previous health record if no lab result yet
         if (v.insulin != null) {
@@ -393,27 +389,23 @@ async function checkLabResults() {
         const pendingGlucoseTests = data.lab_results.filter(r => isPending(r) && isGlucoseLike(r));
 
         if (!glucoseTest) {
+            const glucoseEl = document.getElementById('glucose');
+            const glucoseHint = document.getElementById('glucoseHint');
             if (pendingGlucoseTests.length > 0) {
-                // Lab test ordered but results not entered yet — show waiting message
-                const testNames = pendingGlucoseTests.map(r => r.test_name).join(', ');
-                updateStepUI('step2', 'checking', '⏳ Lab result pending: ' + testNames + '. Waiting for lab technician to enter results...');
-                // Set glucose hint to show waiting state
-                const glucoseHint = document.getElementById('glucoseHint');
-                if (glucoseHint) {
-                    glucoseHint.innerHTML = '⏳ <strong>Lab result pending</strong> — ' + testNames + '. The form will auto-fill when the lab technician enters your result. Please wait.';
-                }
-                // Don't show the manual entry message — keep polling
+                const testNames = [...new Set(pendingGlucoseTests.map(r => r.test_name))].join(', ');
+                updateStepUI('step2', 'checking', '⏳ Lab result pending: ' + testNames + '. Waiting for lab technician...');
+                if (glucoseEl) { glucoseEl.value = ''; glucoseEl.readOnly = true; glucoseEl.placeholder = 'Waiting for lab result...'; glucoseEl.classList.remove('field-autofilled'); }
+                if (glucoseHint) glucoseHint.innerHTML = '⏳ <strong>Lab result pending</strong> — ' + testNames + '. The form will auto-fill when the lab technician enters your result. Please wait.';
                 const insulinEl = document.getElementById('insulin');
                 if (insulinEl && !insulinEl.readOnly) {
-                    insulinEl.value = '0';
-                    insulinEl.readOnly = true;
-                    insulinEl.classList.add('field-autofilled');
+                    insulinEl.value = '0'; insulinEl.readOnly = true; insulinEl.classList.add('field-autofilled');
                     const hint = document.getElementById('insulinHint');
                     if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong>.</span>';
                 }
             } else {
-                // No glucose lab test at all
-                updateStepUI('step2', 'missing', 'No glucose lab result found.');
+                updateStepUI('step2', 'missing', 'No glucose lab result found. Ask your doctor to order a glucose test.');
+                if (glucoseEl) { glucoseEl.value = ''; glucoseEl.readOnly = true; glucoseEl.placeholder = 'No lab result yet'; glucoseEl.classList.remove('field-autofilled'); }
+                if (glucoseHint) glucoseHint.innerHTML = '🔬 Glucose will be auto-filled from your lab result. Ask your doctor to order a glucose test.';
             }
             Steps.labResults = false;
             return false;
@@ -519,8 +511,7 @@ async function checkLastPredictionData() {
         fill('diabetesPedigree', d.diabetes_pedigree,  'Pedigree',    true);
 
         // NOTE: glucose is intentionally NOT filled from last prediction.
-        // Glucose must come from lab results only (checkLabResults step).
-        // Filling from a previous prediction would show stale data.
+        // Glucose must come from lab results only.
 
         // Fill blood pressure if not already filled
         if (d.blood_pressure != null) {
@@ -600,51 +591,22 @@ function evaluateFormAccess() {
 
     showAutofillBanner();
 
-    if (Steps.nurseVitals && Steps.labResults) {
-        if (formSection) formSection.style.display = 'block';
-        if (blockedMsg)  blockedMsg.style.display  = 'none';
-        if (submitBtn)   submitBtn.disabled = false;
+    if (formSection) formSection.style.display = 'block';
+    if (blockedMsg)  blockedMsg.style.display  = 'none';
 
-    } else if (Steps.nurseVitals && !Steps.labResults) {
-        if (formSection) formSection.style.display = 'block';
-        if (blockedMsg)  blockedMsg.style.display  = 'none';
-        if (submitBtn)   submitBtn.disabled = false;
-        // Only update glucose hint if glucose is truly empty and not already filled from lab
-        const glucoseEl = document.getElementById('glucose');
-        if (glucoseEl && !glucoseEl.readOnly && !glucoseEl.value) {
-            const hint = document.getElementById('glucoseHint');
-            if (hint && !hint.innerHTML.includes('pending') && !hint.innerHTML.includes('🔬')) {
-                hint.innerHTML = '🔬 Glucose will be auto-filled from your lab result. Ask your doctor to order a glucose test if not done.';
-            }
-        }
-        const insulinEl = document.getElementById('insulin');
-        if (insulinEl && !insulinEl.readOnly) {
-            insulinEl.value = '0';
-            insulinEl.placeholder = '0 (no lab test)';
-            const hint = document.getElementById('insulinHint');
-            if (hint) hint.innerHTML = '<span style="color:#64748b;">&#9432; No insulin lab test on record. Value set to <strong>0</strong>.</span>';
-        }
-    } else {
-        // No nurse vitals at all — still show form, all fields editable
-        if (formSection) formSection.style.display = 'block';
-        if (blockedMsg)  blockedMsg.style.display  = 'none';
-        if (submitBtn)   submitBtn.disabled = false;
-        // Default insulin to 0 if not already filled
-        const insulinEl = document.getElementById('insulin');
-        if (insulinEl && !insulinEl.readOnly) {
-            insulinEl.value = '0';
-            insulinEl.readOnly = true;
-            insulinEl.classList.add('field-autofilled');
-        }
-        // Only show glucose hint if glucose is truly empty (not filled from lab)
-        const glucoseEl = document.getElementById('glucose');
-        const glucoseHint = document.getElementById('glucoseHint');
-        if (glucoseHint && glucoseEl && !glucoseEl.readOnly && !glucoseEl.value) {
-            if (!glucoseHint.innerHTML.includes('pending') && !glucoseHint.innerHTML.includes('🔬')) {
-                glucoseHint.innerHTML = '🔬 Glucose will be auto-filled from your lab result. Ask your doctor to order a glucose test.';
-            }
-        }
+    // Default insulin to 0 if not filled from lab
+    const insulinEl = document.getElementById('insulin');
+    if (insulinEl && !insulinEl.readOnly) {
+        insulinEl.value = '0';
+        insulinEl.readOnly = true;
+        insulinEl.classList.add('field-autofilled');
     }
+
+    // Submit is only enabled when glucose has been filled from a lab result
+    const glucoseEl = document.getElementById('glucose');
+    const glucoseFilled = glucoseEl && glucoseEl.readOnly && glucoseEl.value && parseFloat(glucoseEl.value) > 0;
+    if (submitBtn) submitBtn.disabled = !glucoseFilled;
+
     updateLiveRiskHint();
 }
 
@@ -745,14 +707,24 @@ async function handleSubmit(e) {
     e.preventDefault();
     hideAlert();
 
+    // Block submission if glucose not filled from lab
+    const glucoseEl = document.getElementById('glucose');
+    if (!glucoseEl || !glucoseEl.readOnly || !glucoseEl.value || parseFloat(glucoseEl.value) <= 0) {
+        showAlert(
+            '<i class="bi bi-exclamation-triangle-fill me-2"></i>' +
+            '<strong>Glucose result required.</strong> Your glucose value must come from a lab test. Please wait for the lab technician to enter your result.',
+            'warning'
+        );
+        return;
+    }
+
     if (!Steps.nurseVitals) {
-        // Warn but don't block — nurse may not have recorded yet, patient can still fill manually
         const bmi = parseFloat(document.getElementById('bmi')?.value);
         const bp  = parseFloat(document.getElementById('bloodPressure')?.value);
         if (isNaN(bmi) || isNaN(bp)) {
             showAlert(
                 '<i class="bi bi-exclamation-triangle-fill me-2"></i>' +
-                '<strong>BMI and Blood Pressure are required.</strong> Please visit the nurse station or enter values manually.',
+                '<strong>BMI and Blood Pressure are required.</strong> Please visit the nurse station.',
                 'warning'
             );
             return;

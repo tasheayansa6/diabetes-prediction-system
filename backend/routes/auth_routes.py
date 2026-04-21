@@ -20,6 +20,15 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 # Token blacklist for logout functionality
 # Store in database for persistence across restarts
+
+def _safe_error(e):
+    """Return error detail only in development."""
+    from flask import current_app
+    if current_app.config.get('EXPOSE_ERRORS', False):
+        return str(e)
+    return None
+
+
 def _is_token_blacklisted(token):
     """Check if token is blacklisted in database"""
     try:
@@ -195,16 +204,24 @@ def register():
         
         # Validate username length
         if len(username) < 3:
-            return jsonify({
-                "success": False,
-                "message": "Username must be at least 3 characters long"
-            }), 400
-        
+            return jsonify({"success": False, "message": "Username must be at least 3 characters long"}), 400
+
         if len(username) > 50:
-            return jsonify({
-                "success": False,
-                "message": "Username must be less than 50 characters"
-            }), 400
+            return jsonify({"success": False, "message": "Username must be less than 50 characters"}), 400
+
+        # Minimum age enforcement for healthcare system
+        if role == 'patient':
+            dob = data.get('date_of_birth')
+            age_val = data.get('age')
+            if age_val is not None:
+                try:
+                    if int(age_val) < 18:
+                        return jsonify({
+                            "success": False,
+                            "message": "Patients must be at least 18 years old to register. For minors, please have a parent or guardian register on their behalf."
+                        }), 400
+                except (ValueError, TypeError):
+                    pass
         
         # Validate email format
         if not validate_email(email):
@@ -286,12 +303,13 @@ def register():
                            details=f'Role: {role}')
 
         # Generate JWT token for auto-login
+        expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 86400)
         token = jwt.encode({
             'user_id': new_user.id,
             'email': new_user.email,
             'username': new_user.username,
             'role': new_user.role,
-            'exp': datetime.utcnow() + timedelta(days=1)
+            'exp': datetime.utcnow() + timedelta(seconds=expiry_secs)
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
         
         return jsonify({
@@ -314,7 +332,7 @@ def register():
         return jsonify({
             "success": False,
             "message": "An error occurred during registration",
-            "error": str(e)  # Remove in production
+            "error": _safe_error(e) if current_app.config.get('EXPOSE_ERRORS') else None
         }), 500
 
 
@@ -434,12 +452,13 @@ def login():
                 pass
         
         # Generate JWT token
+        expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 86400)
         token = jwt.encode({
             'user_id': user.id,
             'email': user.email,
             'username': user.username,
             'role': user.role,
-            'exp': datetime.utcnow() + timedelta(days=1)
+            'exp': datetime.utcnow() + timedelta(seconds=expiry_secs)
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
         
         return jsonify({
@@ -460,7 +479,7 @@ def login():
         return jsonify({
             "success": False,
             "message": "An error occurred during login",
-            "error": str(e)  # Remove in production
+            "error": _safe_error(e) if current_app.config.get('EXPOSE_ERRORS') else None
         }), 500
 
 
@@ -505,7 +524,7 @@ def send_otp():
             return jsonify({"success": True, "message": "Verification code sent (check spam if not received)", "debug": err}), 200
 
     except Exception as e:
-        return jsonify({"success": False, "message": "Error sending OTP", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "Error sending OTP", "error": _safe_error(e)}), 500
 
 
 # ============ VERIFY OTP ============
@@ -545,7 +564,7 @@ def verify_otp():
         return jsonify({"success": True, "message": "Email verified successfully"}), 200
 
     except Exception as e:
-        return jsonify({"success": False, "message": "Error verifying OTP", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "Error verifying OTP", "error": _safe_error(e)}), 500
 
 
 # ============ FORGOT PASSWORD ============
@@ -587,7 +606,7 @@ def forgot_password():
         return jsonify({"success": True, "message": "If an account exists with this email, a reset link has been sent."}), 200
 
     except Exception as e:
-        return jsonify({"success": False, "message": "Error processing request", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "Error processing request", "error": _safe_error(e)}), 500
 
 
 # ============ RESET PASSWORD ============
@@ -634,7 +653,7 @@ def reset_password():
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"success": False, "message": "Error resetting password", "error": str(e)}), 500
+        return jsonify({"success": False, "message": "Error resetting password", "error": _safe_error(e)}), 500
 
 
 @auth_bp.route('/logout', methods=['POST'])

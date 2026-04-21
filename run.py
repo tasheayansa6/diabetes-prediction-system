@@ -78,4 +78,9 @@ if __name__ == '__main__':
     print("Health check: http://localhost:5000/health")
     print("Press CTRL+C to quit\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
+    app.run(
+        debug=app.config.get('DEBUG', False),
+        host='0.0.0.0',
+        port=int(os.getenv('PORT', 5000)),
+        use_reloader=False
+    )

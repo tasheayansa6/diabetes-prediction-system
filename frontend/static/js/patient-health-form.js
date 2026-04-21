@@ -290,19 +290,10 @@ async function checkNurseVitals() {
         }
 
         // Auto-fill glucose from previous health record if no lab result yet
-        if (v.glucose != null) {
-            const el = document.getElementById('glucose');
-            if (el && !el.readOnly) {
-                el.value = v.glucose;
-                el.readOnly = true;
-                el.classList.add('field-autofilled');
-            }
-            const badge = document.getElementById('glucoseBadge');
-            if (badge) { badge.style.display = 'inline'; badge.textContent = '📋 From Record'; }
-            const hint = document.getElementById('glucoseHint');
-            if (hint) hint.innerHTML = '📋 Auto-filled from your last health record. Normal fasting: 70–99 mg/dL.';
-            filled.push('Glucose: ' + v.glucose + ' mg/dL');
-        }
+        // NOTE: glucose is intentionally NOT filled here — it must come from
+        // lab results only (checkLabResults step). Health record glucose is
+        // the patient's own previous input, not a clinical measurement.
+        // The lab step (Step 2) will fill glucose from the actual lab test.
 
         // Auto-fill insulin from previous health record if no lab result yet
         if (v.insulin != null) {
@@ -433,9 +424,13 @@ async function checkLabResults() {
         const glucoseVal = parseLabValue(glucoseTest.results);
         if (!isNaN(glucoseVal) && glucoseVal > 0) {
             const el = document.getElementById('glucose');
-            if (el) { el.value = glucoseVal; el.readOnly = true; el.classList.add('field-autofilled'); }
+            if (el) {
+                el.value = glucoseVal;
+                el.readOnly = true;
+                el.classList.add('field-autofilled');
+            }
             const badge = document.getElementById('glucoseBadge');
-            if (badge) badge.style.display = 'inline';
+            if (badge) { badge.style.display = 'inline'; badge.textContent = '🔬 From Lab'; }
             const hint = document.getElementById('glucoseHint');
             if (hint) hint.innerHTML = '🔬 Auto-filled from lab: <strong>' + glucoseTest.test_name + '</strong>. Normal fasting: 70–99 mg/dL.';
             filled.push('Glucose: ' + glucoseVal + ' mg/dL');
@@ -444,9 +439,15 @@ async function checkLabResults() {
             const fallback = parseFloat(raw);
             if (!isNaN(fallback) && fallback > 0) {
                 const el = document.getElementById('glucose');
-                if (el) { el.value = fallback; el.readOnly = true; el.classList.add('field-autofilled'); }
+                if (el) {
+                    el.value = fallback;
+                    el.readOnly = true;
+                    el.classList.add('field-autofilled');
+                }
                 const badge = document.getElementById('glucoseBadge');
-                if (badge) badge.style.display = 'inline';
+                if (badge) { badge.style.display = 'inline'; badge.textContent = '🔬 From Lab'; }
+                const hint = document.getElementById('glucoseHint');
+                if (hint) hint.innerHTML = '🔬 Auto-filled from lab: <strong>' + glucoseTest.test_name + '</strong>. Normal fasting: 70–99 mg/dL.';
                 filled.push('Glucose: ' + fallback + ' mg/dL');
             }
         }
@@ -517,20 +518,9 @@ async function checkLastPredictionData() {
         fill('pregnancies',      d.pregnancies,        'Pregnancies', true);
         fill('diabetesPedigree', d.diabetes_pedigree,  'Pedigree',    true);
 
-        // Fill glucose from last prediction if not already filled from lab/vitals
-        if (d.glucose != null) {
-            const el = document.getElementById('glucose');
-            if (el && !el.readOnly && !el.value) {
-                el.value = d.glucose;
-                el.readOnly = true;
-                el.classList.add('field-autofilled');
-                const badge = document.getElementById('glucoseBadge');
-                if (badge) { badge.style.display = 'inline'; badge.textContent = '📋 From Last Visit'; }
-                const hint = document.getElementById('glucoseHint');
-                if (hint) hint.innerHTML = '📋 Auto-filled from your last prediction. Normal fasting: 70–99 mg/dL.';
-                filled.push('Glucose: ' + d.glucose + ' mg/dL');
-            }
-        }
+        // NOTE: glucose is intentionally NOT filled from last prediction.
+        // Glucose must come from lab results only (checkLabResults step).
+        // Filling from a previous prediction would show stale data.
 
         // Fill blood pressure if not already filled
         if (d.blood_pressure != null) {
@@ -619,13 +609,12 @@ function evaluateFormAccess() {
         if (formSection) formSection.style.display = 'block';
         if (blockedMsg)  blockedMsg.style.display  = 'none';
         if (submitBtn)   submitBtn.disabled = false;
-        // Only update glucose hint if glucose is truly empty and not auto-filled
+        // Only update glucose hint if glucose is truly empty and not already filled from lab
         const glucoseEl = document.getElementById('glucose');
         if (glucoseEl && !glucoseEl.readOnly && !glucoseEl.value) {
             const hint = document.getElementById('glucoseHint');
-            if (hint && !hint.innerHTML.includes('pending')) {
-                // Don't overwrite the "pending" message set by checkLabResults
-                hint.innerHTML = '🔬 Glucose will be auto-filled from your lab result. Normal fasting: 70–99 mg/dL.';
+            if (hint && !hint.innerHTML.includes('pending') && !hint.innerHTML.includes('🔬')) {
+                hint.innerHTML = '🔬 Glucose will be auto-filled from your lab result. Ask your doctor to order a glucose test if not done.';
             }
         }
         const insulinEl = document.getElementById('insulin');
@@ -647,12 +636,12 @@ function evaluateFormAccess() {
             insulinEl.readOnly = true;
             insulinEl.classList.add('field-autofilled');
         }
-        // Only show glucose hint if glucose is truly empty (not filled from last prediction)
+        // Only show glucose hint if glucose is truly empty (not filled from lab)
         const glucoseEl = document.getElementById('glucose');
         const glucoseHint = document.getElementById('glucoseHint');
         if (glucoseHint && glucoseEl && !glucoseEl.readOnly && !glucoseEl.value) {
-            if (!glucoseHint.innerHTML.includes('pending')) {
-                glucoseHint.innerHTML = '🔬 Glucose will be auto-filled from your lab result. Normal fasting: 70–99 mg/dL.';
+            if (!glucoseHint.innerHTML.includes('pending') && !glucoseHint.innerHTML.includes('🔬')) {
+                glucoseHint.innerHTML = '🔬 Glucose will be auto-filled from your lab result. Ask your doctor to order a glucose test.';
             }
         }
     }

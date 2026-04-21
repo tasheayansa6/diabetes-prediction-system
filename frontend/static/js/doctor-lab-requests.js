@@ -114,15 +114,19 @@ async function loadPatients() {
     const sel = document.getElementById('modal_patient_id');
     try {
         const r = await fetch('/api/doctor/patients?limit=100', { headers: { Authorization: 'Bearer ' + token() } });
-        const d = await r.json();
-        if (!d.success) throw new Error(d.message);
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.success) throw new Error(d.message || `Failed to fetch patients (${r.status})`);
+        const patients = Array.isArray(d.patients) ? d.patients : [];
         sel.innerHTML = '<option value="">Select patient...</option>';
-        d.patients.forEach(p => {
+        patients.forEach(p => {
             const o = document.createElement('option');
             o.value = p.id;
             o.textContent = `${p.username} (${p.patient_id || 'ID:'+p.id})`;
             sel.appendChild(o);
         });
+        if (!patients.length) {
+            sel.innerHTML = '<option value="">No patients found</option>';
+        }
         const pre = new URLSearchParams(window.location.search).get('patient_id');
         if (pre) {
             sel.value = pre;

@@ -14,6 +14,7 @@ import re
 from datetime import datetime, timedelta
 import jwt
 from functools import wraps
+import uuid
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
@@ -247,6 +248,37 @@ def register():
         
         db.session.add(new_user)
         db.session.commit()
+
+        # If a patient self-registers, place them in nurse queue so the
+        # patient -> nurse flow works without manual handoff.
+        if role == 'patient':
+            try:
+                from backend.models.queue import PatientQueue
+                from sqlalchemy import func
+
+                today = datetime.utcnow().date()
+                last_queue = PatientQueue.query.filter(
+                    func.date(PatientQueue.check_in_time) == today
+                ).order_by(PatientQueue.queue_number.desc()).first()
+                next_number = (last_queue.queue_number + 1) if last_queue else 1
+
+                queue_item = PatientQueue(
+                    queue_id=f"Q{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
+                    patient_id=new_user.id,
+                    nurse_id=None,
+                    queue_number=next_number,
+                    priority=0,
+                    status='waiting',
+                    purpose='registration',
+                    check_in_time=datetime.utcnow(),
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()
+                )
+                db.session.add(queue_item)
+                db.session.commit()
+            except Exception:
+                # Do not fail registration if queue insert fails.
+                db.session.rollback()
 
         from backend.utils.logger import log_security_event
         log_security_event('register', user_id=new_user.id, username=new_user.username,

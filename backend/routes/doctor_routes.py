@@ -221,29 +221,53 @@ def get_patients(current_doctor):
         limit = request.args.get('limit', 20, type=int)
         offset = request.args.get('offset', 0, type=int)
         
-        query = Patient.query
-        
+        # Use robust SQL instead of Patient ORM query to avoid polymorphic
+        # crashes from legacy inconsistent rows.
+        params = {'limit': limit, 'offset': offset}
+        where_sql = "WHERE u.role = 'patient'"
         if search:
-            query = query.filter(
-                (Patient.username.ilike(f'%{search}%')) |
-                (Patient.email.ilike(f'%{search}%')) |
-                (Patient.patient_id.ilike(f'%{search}%'))
+            where_sql += (
+                " AND (u.username LIKE :search OR u.email LIKE :search OR p.patient_id LIKE :search)"
             )
-        
-        total = query.count()
-        patients = query.order_by(Patient.created_at.desc()).offset(offset).limit(limit).all()
-        
-        # Build patient list manually instead of using to_dict()
+            params['search'] = f'%{search}%'
+
+        total = db.session.execute(
+            text(f"""
+                SELECT COUNT(*) AS c
+                FROM users u
+                LEFT JOIN patients p ON p.id = u.id
+                {where_sql}
+            """),
+            params
+        ).fetchone().c
+
+        rows = db.session.execute(
+            text(f"""
+                SELECT
+                    u.id,
+                    u.username,
+                    u.email,
+                    u.created_at,
+                    p.patient_id
+                FROM users u
+                LEFT JOIN patients p ON p.id = u.id
+                {where_sql}
+                ORDER BY u.created_at DESC
+                LIMIT :limit OFFSET :offset
+            """),
+            params
+        ).fetchall()
+
         patients_list = []
-        for p in patients:
-            u = User.query.get(p.id)
+        for r in rows:
+            created_at = r.created_at.isoformat() if hasattr(r.created_at, 'isoformat') else str(r.created_at)
             patients_list.append({
-                "id": p.id,
-                "patient_id": p.patient_id,
-                "username": u.username if u else f"Patient #{p.id}",
-                "email": u.email if u else None,
+                "id": r.id,
+                "patient_id": r.patient_id or f"PAT{int(r.id):06d}",
+                "username": r.username or f"Patient #{r.id}",
+                "email": r.email,
                 "role": "patient",
-                "created_at": u.created_at.isoformat() if u and u.created_at else None
+                "created_at": created_at
             })
         
         return jsonify({

@@ -260,4 +260,4 @@ frontend/
 
 ---
 
-*Last updated: March 2026*
+

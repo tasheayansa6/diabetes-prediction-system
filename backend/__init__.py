@@ -20,6 +20,57 @@ from backend.middleware.cors_middleware import setup_cors_manually
 import backend.models
 
 
+def _repair_sqlite_polymorphic_user_integrity(app):
+    """
+    Keep users + role tables consistent for SQLite deployments.
+
+    Some maintenance scripts can delete rows from `users` without deleting
+    corresponding joined-table inheritance rows (doctors, nurses, ...), which
+    later causes UNIQUE collisions when new users reuse those ids.
+    """
+    role_tables = [
+        'patients',
+        'doctors',
+        'nurses',
+        'lab_technicians',
+        'pharmacists',
+        'admins',
+    ]
+
+    try:
+        from sqlalchemy import text
+
+        # 1) Remove role rows that no longer have a parent user.
+        for table in role_tables:
+            db.session.execute(text(
+                f"DELETE FROM {table} "
+                "WHERE id NOT IN (SELECT id FROM users)"
+            ))
+
+        # 2) Ensure next users.id is above every role-table id.
+        max_ids = []
+        for table in ['users', *role_tables]:
+            row = db.session.execute(text(f"SELECT COALESCE(MAX(id), 0) AS max_id FROM {table}")).fetchone()
+            max_ids.append(int(row.max_id if row and row.max_id is not None else 0))
+
+        target_seq = max(max_ids) if max_ids else 0
+        if target_seq > 0:
+            updated = db.session.execute(
+                text("UPDATE sqlite_sequence SET seq = :seq WHERE name = 'users'"),
+                {'seq': target_seq}
+            )
+            if getattr(updated, 'rowcount', 0) == 0:
+                db.session.execute(
+                    text("INSERT INTO sqlite_sequence(name, seq) VALUES ('users', :seq)"),
+                    {'seq': target_seq}
+                )
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        app.logger.warning(f"SQLite user-role integrity repair skipped: {e}")
+
+
 def create_app(config_name="development"):
     app = Flask(__name__,
                 template_folder='../frontend',
@@ -49,6 +100,7 @@ def create_app(config_name="development"):
         try:
             with app.app_context():
                 db.create_all()
+                _repair_sqlite_polymorphic_user_integrity(app)
         except Exception as e:
             app.logger.warning(f"SQLite bootstrap skipped: {e}")
 

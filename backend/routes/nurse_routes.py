@@ -12,7 +12,7 @@ from backend.models.queue import PatientQueue
 from backend.models.appointment import Appointment
 from backend.utils.validators import validate_health_data
 from datetime import datetime, timedelta
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, text
 import jwt
 from functools import wraps
 import uuid
@@ -20,6 +20,37 @@ import uuid
 nurse_bp = Blueprint('nurse', __name__, url_prefix='/api/nurse')
 
 # ============ TOKEN DECORATOR ============
+
+
+def _ensure_patient_profile(user):
+    """
+    Ensure a `patients` row exists for a user with role=patient.
+    """
+    if not user or getattr(user, 'role', None) != 'patient':
+        return None
+
+    patient_exists = db.session.execute(
+        text("SELECT id FROM patients WHERE id = :id"),
+        {'id': user.id}
+    ).fetchone()
+    if patient_exists:
+        return Patient.query.filter_by(id=user.id).first()
+
+    patient = Patient(
+        id=user.id,
+        patient_id=f"PAT{user.id:06d}",
+        username=user.username,
+        email=user.email,
+        password_hash=user.password_hash,
+        role='patient',
+        full_name=getattr(user, 'full_name', None),
+        phone=getattr(user, 'phone', None),
+        is_active=getattr(user, 'is_active', True),
+        email_verified=getattr(user, 'email_verified', False),
+        created_at=getattr(user, 'created_at', datetime.utcnow())
+    )
+    db.session.add(patient)
+    return patient
 
 def token_required(f):
     """Decorator for nurse routes using JWT token"""
@@ -236,7 +267,16 @@ def record_vitals(current_nurse):
                 }), 400
         
         # Validate patient exists
-        patient = Patient.query.get(data['patient_id'])
+        try:
+            patient = Patient.query.get(data['patient_id'])
+        except Exception:
+            patient = None
+        if not patient:
+            # Backward-compatibility: some old accounts exist in users table only.
+            user_patient = User.query.get(data['patient_id'])
+            if user_patient and user_patient.role == 'patient':
+                patient = _ensure_patient_profile(user_patient)
+                db.session.commit()
         if not patient:
             return jsonify({
                 "success": False,
@@ -829,19 +869,55 @@ def get_all_patients(current_nurse):
         limit = request.args.get('limit', 20, type=int)
         offset = request.args.get('offset', 0, type=int)
         
-        total = Patient.query.count()
-        patients = Patient.query.order_by(Patient.created_at.desc())\
-            .offset(offset).limit(limit).all()
-        
+        # Backfill missing patient rows for legacy user records.
+        user_patients = User.query.filter_by(role='patient').all()
+        created_any = False
+        for u in user_patients:
+            exists = db.session.execute(
+                text("SELECT 1 FROM patients WHERE id = :id"),
+                {'id': u.id}
+            ).fetchone()
+            if not exists:
+                _ensure_patient_profile(u)
+                created_any = True
+        if created_any:
+            db.session.commit()
+
+        total = db.session.execute(
+            text("SELECT COUNT(*) AS c FROM users WHERE role = 'patient'")
+        ).fetchone().c
+
+        rows = db.session.execute(text("""
+            SELECT
+                u.id,
+                u.username,
+                u.email,
+                u.created_at,
+                p.patient_id,
+                p.blood_group
+            FROM users u
+            LEFT JOIN patients p ON p.id = u.id
+            WHERE u.role = 'patient'
+            ORDER BY u.created_at DESC
+            LIMIT :limit OFFSET :offset
+        """), {'limit': limit, 'offset': offset}).fetchall()
+
         patients_list = []
-        for p in patients:
+        for r in rows:
+            raw_created_at = getattr(r, 'created_at', None)
+            if raw_created_at is None:
+                created_at = None
+            elif hasattr(raw_created_at, 'isoformat'):
+                created_at = raw_created_at.isoformat()
+            else:
+                created_at = str(raw_created_at)
             patients_list.append({
-                "id": p.id,
-                "patient_id": p.patient_id,
-                "username": p.username,
-                "email": p.email,
-                "blood_group": p.blood_group,
-                "created_at": p.created_at.isoformat() if p.created_at else None
+                "id": r.id,
+                "patient_id": r.patient_id or f"PAT{int(r.id):06d}",
+                "username": r.username,
+                "email": r.email,
+                "blood_group": r.blood_group,
+                "created_at": created_at
             })
         
         return jsonify({

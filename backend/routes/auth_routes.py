@@ -266,6 +266,29 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
+        # Notify all nurses that a new patient has registered
+        if role == 'patient':
+            try:
+                from backend.models.notification import Notification
+                nurses = User.query.filter_by(role='nurse', is_active=True).all()
+                for nurse in nurses:
+                    db.session.add(Notification(
+                        user_id=nurse.id,
+                        title='New Patient Registered',
+                        message=f'New patient {username} has registered and is waiting for vitals recording.',
+                        type='info',
+                        category='general',
+                        is_read=False,
+                        link='/templates/nurse/record_vitals.html',
+                        created_at=datetime.utcnow()
+                    ))
+                db.session.commit()
+            except Exception:
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+
         # If a patient self-registers, place them in nurse queue so the
         # patient -> nurse flow works without manual handoff.
         if role == 'patient':

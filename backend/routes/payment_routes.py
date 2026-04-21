@@ -130,9 +130,24 @@ def _ref_from_data(data):
 def _send_confirmation(patient_id, total, payment_id):
     try:
         from backend.services.notification_service import send_payment_confirmation
-        payer = User.query.get(patient_id)
+        from backend.models.notification import Notification
+        from backend.models.user import User as _User
+        payer = _User.query.get(patient_id)
         if payer:
+            # Email notification
             send_payment_confirmation(payer.email, payer.username, total, payment_id)
+            # In-app notification
+            db.session.add(Notification(
+                user_id=patient_id,
+                title='Payment Confirmed',
+                message=f'Your payment of ETB {total:.2f} (ID: {payment_id}) has been processed successfully.',
+                type='payment',
+                category='general',
+                is_read=False,
+                link='/templates/payment/payment_history.html',
+                created_at=datetime.utcnow()
+            ))
+            db.session.commit()
     except Exception:
         pass
 
@@ -842,7 +857,7 @@ def chapa_webhook():
             webhook_secret.encode(),
             request.data,
             hashlib.sha256
-        ).hexdigest()  # type: ignore[attr-defined]
+        ).hexdigest()
         if not hmac.compare_digest(signature, expected):
             current_app.logger.warning('Chapa webhook: invalid signature')
             return jsonify({'success': False, 'message': 'Invalid signature'}), 401

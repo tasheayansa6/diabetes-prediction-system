@@ -135,6 +135,11 @@ def create_app(config_name="development"):
                             conn.execute(_text('CREATE INDEX IF NOT EXISTS ix_audit_logs_action ON audit_logs(action)'))
                         if 'ix_audit_logs_created_at' not in idx_names:
                             conn.execute(_text('CREATE INDEX IF NOT EXISTS ix_audit_logs_created_at ON audit_logs(created_at)'))
+                        # Auto-consent all patients who existed before consent feature was added
+                        conn.execute(_text(
+                            "UPDATE patients SET consent_given=1, consent_given_at=datetime('now') "
+                            "WHERE consent_given=0 OR consent_given IS NULL"
+                        ))
                         conn.commit()
                 except Exception as _me:
                     app.logger.warning(f'Schema migration skipped: {_me}')

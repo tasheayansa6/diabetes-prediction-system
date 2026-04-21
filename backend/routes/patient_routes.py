@@ -420,17 +420,20 @@ def predict(current_user):
         if not valid:
             return jsonify({"success": False, "message": message}), 400
 
-        # Consent check
+        # Consent check — only block if consent_given is explicitly False
+        # (existing patients are auto-consented on startup; new patients see UI dialog)
         try:
             patient_obj = Patient.query.get(current_user['id'])
-            if patient_obj and hasattr(patient_obj, 'consent_given') and not patient_obj.consent_given:
+            if patient_obj and hasattr(patient_obj, 'consent_given') \
+                    and patient_obj.consent_given is not None \
+                    and patient_obj.consent_given == False:
                 return jsonify({
                     "success": False,
-                    "message": "Informed consent required before running a prediction.",
+                    "message": "Please accept the informed consent terms before running a prediction.",
                     "requires_consent": True
                 }), 403
         except Exception:
-            pass
+            pass  # consent column missing on older DBs — allow
 
         # ── Enforce payment before prediction ────────────────────────────────
         try:

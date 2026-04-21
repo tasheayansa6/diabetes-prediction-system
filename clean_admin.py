@@ -1,76 +1,59 @@
 """
-Clean database and create fresh admin account.
-This fixes UNIQUE constraint issues by clearing conflicting entries.
+Create admin account using the correct environment config.
+Runs during Render build: uses FLASK_ENV env var (defaults to production on Render).
 """
 import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
 
-from backend import create_app
-from backend.extensions import db
-from backend.models.user import User
-from werkzeug.security import generate_password_hash
-
 def clean_and_create_admin():
-    """Clean database and create fresh admin"""
-    app = create_app('development')
-    
+    # Use the same config that the server will use at runtime
+    config_name = os.getenv('FLASK_ENV', 'production')
+    print(f"Using config: {config_name}")
+
+    from backend import create_app
+    from backend.extensions import db
+    from backend.models.user import User
+    from werkzeug.security import generate_password_hash
+
+    app = create_app(config_name)
+
     with app.app_context():
-        try:
-            # Delete ALL users to avoid conflicts
-            User.query.delete()
+        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        print(f"DB URI: {db_uri}")
+
+        # Read credentials from env (set in render.yaml / Render dashboard)
+        admin_email    = os.getenv('ADMIN_BOOTSTRAP_EMAIL',    'admin@system.com')
+        admin_password = os.getenv('ADMIN_BOOTSTRAP_PASSWORD', 'Admin@1234')
+        admin_username = os.getenv('ADMIN_BOOTSTRAP_USERNAME', 'admin')
+
+        existing = User.query.filter_by(email=admin_email).first()
+        if existing:
+            # Always sync password so deploy always resets to known credentials
+            existing.password_hash = generate_password_hash(admin_password)
+            existing.is_active = True
             db.session.commit()
-            print("🧹 Cleaned existing users from database")
-            
-            # Reset auto-increment counter
-            db.session.execute("DELETE FROM sqlite_sequence WHERE name='users'")
-            db.session.commit()
-            print("🔄 Reset user ID counter")
-            
-        except Exception as e:
-            print(f"⚠️  Warning during cleanup: {e}")
-        
-        # Create new admin
-        admin_data = {
-            'username': 'admin',
-            'email': 'admin@system.com',
-            'full_name': 'System Administrator'
-        }
-        
+            print(f"Admin password synced: {admin_email}")
+            return True
+
         from backend.utils.role_accounts import create_polymorphic_user
         admin_user = create_polymorphic_user(
-            admin_data, 
-            generate_password_hash('Admin@1234'), 
+            {'username': admin_username, 'email': admin_email},
+            generate_password_hash(admin_password),
             'admin'
         )
-        
         if admin_user:
             admin_user.is_active = True
             db.session.add(admin_user)
             db.session.commit()
-            
-            print("✅ Admin account created successfully!")
-            print(f"📧 Email: admin@system.com")
-            print(f"🔑 Password: Admin@1234")
-            print(f"🆔 User ID: {admin_user.id}")
-            print(f"🌐 Login at: http://localhost:5000/login")
+            print(f"Admin created: {admin_email} / {admin_password}")
             return True
-        else:
-            print("❌ Failed to create admin account")
-            return False
+
+        print("Failed to create admin")
+        return False
+
 
 if __name__ == '__main__':
-    print("🔧 Cleaning database and creating admin account...")
-    print("=" * 50)
-    
     success = clean_and_create_admin()
-    
-    if success:
-        print("=" * 50)
-        print("✅ Ready! You can now login with:")
-        print("   Email: admin@system.com")
-        print("   Password: Admin@1234")
-        print("   URL: http://localhost:5000/login")
-    else:
-        print("❌ Failed to create admin account")
+    if not success:
         sys.exit(1)

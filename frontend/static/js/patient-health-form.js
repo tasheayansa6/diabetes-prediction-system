@@ -610,6 +610,18 @@ function evaluateFormAccess() {
     updateLiveRiskHint();
 }
 
+// ── Consent modal handlers ────────────────────────────────────────────────────
+async function acceptConsent() {
+    try {
+        await fetch(API + '/patient/consent', { method: 'POST', headers: authHeaders() });
+    } catch (_) { /* non-fatal */ }
+    document.getElementById('consentModal').style.display = 'none';
+}
+
+function declineConsent() {
+    window.location.href = '/templates/patient/dashboard.html';
+}
+
 // ── Payment redirect — uses localStorage (persists across page navigations) ───
 function goToPayment(body) {
     // Store form data scoped to this user so it survives the payment page redirect
@@ -654,9 +666,13 @@ async function runPrediction(body) {
 
         if (!data.success) {
             hideOverlay();
-            // Payment required — redirect to payment page
             if (res.status === 402 || data.requires_payment) {
                 goToPayment(body);
+                return;
+            }
+            if (res.status === 403 && data.requires_consent) {
+                document.getElementById('consentModal').style.display = 'flex';
+                resetBtn();
                 return;
             }
             showAlert(data.message || 'Prediction failed. Please try again.');
@@ -767,6 +783,15 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (nameEl) nameEl.textContent = user.name || user.username;
     const sidebarName = document.getElementById('sidebarName');
     if (sidebarName) sidebarName.textContent = user.name || user.username;
+
+    // Check consent status — show modal if not yet given
+    try {
+        const cr = await fetch(API + '/patient/consent', { headers: authHeaders() });
+        const cd = await cr.json();
+        if (cd.success && !cd.consent_given) {
+            document.getElementById('consentModal').style.display = 'flex';
+        }
+    } catch (_) { /* consent check failed — allow */ }
 
     const form = document.getElementById('healthDataForm');
     if (form) form.addEventListener('submit', handleSubmit);

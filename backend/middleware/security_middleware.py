@@ -53,9 +53,9 @@ def setup_security_headers(app):
         csp = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' data: https://fonts.gstatic.com; "
             "img-src 'self' data:; "
-            "font-src 'self' data:; "
             "connect-src 'self' https://api.chapa.co; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "

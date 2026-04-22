@@ -90,16 +90,15 @@ class ProductionConfig(BaseConfig):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 20,
-        'max_overflow': 30,
+        'pool_size': 5,
+        'max_overflow': 10,
         'pool_pre_ping': True,
-        'pool_recycle': 3600,
+        'pool_recycle': 300,
         'pool_timeout': 30,
     }
     # Session timeout: 30 minutes of inactivity
     PERMANENT_SESSION_LIFETIME = 1800
-    JWT_EXPIRY_SECONDS = int(os.getenv('JWT_EXPIRY_SECONDS', '1800'))  # 30 min default in prod
-    # Expose internal errors to client: never in production
+    JWT_EXPIRY_SECONDS = int(os.getenv('JWT_EXPIRY_SECONDS', '1800'))
     PROPAGATE_EXCEPTIONS = False
     EXPOSE_ERRORS = False
 

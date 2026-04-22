@@ -3,7 +3,7 @@ services:
     name: diabetes-prediction-system
     env: python
     plan: free
-    buildCommand: pip install -r requirements_production.txt && python seed_postgres.py
+    buildCommand: pip install -r requirements_production.txt && python seed_postgres.py || echo 'Seed skipped'
     startCommand: gunicorn run:app --workers 4 --threads 2 --timeout 120 --bind 0.0.0.0:$PORT --worker-class gthread --max-requests 1000 --max-requests-jitter 100
     autoDeploy: true
     envVars:
@@ -16,7 +16,7 @@ services:
       - key: SESSION_COOKIE_SAMESITE
         value: Lax
       - key: DATABASE_URL
-        value: postgresql://diabetes_user:9IW4jzJynMq1ppQfeFvAtKf0hIknNTZG@dpg-d7kbhg8sfn5c73btr2k0-a/diabetes_792q
+        value: postgresql://diabetes_user:9IW4jzJynMq1ppQfeFvAtKf0hIknNTZG@dpg-d7kbhg8sfn5c73btr2k0-a/diabetes_792q?sslmode=require
       - key: SECRET_KEY
         generateValue: true
       - key: ADMIN_BOOTSTRAP_EMAIL

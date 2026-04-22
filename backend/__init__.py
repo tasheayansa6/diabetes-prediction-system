@@ -131,6 +131,11 @@ def create_app(config_name="development"):
                                 conn.execute(_text(f'ALTER TABLE patients ADD COLUMN {col} {defn}'))
                         if 'ip_address' not in pred_cols:
                             conn.execute(_text('ALTER TABLE predictions ADD COLUMN ip_address VARCHAR(50)'))
+                        if 'model_used' not in pred_cols:
+                            conn.execute(_text('ALTER TABLE predictions ADD COLUMN model_used VARCHAR(50)'))
+                        # Also ensure model_used column exists (older DBs may not have it)
+                        if 'model_used' not in pred_cols:
+                            conn.execute(_text('ALTER TABLE predictions ADD COLUMN model_used VARCHAR(50)'))
                         if 'ix_audit_logs_action' not in idx_names:
                             conn.execute(_text('CREATE INDEX IF NOT EXISTS ix_audit_logs_action ON audit_logs(action)'))
                         if 'ix_audit_logs_created_at' not in idx_names:

@@ -97,6 +97,21 @@ def _extract_prediction_review(prediction):
         'reviewed_at': note.created_at.isoformat() if note.created_at else None
     }
 
+def _safe_review(prediction):
+    """Wrap _extract_prediction_review in try/except so one bad prediction
+    doesn't crash the entire predictions list endpoint."""
+    try:
+        return _extract_prediction_review(prediction)
+    except Exception:
+        return {
+            'status': 'pending_review',
+            'summary': 'Awaiting doctor review.',
+            'doctor_id': None,
+            'doctor_name': None,
+            'reviewed_at': None
+        }
+
+
 def validate_email(email):
     """Validate email format"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -679,8 +694,9 @@ def get_predictions(current_user):
                     "id": p.id,
                     "probability_percent": p.probability_percent,
                     "risk_level": p.risk_level,
-                    "input_data": p.input_data,
-                    "review": _extract_prediction_review(p),
+                    "input_data": {k: v for k, v in (p.input_data or {}).items()
+                                   if not str(k).startswith('_')} if p.input_data else {},
+                    "review": _safe_review(p),
                     "created_at": p.created_at.isoformat() if p.created_at else None
                 } for p in predictions
             ],
@@ -693,9 +709,10 @@ def get_predictions(current_user):
         }), 200
         
     except Exception as e:
+        current_app.logger.error(f'get_predictions error: {e}')
         return jsonify({
             "success": False,
-            "message": "An error occurred",
+            "message": "An error occurred fetching predictions",
             "error": _safe_error(e)
         }), 500
 

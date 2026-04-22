@@ -315,6 +315,27 @@ def chapa_status():
 
 # ── Prediction payment access ─────────────────────────────────────────────────
 
+@payment_bp.route('/check-lab-payment', methods=['GET'])
+@token_required(['patient'])
+def check_lab_payment(current_user):
+    """Check if patient has a completed lab payment."""
+    try:
+        from backend.models.payment import Payment
+        paid = Payment.query.filter(
+            Payment.patient_id == current_user['id'],
+            Payment.payment_type.in_(['lab', 'services', 'general']),
+            Payment.payment_status == 'completed'
+        ).first()
+        return jsonify({
+            'success': True,
+            'has_paid': paid is not None,
+            'message': 'Payment verified.' if paid else 'Lab payment required.'
+        }), 200
+    except Exception as e:
+        # On error, allow access (don't block patient)
+        return jsonify({'success': True, 'has_paid': True}), 200
+
+
 @payment_bp.route('/check-prediction-access', methods=['GET'])
 @token_required(['patient'])
 def check_prediction_access(current_user):

@@ -33,6 +33,23 @@ async function loadLabResults() {
         document.getElementById('sumCompleted').textContent = allResults.filter(r => r.status === 'completed').length;
         document.getElementById('sumValidated').textContent = allResults.filter(r => r.status === 'validated').length;
 
+        // ── Payment gate: if patient has any lab tests but hasn't paid, redirect to payment ──
+        if (allResults.length > 0) {
+            const returning = new URLSearchParams(window.location.search).get('paid') === 'true'
+                           || localStorage.getItem('labPaid') === 'true';
+            if (!returning) {
+                // Check if patient has a completed lab payment
+                const payRes = await apiFetch(`${API}/payments/check-lab-payment`);
+                const payData = await payRes.json();
+                if (payData.success && !payData.has_paid) {
+                    // No payment — redirect to payment page
+                    window.location.href = '/templates/payment/payment_page.html'
+                        + '?service=lab&return=lab_results';
+                    return;
+                }
+            }
+        }
+
     } catch (e) {
         allResults = [];
         document.getElementById('resultsList').innerHTML =

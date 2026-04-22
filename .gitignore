@@ -9,7 +9,8 @@ dist/
 build/
 
 # Database (never commit real data)
-*.db
+# NOTE: instance/diabetes.db is committed intentionally for Render deployment
+# It contains seed data (test patients, predictions) for the demo
 *.db-shm
 *.db-wal
 database/

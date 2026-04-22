@@ -141,7 +141,6 @@ class ProductionConfig(BaseConfig):
                 'pool_pre_ping': True,
                 'creator': _make_sqlite_wal_connection,
             }
-
 class PostgreSQLConfig(BaseConfig):
     """PostgreSQL-specific configuration for production"""
     DEBUG = False

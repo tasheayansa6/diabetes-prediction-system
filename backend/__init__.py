@@ -1,4 +1,4 @@
-﻿import os
+import os
 from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
@@ -94,14 +94,20 @@ def create_app(config_name="development"):
     bcrypt.init_app(app)
     mail.init_app(app)
 
-    # Render SQLite bootstrap: ensure tables exist on first boot.
-    # This avoids registration/login 500s when /tmp sqlite starts empty.
-    if str(app.config.get('SQLALCHEMY_DATABASE_URI', '')).startswith('sqlite:///'):
+    # Create all tables (works for both SQLite and PostgreSQL)
+    try:
+        with app.app_context():
+            db.create_all()
+    except Exception as e:
+        app.logger.warning(f"db.create_all() skipped: {e}")
+
+    # SQLite-only bootstrap: schema migrations and data fixes
+    db_uri = str(app.config.get('SQLALCHEMY_DATABASE_URI', ''))
+    if db_uri.startswith('sqlite:///'):
         try:
             with app.app_context():
-                db.create_all()
                 _repair_sqlite_polymorphic_user_integrity(app)
-                # Clean orphaned lab tests (patient deleted but lab test remains)
+                # Clean orphaned lab tests
                 try:
                     from sqlalchemy import text as _text
                     deleted = db.session.execute(_text(
@@ -113,7 +119,7 @@ def create_app(config_name="development"):
                 except Exception:
                     db.session.rollback()
 
-                # Add consent + deletion columns if missing (safe ALTER TABLE)
+                # Add missing columns (safe ALTER TABLE)
                 try:
                     from sqlalchemy import text as _text, inspect as _inspect
                     inspector = _inspect(db.engine)
@@ -133,14 +139,10 @@ def create_app(config_name="development"):
                             conn.execute(_text('ALTER TABLE predictions ADD COLUMN ip_address VARCHAR(50)'))
                         if 'model_used' not in pred_cols:
                             conn.execute(_text('ALTER TABLE predictions ADD COLUMN model_used VARCHAR(50)'))
-                        # Also ensure model_used column exists (older DBs may not have it)
-                        if 'model_used' not in pred_cols:
-                            conn.execute(_text('ALTER TABLE predictions ADD COLUMN model_used VARCHAR(50)'))
                         if 'ix_audit_logs_action' not in idx_names:
                             conn.execute(_text('CREATE INDEX IF NOT EXISTS ix_audit_logs_action ON audit_logs(action)'))
                         if 'ix_audit_logs_created_at' not in idx_names:
                             conn.execute(_text('CREATE INDEX IF NOT EXISTS ix_audit_logs_created_at ON audit_logs(created_at)'))
-                        # Auto-consent all patients who existed before consent feature was added
                         conn.execute(_text(
                             "UPDATE patients SET consent_given=1, consent_given_at=datetime('now') "
                             "WHERE consent_given=0 OR consent_given IS NULL"

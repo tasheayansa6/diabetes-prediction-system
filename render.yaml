@@ -3,7 +3,7 @@ services:
     name: diabetes-prediction-system
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements_production.txt && python seed_postgres.py
     startCommand: gunicorn run:app --workers 4 --threads 2 --timeout 120 --bind 0.0.0.0:$PORT --worker-class gthread --max-requests 1000 --max-requests-jitter 100
     autoDeploy: true
     envVars:
@@ -16,7 +16,7 @@ services:
       - key: SESSION_COOKIE_SAMESITE
         value: Lax
       - key: DATABASE_URL
-        value: sqlite:///instance/diabetes.db
+        value: postgresql://diabetes_user:9IW4jzJynMq1ppQfeFvAtKf0hIknNTZG@dpg-d7kbhg8sfn5c73btr2k0-a/diabetes_792q
       - key: SECRET_KEY
         generateValue: true
       - key: ADMIN_BOOTSTRAP_EMAIL
@@ -31,3 +31,9 @@ services:
         value: https://diabetes-prediction-system-n7ik.onrender.com/templates/payment/payment_success.html
       - key: MAIL_SUPPRESS_SEND
         value: "False"
+      - key: CHAPA_SECRET_KEY
+        value: CHASECK_TEST-Ro4smOXVYAhpemheaNeMtNlyNyUIFXYR
+      - key: CHAPA_PUBLIC_KEY
+        value: CHAPUBK_TEST-QOWKS1hsRDeucGrvUDmtxg2lfKwQN1DT
+      - key: CHAPA_WEBHOOK_SECRET
+        value: rS2oeymtZgrgJ7WIGcmBUjg

@@ -26,8 +26,8 @@ services:
       - key: ADMIN_BOOTSTRAP_USERNAME
         value: admin
       - key: CHAPA_CALLBACK_URL
-        value: https://diabetes-prediction-system.onrender.com/api/payments/chapa/webhook
+        value: https://diabetes-prediction-system-n7ik.onrender.com/api/payments/chapa/webhook
       - key: CHAPA_RETURN_URL
-        value: https://diabetes-prediction-system.onrender.com/templates/payment/payment_success.html
+        value: https://diabetes-prediction-system-n7ik.onrender.com/templates/payment/payment_success.html
       - key: MAIL_SUPPRESS_SEND
         value: "False"

@@ -388,17 +388,33 @@ def enter_results(current_technician):
                 "message": f"Cannot enter results for test with status '{test.status}'"
             }), 400
 
-        # Validate result is numeric for quantitative tests
+        # Validate result — numeric for quantitative tests, allow text for qualitative
         result_str = str(data['results']).strip()
+        if result_str == '':
+            return jsonify({"success": False, "message": "Result value cannot be empty."}), 400
+        # Only reject if it looks like it should be numeric but isn't
+        # (pure letters with no numbers at all = likely wrong entry)
+        import re as _re
+        has_any_digit = bool(_re.search(r'\d', result_str))
+        is_pure_alpha = bool(_re.match(r'^[a-zA-Z\s]+$', result_str))
+        # Allow: "95", "6.2", "Normal", "Negative", "WBC: 7.2 HDL: 52", "Positive"
+        # Reject: "abc" (pure letters, no digits, not a known qualitative term)
+        QUALITATIVE_TERMS = {
+            'normal', 'negative', 'positive', 'reactive', 'non-reactive',
+            'absent', 'present', 'trace', 'mild', 'moderate', 'severe',
+            'clear', 'turbid', 'yellow', 'pale', 'dark', 'borderline'
+        }
+        if is_pure_alpha and result_str.lower() not in QUALITATIVE_TERMS and not has_any_digit:
+            return jsonify({
+                "success": False,
+                "message": f"Result '{result_str}' is not a valid value. Enter a number (e.g. 95) or a qualitative term (e.g. Normal, Negative)."
+            }), 400
         try:
             result_val = float(result_str)
             if result_val < 0:
                 return jsonify({"success": False, "message": "Result value cannot be negative."}), 400
         except ValueError:
-            return jsonify({
-                "success": False,
-                "message": "Result must be a numeric value (e.g. 95, 6.2, 120)."
-            }), 400
+            pass  # Non-numeric qualitative result — allowed
 
         # Prevent write conflicts: if another technician already started this test,
         # only that technician can finalize it.

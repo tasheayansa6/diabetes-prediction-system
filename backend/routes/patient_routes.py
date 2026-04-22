@@ -705,14 +705,21 @@ def get_prediction(current_user, prediction_id):
     """
     try:
         prediction = Prediction.query.filter_by(
-            id=prediction_id, 
+            id=prediction_id,
             patient_id=current_user['id']
         ).first()
-        
+
         if not prediction:
+            # Check if prediction exists at all (wrong patient vs not found)
+            exists = Prediction.query.get(prediction_id)
+            if exists:
+                return jsonify({
+                    "success": False,
+                    "message": "This prediction belongs to a different account."
+                }), 403
             return jsonify({
                 "success": False,
-                "message": "Prediction not found"
+                "message": "Prediction not found."
             }), 404
         
         return jsonify({

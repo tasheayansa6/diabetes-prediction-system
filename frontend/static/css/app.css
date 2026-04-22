@@ -64,7 +64,7 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 .nav-item.active { background: linear-gradient(90deg,#3b82f6,#2563eb); color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
 
 /* ── Main content ── */
-.main { flex: 1; padding: 1.75rem; background: #f1f5f9; overflow-x: hidden; }
+.main { flex: 1; padding: 1.75rem; padding-bottom: 3rem; background: #f1f5f9; overflow-x: hidden; }
 .page-title { font-size: 1.4rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.5rem; }
 .page-subtitle { color: #64748b; font-size: 0.875rem; margin-top: 0.2rem; }
 
@@ -216,6 +216,7 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
     color: #94a3b8;
     padding: 1.5rem 2rem 1rem;
     font-size: 0.78rem;
+    margin-left: 220px;  /* same as sidebar width so footer doesn't overlap */
 }
 .footer-inner {
     display: flex;

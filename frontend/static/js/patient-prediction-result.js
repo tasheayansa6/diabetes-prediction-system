@@ -156,7 +156,17 @@ async function loadResult() {
         const data = await res.json();
         if (!data.success) {
             const main = document.querySelector('.main');
-            if (main) main.innerHTML = '<div class="alert alert-danger m-4">Could not load prediction. <a href="/templates/patient/prediction_history.html">View history</a>.</div>';
+            if (main) {
+                const msg = res.status === 404
+                    ? 'Prediction not found. It may belong to a different account.'
+                    : (data.message || 'Could not load prediction.');
+                main.innerHTML = `<div class="alert alert-danger m-4">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>${msg}</strong><br>
+                    <a href="/templates/patient/prediction_history.html" class="btn btn-sm btn-outline mt-2">View My Predictions</a>
+                    <a href="/templates/patient/health_data_form.html" class="btn btn-sm btn-primary mt-2 ms-2">New Prediction</a>
+                </div>`;
+            }
             return;
         }
 

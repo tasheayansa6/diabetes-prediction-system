@@ -16,7 +16,7 @@ class MedicineInventory(db.Model):
     
     # Stock Information
     quantity = db.Column(db.Integer, default=0)
-    unit = db.Column(db.String(20), default='tablets')
+    unit = db.Column(db.String(50), default='tablets')
     minimum_stock = db.Column(db.Integer, default=10)
     maximum_stock = db.Column(db.Integer, default=100)
     reorder_level = db.Column(db.Integer, default=20)
@@ -57,7 +57,7 @@ class MedicineInventory(db.Model):
     def __init__(self, **kwargs):
         if 'medicine_id' not in kwargs or not kwargs['medicine_id']:
             import uuid
-            kwargs['medicine_id'] = f"MED{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+            kwargs['medicine_id'] = f"MED{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
         super(MedicineInventory, self).__init__(**kwargs)
     
     @property

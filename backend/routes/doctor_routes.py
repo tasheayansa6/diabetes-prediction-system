@@ -474,7 +474,7 @@ def create_prescription(current_doctor):
         
         # Generate unique prescription_id
         import uuid
-        presc_id = f"RX{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+        presc_id = f"RX{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
 
         # Ensure doctor row exists (FK constraint for PostgreSQL)
         from backend.models.doctor import Doctor as _Doctor
@@ -783,7 +783,7 @@ def review_prediction(current_doctor, prediction_id):
         prediction.doctor_id = current_doctor['id']
 
         # Create/append review note linked to this prediction
-        note_id = f"NOTE{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+        note_id = f"NOTE{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
         review_note = Note(
             note_id=note_id,
             patient_id=prediction.patient_id,
@@ -862,7 +862,7 @@ def create_note(current_doctor):
         
         # Generate a unique note_id
         import uuid
-        note_id = f"NOTE{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+        note_id = f"NOTE{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
         
         # Create note
         note = Note(
@@ -1226,7 +1226,7 @@ def order_lab_test(current_doctor):
                 }), 400
         
         # Generate a unique test_id
-        test_id = data.get('test_id', f"LAB{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}")
+        test_id = data.get('test_id', f"LAB{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}")
         
         # Create lab test with only fields that exist in your model
         lab_test = LabTest(
@@ -1662,18 +1662,17 @@ def create_lab_request(current_doctor):
                     "message": f"Missing required field: {field}"
                 }), 400
         
-        # Ensure doctor row exists in doctors table (FK constraint)
+        # Generate a unique test_id (max 20 chars to fit VARCHAR(20) on older DBs)
+        import uuid
+        test_id = f"LAB{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+
+        # Ensure doctor row exists in doctors table (FK constraint for PostgreSQL)
         from backend.models.doctor import Doctor
         if not Doctor.query.get(current_doctor['id']):
             doc_user = User.query.get(current_doctor['id'])
             if doc_user:
-                new_doc = Doctor(id=doc_user.id, doctor_id=f"DOC{doc_user.id:04d}")
-                db.session.add(new_doc)
+                db.session.add(Doctor(id=doc_user.id, doctor_id=f"DOC{doc_user.id:04d}"))
                 db.session.flush()
-
-        # Generate a unique test_id
-        import uuid
-        test_id = f"LAB{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
         
         # Create lab test (which becomes a lab request)
         lab_request = LabTest(

@@ -5,7 +5,7 @@ class Admin(User):
     __tablename__ = 'admins'
     
     id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-    admin_id = db.Column(db.String(20), unique=True)
+    admin_id = db.Column(db.String(50), unique=True)
     department = db.Column(db.String(100))
     access_level = db.Column(db.Integer, default=1)  # 1=basic, 2=moderate, 3=full
     can_delete_users = db.Column(db.Boolean, default=False)

@@ -5,9 +5,9 @@ class Patient(User):
     __tablename__ = 'patients'
     
     id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-    patient_id = db.Column(db.String(20), unique=True)
+    patient_id = db.Column(db.String(50), unique=True)
     blood_group = db.Column(db.String(5))
-    emergency_contact = db.Column(db.String(20))
+    emergency_contact = db.Column(db.String(50))
     emergency_contact_name = db.Column(db.String(120))
     medical_history = db.Column(db.Text)
     allergies = db.Column(db.Text)

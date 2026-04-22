@@ -5,7 +5,7 @@ class Payment(db.Model):
     __tablename__ = 'payments'
     
     id = db.Column(db.Integer, primary_key=True)
-    payment_id = db.Column(db.String(20), unique=True, nullable=False)
+    payment_id = db.Column(db.String(50), unique=True, nullable=False)
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
     
     payment_type = db.Column(db.String(50), nullable=False)  # consultation, lab_test, prescription, etc.
@@ -18,7 +18,7 @@ class Payment(db.Model):
     total_amount = db.Column(db.Float, nullable=False)
     
     payment_method = db.Column(db.String(50))  # cash, card, insurance, online
-    payment_status = db.Column(db.String(20), default='pending')  # pending, completed, failed, refunded
+    payment_status = db.Column(db.String(50), default='pending')  # pending, completed, failed, refunded
     
     transaction_id = db.Column(db.String(100))
     payment_date = db.Column(db.DateTime)

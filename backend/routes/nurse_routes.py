@@ -320,7 +320,7 @@ def record_vitals(current_nurse):
                 bmi = None
         
         # Generate unique vital_id
-        vital_id = f"VT{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+        vital_id = f"VT{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
         
         # Create vital sign record
         vital = VitalSign(
@@ -636,7 +636,7 @@ def register_patient(current_nurse):
             }), 409
         
         # Generate unique patient_id
-        patient_id = f"PAT{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+        patient_id = f"PAT{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
         
         # Create patient
         hashed_password = generate_password_hash(data['password'])
@@ -698,7 +698,7 @@ def add_to_queue(patient_id, purpose, current_nurse):
         
         next_number = (last_queue.queue_number + 1) if last_queue else 1
         
-        queue_id = f"Q{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+        queue_id = f"Q{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
         
         queue_item = PatientQueue(
             queue_id=queue_id,

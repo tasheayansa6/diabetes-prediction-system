@@ -1157,7 +1157,7 @@ def generate_system_report(current_admin):
         
         # Build report
         report = {
-            "report_id": f"SYS{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            "report_id": f"SYS{datetime.utcnow().strftime('%y%m%d%H%M%S')}",
             "generated_at": datetime.utcnow().isoformat(),
             "generated_by": current_admin['username'],
             "user_statistics": {

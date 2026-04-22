@@ -9,7 +9,7 @@ class Note(db.Model):
     __tablename__ = 'notes'
     
     id = db.Column(db.Integer, primary_key=True)
-    note_id = db.Column(db.String(20), unique=True, nullable=True)
+    note_id = db.Column(db.String(50), unique=True, nullable=True)
     
     # Relationships
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)

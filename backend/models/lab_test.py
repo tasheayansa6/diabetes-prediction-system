@@ -5,7 +5,7 @@ class LabTest(db.Model):
     __tablename__ = 'lab_tests'
     
     id = db.Column(db.Integer, primary_key=True)
-    test_id = db.Column(db.String(20), unique=True, nullable=False)
+    test_id = db.Column(db.String(50), unique=True, nullable=False)
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'))
     technician_id = db.Column(db.Integer, db.ForeignKey('lab_technicians.id'))
@@ -14,8 +14,8 @@ class LabTest(db.Model):
     test_type = db.Column(db.String(50))  # Blood, Urine, etc.
     test_category = db.Column(db.String(50))  # Hematology, Biochemistry, etc.
     
-    status = db.Column(db.String(20), default='pending')  # pending, in_progress, completed, cancelled
-    priority = db.Column(db.String(20), default='normal')  # urgent, high, normal, low
+    status = db.Column(db.String(50), default='pending')  # pending, in_progress, completed, cancelled
+    priority = db.Column(db.String(50), default='normal')  # urgent, high, normal, low
     
     sample_collected_at = db.Column(db.DateTime)
     test_started_at = db.Column(db.DateTime)
@@ -23,7 +23,7 @@ class LabTest(db.Model):
     
     results = db.Column(db.Text)  # JSON string with test results
     normal_range = db.Column(db.String(100))
-    unit = db.Column(db.String(20))
+    unit = db.Column(db.String(50))
     remarks = db.Column(db.Text)
     
     cost = db.Column(db.Float)

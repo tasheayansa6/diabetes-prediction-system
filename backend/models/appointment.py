@@ -9,7 +9,7 @@ class Appointment(db.Model):
     __tablename__ = 'appointments'
     
     id = db.Column(db.Integer, primary_key=True)
-    appointment_id = db.Column(db.String(20), unique=True, nullable=True)
+    appointment_id = db.Column(db.String(50), unique=True, nullable=True)
     
     # Relationships
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
@@ -26,7 +26,7 @@ class Appointment(db.Model):
     notes = db.Column(db.Text, nullable=True)
     
     # Status
-    status = db.Column(db.String(20), default='scheduled')  # scheduled, completed, cancelled, no-show
+    status = db.Column(db.String(50), default='scheduled')  # scheduled, completed, cancelled, no-show
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

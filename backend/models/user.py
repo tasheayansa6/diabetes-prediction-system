@@ -13,8 +13,8 @@ class User(UserMixin, db.Model):
     
     # Basic info
     full_name = db.Column(db.String(100))
-    phone = db.Column(db.String(20))
-    role = db.Column(db.String(20), nullable=False, default='patient')
+    phone = db.Column(db.String(50))
+    role = db.Column(db.String(50), nullable=False, default='patient')
     
     # Status
     is_active = db.Column(db.Boolean, default=True)

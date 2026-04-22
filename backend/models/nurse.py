@@ -5,11 +5,11 @@ class Nurse(User):
     __tablename__ = 'nurses'
     
     id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-    nurse_id = db.Column(db.String(20), unique=True)
+    nurse_id = db.Column(db.String(50), unique=True)
     qualification = db.Column(db.String(200))
     license_number = db.Column(db.String(50), unique=True)
     department = db.Column(db.String(100))
-    shift = db.Column(db.String(20))  # morning, evening, night
+    shift = db.Column(db.String(50))  # morning, evening, night
     years_of_experience = db.Column(db.Integer)
     
     __mapper_args__ = {

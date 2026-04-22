@@ -17,10 +17,10 @@ class Prediction(db.Model):  # Changed from PredictionResult for consistency
     probability_percent = db.Column(db.Float, nullable=False)  # 0.00 to 100.00
     
     # Risk Level (4 levels as per your ML model)
-    risk_level = db.Column(db.String(20), nullable=False)  # LOW, MODERATE, HIGH, VERY_HIGH
+    risk_level = db.Column(db.String(50), nullable=False)  # LOW, MODERATE, HIGH, VERY_HIGH
     
     # ML Model Metadata
-    model_version = db.Column(db.String(20), default="1.0.0")
+    model_version = db.Column(db.String(50), default="1.0.0")
     model_used = db.Column(db.String(50), default="Logistic Regression")
     
     # Explanation from ML model

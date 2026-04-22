@@ -977,7 +977,7 @@ def request_refill(current_user, prescription_id):
             }), 400
 
         import uuid
-        new_id = f"RX{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+        new_id = f"RX{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
 
         refill = Prescription(
             prescription_id=new_id,
@@ -1934,7 +1934,7 @@ def generate_patient_report(current_user):
         
         # Build report
         report = {
-            "report_id": f"RPT{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            "report_id": f"RPT{datetime.utcnow().strftime('%y%m%d%H%M%S')}",
             "generated_at": datetime.utcnow().isoformat(),
             "patient_info": {
                 "id": patient.id,
@@ -2238,7 +2238,7 @@ def mark_medication_taken(current_user, prescription_id):
             return jsonify({"success": True, "message": "Already marked as taken today", "already_taken": True}), 200
 
         note = Note(
-            note_id=f"ADH{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
+            note_id=f"ADH{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
             patient_id=current_user['id'],
             doctor_id=rx.doctor_id,
             title=f"Taken: {rx.prescription_id} on {today}",
@@ -2430,7 +2430,7 @@ def send_message(current_user):
             return jsonify({'success': False, 'message': 'Doctor ID required'}), 400
 
         note = Note(
-            note_id=f"MSG{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
+            note_id=f"MSG{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
             patient_id=current_user['id'],
             doctor_id=doctor_id,
             title=f"Message from {current_user['username']}",

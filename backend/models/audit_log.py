@@ -7,7 +7,7 @@ class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     username = db.Column(db.String(80))
-    user_role = db.Column(db.String(20))
+    user_role = db.Column(db.String(50))
     
     action = db.Column(db.String(50), nullable=False)  # login, logout, create, update, delete, view
     resource = db.Column(db.String(50))  # user, patient, prescription, etc.
@@ -17,7 +17,7 @@ class AuditLog(db.Model):
     ip_address = db.Column(db.String(50))
     user_agent = db.Column(db.String(200))
     
-    status = db.Column(db.String(20))  # success, failed
+    status = db.Column(db.String(50))  # success, failed
     error_message = db.Column(db.Text)
     
     old_value = db.Column(db.Text)  

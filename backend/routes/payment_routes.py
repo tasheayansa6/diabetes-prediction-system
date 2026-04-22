@@ -632,7 +632,7 @@ def create_subscription(current_user):
         days_map = {'weekly': 7, 'monthly': 30, 'quarterly': 90, 'yearly': 365}
         next_billing = now + timedelta(days=days_map.get(data['billing_cycle'], 30))
 
-        sub_id = f"SUB{now.strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
+        sub_id = f"SUB{now.strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
         subscription = Subscription(
             subscription_id=sub_id,
             patient_id=patient.id,

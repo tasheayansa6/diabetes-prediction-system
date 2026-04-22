@@ -8,7 +8,7 @@ class Invoice(db.Model):
     __tablename__ = 'invoices'
     
     id = db.Column(db.Integer, primary_key=True)
-    invoice_id = db.Column(db.String(20), unique=True, nullable=False)
+    invoice_id = db.Column(db.String(50), unique=True, nullable=False)
     payment_id = db.Column(db.Integer, db.ForeignKey('payments.id'), nullable=True)
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
     
@@ -17,7 +17,7 @@ class Invoice(db.Model):
     discount = db.Column(db.Float, default=0)
     total_amount = db.Column(db.Float, nullable=False)
     
-    status = db.Column(db.String(20), default='pending')  # pending, paid, overdue, cancelled
+    status = db.Column(db.String(50), default='pending')  # pending, paid, overdue, cancelled
     due_date = db.Column(db.Date)
     paid_at = db.Column(db.DateTime)
     
@@ -31,7 +31,7 @@ class Invoice(db.Model):
     def __init__(self, **kwargs):
         if 'invoice_id' not in kwargs or not kwargs['invoice_id']:
             import uuid
-            kwargs['invoice_id'] = f"INV{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+            kwargs['invoice_id'] = f"INV{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
         super(Invoice, self).__init__(**kwargs)
     
     def to_dict(self):

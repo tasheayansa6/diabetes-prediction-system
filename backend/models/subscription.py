@@ -8,14 +8,14 @@ class Subscription(db.Model):
     __tablename__ = 'subscriptions'
     
     id = db.Column(db.Integer, primary_key=True)
-    subscription_id = db.Column(db.String(20), unique=True, nullable=False)
+    subscription_id = db.Column(db.String(50), unique=True, nullable=False)
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
     
     plan = db.Column(db.String(50))  # basic, premium, enterprise
-    billing_cycle = db.Column(db.String(20))  # monthly, yearly, weekly
+    billing_cycle = db.Column(db.String(50))  # monthly, yearly, weekly
     amount = db.Column(db.Float)
     
-    status = db.Column(db.String(20), default='active')  # active, cancelled, expired
+    status = db.Column(db.String(50), default='active')  # active, cancelled, expired
     
     start_date = db.Column(db.DateTime)
     next_billing_date = db.Column(db.DateTime)
@@ -30,7 +30,7 @@ class Subscription(db.Model):
     def __init__(self, **kwargs):
         if 'subscription_id' not in kwargs or not kwargs['subscription_id']:
             import uuid
-            kwargs['subscription_id'] = f"SUB{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
+            kwargs['subscription_id'] = f"SUB{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
         super(Subscription, self).__init__(**kwargs)
     
     def to_dict(self):

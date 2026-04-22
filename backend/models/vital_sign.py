@@ -9,7 +9,7 @@ class VitalSign(db.Model):
     __tablename__ = 'vital_signs'
     
     id = db.Column(db.Integer, primary_key=True)
-    vital_id = db.Column(db.String(20), unique=True)
+    vital_id = db.Column(db.String(50), unique=True)
     
     # Foreign Keys
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)

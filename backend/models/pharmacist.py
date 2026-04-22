@@ -5,10 +5,10 @@ class Pharmacist(User):
     __tablename__ = 'pharmacists'
     
     id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-    pharmacist_id = db.Column(db.String(20), unique=True)
+    pharmacist_id = db.Column(db.String(50), unique=True)
     qualification = db.Column(db.String(200))
     license_number = db.Column(db.String(50), unique=True)
-    shift = db.Column(db.String(20))  # morning, evening, night
+    shift = db.Column(db.String(50))  # morning, evening, night
     
     __mapper_args__ = {
         'polymorphic_identity': 'pharmacist',

@@ -306,7 +306,7 @@ def register():
                 next_number = (last_queue.queue_number + 1) if last_queue else 1
 
                 queue_item = PatientQueue(
-                    queue_id=f"Q{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
+                    queue_id=f"Q{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
                     patient_id=new_user.id,
                     nurse_id=None,
                     queue_number=next_number,

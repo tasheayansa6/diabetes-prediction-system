@@ -7,7 +7,7 @@ class PatientQueue(db.Model):
     __tablename__ = 'patient_queue'
     
     id = db.Column(db.Integer, primary_key=True)
-    queue_id = db.Column(db.String(20), unique=True)
+    queue_id = db.Column(db.String(50), unique=True)
     
     # Foreign Keys
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
@@ -17,7 +17,7 @@ class PatientQueue(db.Model):
     # Queue Info
     queue_number = db.Column(db.Integer, nullable=False)
     priority = db.Column(db.Integer, default=0)  # 0=normal, 1=urgent, 2=emergency
-    status = db.Column(db.String(20), default='waiting')  # waiting, called, in-progress, completed, cancelled
+    status = db.Column(db.String(50), default='waiting')  # waiting, called, in-progress, completed, cancelled
     purpose = db.Column(db.String(100))  # checkup, medication, lab, consultation
     
     # Timestamps

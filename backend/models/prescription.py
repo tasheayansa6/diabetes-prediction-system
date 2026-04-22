@@ -5,7 +5,7 @@ class Prescription(db.Model):
     __tablename__ = 'prescriptions'
     
     id = db.Column(db.Integer, primary_key=True)
-    prescription_id = db.Column(db.String(20), unique=True)
+    prescription_id = db.Column(db.String(50), unique=True)
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False)
     prediction_id = db.Column(db.Integer, nullable=True)
@@ -17,7 +17,7 @@ class Prescription(db.Model):
     instructions = db.Column(db.Text)
     notes = db.Column(db.Text)
     
-    status = db.Column(db.String(20), default='pending')
+    status = db.Column(db.String(50), default='pending')
     verified_by = db.Column(db.Integer, db.ForeignKey('pharmacists.id'))
     verified_at = db.Column(db.DateTime)
     dispensed_by = db.Column(db.Integer, db.ForeignKey('pharmacists.id'))

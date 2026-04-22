@@ -5,7 +5,7 @@ class LabTechnician(User):
     __tablename__ = 'lab_technicians'
     
     id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-    technician_id = db.Column(db.String(20), unique=True)
+    technician_id = db.Column(db.String(50), unique=True)
     qualification = db.Column(db.String(200))
     license_number = db.Column(db.String(50), unique=True)
     specialization = db.Column(db.String(100))  

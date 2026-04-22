@@ -98,6 +98,39 @@ def create_app(config_name="development"):
     try:
         with app.app_context():
             db.create_all()
+            # PostgreSQL: widen VARCHAR columns that were too small
+            # (db.create_all does NOT alter existing columns)
+            db_uri = str(app.config.get('SQLALCHEMY_DATABASE_URI', ''))
+            if db_uri.startswith('postgresql'):
+                try:
+                    from sqlalchemy import text as _text
+                    with db.engine.connect() as conn:
+                        # Widen all _id VARCHAR columns that may be too small
+                        alter_stmts = [
+                            "ALTER TABLE lab_tests ALTER COLUMN test_id TYPE VARCHAR(50)",
+                            "ALTER TABLE notes ALTER COLUMN note_id TYPE VARCHAR(50)",
+                            "ALTER TABLE prescriptions ALTER COLUMN prescription_id TYPE VARCHAR(50)",
+                            "ALTER TABLE payments ALTER COLUMN payment_id TYPE VARCHAR(50)",
+                            "ALTER TABLE appointments ALTER COLUMN appointment_id TYPE VARCHAR(50)",
+                            "ALTER TABLE vital_signs ALTER COLUMN vital_id TYPE VARCHAR(50)",
+                            "ALTER TABLE patient_queue ALTER COLUMN queue_id TYPE VARCHAR(50)",
+                            "ALTER TABLE invoices ALTER COLUMN invoice_id TYPE VARCHAR(50)",
+                            "ALTER TABLE subscriptions ALTER COLUMN subscription_id TYPE VARCHAR(50)",
+                            "ALTER TABLE patients ALTER COLUMN patient_id TYPE VARCHAR(50)",
+                            "ALTER TABLE doctors ALTER COLUMN doctor_id TYPE VARCHAR(50)",
+                            "ALTER TABLE nurses ALTER COLUMN nurse_id TYPE VARCHAR(50)",
+                            "ALTER TABLE lab_technicians ALTER COLUMN technician_id TYPE VARCHAR(50)",
+                            "ALTER TABLE pharmacists ALTER COLUMN pharmacist_id TYPE VARCHAR(50)",
+                        ]
+                        for stmt in alter_stmts:
+                            try:
+                                conn.execute(_text(stmt))
+                            except Exception:
+                                pass  # column may already be wide enough
+                        conn.commit()
+                        app.logger.info('PostgreSQL column widening applied')
+                except Exception as pg_err:
+                    app.logger.warning(f'PostgreSQL column widening skipped: {pg_err}')
     except Exception as e:
         app.logger.warning(f"db.create_all() skipped: {e}")
 

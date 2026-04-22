@@ -1546,26 +1546,25 @@ def get_prescription(current_doctor, prescription_id):
 @doctor_bp.route('/test-types', methods=['GET'])
 @token_required
 def get_test_types_for_doctor(current_doctor):
-    """GET /api/doctor/test-types — returns test types, seeds defaults if empty"""
+    """GET /api/doctor/test-types — returns diabetes-relevant test types only"""
     try:
         from backend.models.test_type import TestType
-        types = TestType.query.order_by(TestType.category, TestType.test_name).all()
+        # Only diabetes-relevant tests needed for ML prediction flow
+        DIABETES_TESTS = [
+            ('Blood Glucose (Fasting)', 'BG001',   'Diabetes',    25.0, '70-99 mg/dL',          'Fast for 8 hours before test'),
+            ('HbA1c',                  'HBA1C',    'Diabetes',    45.0, '< 5.7%',               'No fasting required'),
+            ('Oral Glucose Tolerance', 'OGTT',     'Diabetes',    60.0, '< 140 mg/dL at 2hr',   'Fast 8hrs, drink glucose solution'),
+            ('Insulin Level',          'INS001',   'Diabetes',    55.0, '2-25 uU/mL',           'Fast for 8 hours before test'),
+            ('Random Blood Glucose',   'RBG001',   'Diabetes',    20.0, '< 200 mg/dL',          'No fasting required'),
+            ('Postprandial Glucose',   'PPG001',   'Diabetes',    25.0, '< 140 mg/dL at 2hr',   'Test 2 hours after meal'),
+            ('C-Peptide',              'CPEP001',  'Diabetes',    65.0, '0.5-2.0 ng/mL',        'Fast for 8 hours before test'),
+            ('Fructosamine',           'FRUCT001', 'Diabetes',    50.0, '200-285 umol/L',        'No fasting required'),
+        ]
+        types = TestType.query.filter(
+            TestType.category == 'Diabetes'
+        ).order_by(TestType.test_name).all()
         if not types:
-            defaults = [
-                ('Blood Glucose (Fasting)', 'BG001',   'Diabetes',    25.0, '70-99 mg/dL',          'Fast for 8 hours before test'),
-                ('HbA1c',                  'HBA1C',    'Diabetes',    45.0, '< 5.7%',               'No fasting required'),
-                ('Oral Glucose Tolerance', 'OGTT',     'Diabetes',    60.0, '< 140 mg/dL at 2hr',   'Fast 8hrs, drink glucose solution'),
-                ('Insulin Level',          'INS001',   'Diabetes',    55.0, '2-25 uU/mL',           'Fast for 8 hours before test'),
-                ('Lipid Profile',          'LIP001',   'Cardiology',  50.0, 'LDL<100, HDL>40 mg/dL','Fast for 12 hours'),
-                ('Complete Blood Count',   'CBC001',   'Hematology',  35.0, 'WBC 4.5-11 x10^9/L',  'No fasting required'),
-                ('Kidney Function',        'KFT001',   'Nephrology',  40.0, '0.6-1.2 mg/dL',        'No fasting required'),
-                ('Liver Function',         'LFT001',   'Hepatology',  45.0, 'ALT 7-56 U/L',         'No fasting required'),
-                ('Thyroid (TSH)',           'TSH001',   'Endocrinology',50.0,'0.4-4.0 mIU/L',       'No fasting required'),
-                ('Urine Analysis',         'UA001',    'Urology',     20.0, 'Normal',               'Midstream clean catch urine'),
-                ('Microalbumin (Urine)',    'MALB001',  'Nephrology',  40.0, '< 30 mg/g',            'Random urine sample'),
-                ('C-Peptide',              'CPEP001',  'Diabetes',    65.0, '0.5-2.0 ng/mL',        'Fast for 8 hours before test'),
-            ]
-            for name, code, cat, cost, normal, prep in defaults:
+            for name, code, cat, cost, normal, prep in DIABETES_TESTS:
                 if not TestType.query.filter_by(test_code=code).first():
                     db.session.add(TestType(
                         test_name=name, test_code=code, category=cat,
@@ -1573,7 +1572,9 @@ def get_test_types_for_doctor(current_doctor):
                         preparation_instructions=prep
                     ))
             db.session.commit()
-            types = TestType.query.order_by(TestType.category, TestType.test_name).all()
+            types = TestType.query.filter(
+                TestType.category == 'Diabetes'
+            ).order_by(TestType.test_name).all()
         return jsonify({'success': True, 'test_types': [t.to_dict() for t in types]}), 200
     except Exception as e:
         db.session.rollback()

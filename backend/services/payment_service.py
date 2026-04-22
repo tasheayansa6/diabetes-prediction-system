@@ -31,17 +31,20 @@ IMMEDIATE_METHODS = {'credit_card', 'debit_card', 'telebirr', 'cbe_birr',
 
 
 # ── ID generators ─────────────────────────────────────────────────────────────
+# Use 2-digit year (%y) to keep IDs within VARCHAR(20) on PostgreSQL
+# PAY + 12 + 4 = 19 chars, INV + 12 + 4 = 19 chars
 
 def generate_payment_id() -> str:
-    return f"PAY{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
+    return f"PAY{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
 
 
 def generate_invoice_id() -> str:
-    return f"INV{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
+    return f"INV{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
 
 
 def generate_tx_ref() -> str:
-    return f"CHAPA-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+    # CHAPA- + 12 + - + 6 = 25 chars — stored in transaction_id VARCHAR(100)
+    return f"CHAPA-{datetime.utcnow().strftime('%y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
 
 
 # ── Pricing helpers ───────────────────────────────────────────────────────────

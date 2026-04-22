@@ -256,14 +256,17 @@ def get_last_health_data(current_user):
     """
     GET /api/patient/health-data/last
     Returns the input_data from the patient's most recent prediction.
-    Used to auto-fill Pregnancies, Skin Thickness, Pedigree, Age on the health form.
+    Always returns 200 so the health form doesn't get a console error.
     """
     try:
         last = Prediction.query.filter_by(patient_id=current_user['id'])\
             .order_by(Prediction.created_at.desc()).first()
 
         if not last or not last.input_data:
-            return jsonify({'success': False, 'message': 'No previous prediction found'}), 404
+            # Return 200 with empty data — not 404
+            # The health form handles missing data gracefully
+            return jsonify({'success': False, 'message': 'No previous prediction found',
+                            'data': None}), 200
 
         d = last.input_data
         return jsonify({
@@ -281,7 +284,7 @@ def get_last_health_data(current_user):
         }), 200
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': str(e), 'data': None}), 200
 
 
 # ============ HEALTH RECORDS ENDPOINTS ============
@@ -1020,12 +1023,8 @@ def get_lab_results(current_user):
     Get all lab results for the current patient
     """
     try:
-        limit = request.args.get('limit', 10, type=int)
+        limit = request.args.get('limit', 100, type=int)  # default 100 so glucose tests are always found
         offset = request.args.get('offset', 0, type=int)
-        
-        # Sort by result completion time first, then creation time.
-        # This ensures newly completed tests appear immediately in patient auto-fill flows
-        # even if the original lab order was created earlier.
         result_sort_time = func.coalesce(LabTest.test_completed_at, LabTest.created_at)
         lab_results = LabTest.query.filter_by(patient_id=current_user['id'])\
             .order_by(result_sort_time.desc(), LabTest.id.desc())\

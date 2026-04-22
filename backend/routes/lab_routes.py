@@ -450,29 +450,33 @@ def enter_results(current_technician):
         # Notify patient and doctor about completed lab results
         try:
             from backend.models.notification import Notification
+            from backend.models.user import User as _User
             patient = Patient.query.get(test.patient_id)
-            patient_name = patient.username if patient else f'Patient #{test.patient_id}'
+            # Fallback: look up by user id directly if patient row missing
+            patient_user = patient or _User.query.get(test.patient_id)
+            patient_name = patient_user.username if patient_user else f'Patient #{test.patient_id}'
             result_preview = str(data['results'])[:100]
 
-            # Notify patient
-            if patient:
-                db.session.add(Notification(
-                    user_id=patient.id,
-                    title='Lab Result Ready',
-                    message=f'Your {test.test_name} result is now available. Result: {result_preview}. Log in to view the full report.',
-                    type='lab_result',
-                    category='lab',
-                    is_read=False,
-                    link='/templates/patient/lab_results.html',
-                    created_at=datetime.utcnow()
-                ))
+            # Notify patient — use test.patient_id directly as user_id
+            db.session.add(Notification(
+                user_id=test.patient_id,
+                title='Lab Result Ready',
+                message=f'Your {test.test_name} result is now available. '
+                        f'Result: {result_preview}. Log in to view the full report.',
+                type='lab_result',
+                category='lab',
+                is_read=False,
+                link='/templates/patient/lab_results.html',
+                created_at=datetime.utcnow()
+            ))
 
             # Notify ordering doctor
             if test.doctor_id:
                 db.session.add(Notification(
                     user_id=test.doctor_id,
                     title='Lab Result Ready',
-                    message=f'Lab result for {test.test_name} (ID: {test.test_id}) for {patient_name} is now available. Result: {result_preview}',
+                    message=f'Lab result for {test.test_name} (ID: {test.test_id}) '
+                            f'for {patient_name} is now available. Result: {result_preview}',
                     type='lab_result',
                     category='lab',
                     is_read=False,
@@ -481,6 +485,7 @@ def enter_results(current_technician):
                 ))
 
             db.session.commit()
+            current_app.logger.info(f'Lab notifications sent for test {test.test_id} to patient {test.patient_id}')
         except Exception as notif_err:
             current_app.logger.error(f'Lab result notification error: {notif_err}')
             try:

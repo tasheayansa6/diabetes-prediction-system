@@ -28,7 +28,11 @@ def setup_security_headers(app):
     @app.after_request
     def add_security_headers(response):
         import os
-        is_prod = os.getenv('FLASK_ENV', 'development') == 'production'
+        is_prod = (
+            os.getenv('FLASK_ENV', 'development') == 'production'
+            or app.config.get('ENV') == 'production'
+            or not app.config.get('DEBUG', True)
+        )
 
         # ── Clickjacking protection ───────────────────────────────────────────
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'

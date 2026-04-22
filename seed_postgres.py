@@ -12,6 +12,12 @@ if not db_url.startswith('postgresql'):
     print('Not a PostgreSQL URL — skipping migration')
     sys.exit(0)
 
+# Ensure sslmode is set for Render
+if 'sslmode' not in db_url:
+    db_url = db_url + '?sslmode=require'
+    os.environ['DATABASE_URL'] = db_url
+    print(f'Added sslmode=require to DATABASE_URL')
+
 sys.path.insert(0, str(Path(__file__).parent))
 from backend import create_app
 from backend.extensions import db

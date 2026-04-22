@@ -88,7 +88,11 @@ class TestingConfig(BaseConfig):
 
 class ProductionConfig(BaseConfig):
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+    # Auto-add sslmode=require for Render PostgreSQL
+    _raw_db_url = os.getenv('DATABASE_URL', '')
+    if _raw_db_url.startswith('postgresql') and 'sslmode' not in _raw_db_url:
+        _raw_db_url = _raw_db_url + '?sslmode=require'
+    SQLALCHEMY_DATABASE_URI = _raw_db_url or None
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 5,
         'max_overflow': 10,

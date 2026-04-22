@@ -95,7 +95,7 @@ async function handleLogin(event) {
         showError(data.message || 'Login failed. Please check your credentials.');
 
     } catch (err) {
-        showError('Cannot connect to server. Make sure the server is running.');
+        showError('Connection error: ' + err.message + '. Please try again.');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Sign In';

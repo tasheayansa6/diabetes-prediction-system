@@ -74,7 +74,9 @@ async function handleRegister(event) {
         }
     } catch (err) {
         console.error(err);
-        alert('Cannot connect to server. Is Flask running?');
+        const box = document.getElementById('alertBox');
+        if (box) box.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-circle-fill"></i> Connection error: ${err.message}. Please try again.</div>`;
+        else alert('Connection error: ' + err.message);
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;

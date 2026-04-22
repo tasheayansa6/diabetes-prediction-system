@@ -3,8 +3,8 @@ services:
     name: diabetes-prediction-system
     env: python
     plan: free
-    buildCommand: pip install -r requirements_production.txt && python seed_postgres.py || echo 'Seed skipped'
-    startCommand: gunicorn run:app --workers 4 --threads 2 --timeout 120 --bind 0.0.0.0:$PORT --worker-class gthread --max-requests 1000 --max-requests-jitter 100
+    buildCommand: pip install -r requirements_production.txt
+    startCommand: python seed_postgres.py && gunicorn run:app --workers 4 --threads 2 --timeout 120 --bind 0.0.0.0:$PORT --worker-class gthread --max-requests 1000 --max-requests-jitter 100
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION

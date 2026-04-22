@@ -37,21 +37,21 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 
 /* ── Sidebar ── */
 .sidebar {
-    width: 230px; min-width: 230px;
+    width: 220px; min-width: 220px;
     background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%);
-    min-height: calc(100vh - 60px);
-    padding: 1.25rem 0.75rem;
-    position: sticky; top: 60px; height: calc(100vh - 60px);
+    height: calc(100vh - 60px);
+    padding: 1rem 0.75rem;
+    position: fixed; top: 60px; left: 0;
     overflow-y: auto;
     box-shadow: 2px 0 12px rgba(0,0,0,0.15);
+    z-index: 90;
 }
-.sidebar-profile {
-    text-align: center; padding: 1rem 0.5rem 1.25rem;
-    border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem;
-}
-.sidebar-avatar { font-size: 2.5rem; color: #93c5fd; }
-.sidebar-name { color: #e0e7ff; font-weight: 600; font-size: 0.9rem; margin-top: 0.4rem; }
-.sidebar-role { color: #94a3b8; font-size: 0.75rem; margin-top: 0.15rem; }
+/* Push main content right so it doesn't hide under fixed sidebar */
+.app-body { margin-left: 220px; }
+.sidebar-profile { display: none; }
+.sidebar-avatar  { display: none; }
+.sidebar-name    { display: none; }
+.sidebar-role    { display: none; }
 
 .nav-item {
     display: flex; align-items: center; gap: 0.65rem;
@@ -314,6 +314,7 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 @media(max-width:768px){
     .sidebar { display: none; }
     .sidebar.open { display: block; position: fixed; top: 60px; left: 0; z-index: 99; height: calc(100vh - 60px); }
+    .app-body { margin-left: 0; }
     .main { padding: 1rem; }
 }
 
@@ -330,9 +331,8 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 .sidebar nav a:hover { background: rgba(255,255,255,0.1); color: #fff; transform: translateX(3px); }
 .sidebar nav a.active { background: linear-gradient(90deg,#3b82f6,#2563eb); color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
 
-/* Sidebar profile aliases */
-.sidebar-name { color: #e0e7ff; font-weight: 600; font-size: 0.9rem; margin-top: 0.4rem; }
-.sidebar-role { color: #94a3b8; font-size: 0.75rem; margin-top: 0.15rem; }
+/* Sidebar profile — hidden (removed from layout) */
+.sidebar-profile, .sidebar-avatar, .sidebar-name, .sidebar-role { display: none !important; }
 
 /* Modal aliases */
 .modal-header { background: linear-gradient(90deg,#1e3a8a,#2563eb); color: #fff; padding: 1.1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }

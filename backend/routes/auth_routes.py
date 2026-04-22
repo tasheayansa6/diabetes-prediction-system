@@ -271,6 +271,7 @@ def register():
             try:
                 from backend.models.notification import Notification
                 nurses = User.query.filter_by(role='nurse', is_active=True).all()
+                current_app.logger.info(f'Notifying {len(nurses)} nurses about new patient {username}')
                 for nurse in nurses:
                     db.session.add(Notification(
                         user_id=nurse.id,
@@ -283,7 +284,9 @@ def register():
                         created_at=datetime.utcnow()
                     ))
                 db.session.commit()
-            except Exception:
+                current_app.logger.info(f'Nurse notifications sent successfully for patient {username}')
+            except Exception as notif_err:
+                current_app.logger.error(f'Nurse notification error: {notif_err}')
                 try:
                     db.session.rollback()
                 except Exception:

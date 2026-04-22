@@ -98,6 +98,44 @@ function renderRecentActivity(activity) {
     vitalsList.innerHTML  = rows;
 }
 
+async function loadWaitingPatients() {
+    try {
+        const res  = await fetch('/api/nurse/queue?status=waiting&limit=20', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await res.json();
+        const list = document.getElementById('waitingPatientsList');
+        const badge = document.getElementById('waitingBadge');
+        if (!list) return;
+        const queue = (data.success && data.queue) ? data.queue : [];
+        if (badge) badge.textContent = queue.length;
+        if (!queue.length) {
+            list.innerHTML = '<div class="list-item" style="justify-content:center;color:#64748b;font-size:.85rem;">No patients waiting</div>';
+            return;
+        }
+        list.innerHTML = queue.map(function(q) {
+            const name = esc(q.patient ? q.patient.name : 'Patient #' + q.id);
+            const pid  = esc(q.patient ? q.patient.patient_id : '');
+            const wait = esc(q.waiting_time || '');
+            const pri  = q.priority_label || 'Normal';
+            const priColor = pri === 'Emergency' ? '#dc2626' : pri === 'Urgent' ? '#f59e0b' : '#22c55e';
+            return `<div class="list-item justify-between">
+                <div>
+                    <div class="font-medium text-sm">${name}</div>
+                    <div class="text-xs text-muted">${pid} · Waiting: ${wait}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;">
+                    <span style="background:${priColor}20;color:${priColor};padding:.15rem .5rem;border-radius:99px;font-size:.7rem;font-weight:700;">${pri}</span>
+                    <a href="/templates/nurse/record_vitals.html" class="btn btn-sm btn-primary" style="padding:.25rem .6rem;font-size:.75rem;">Record Vitals</a>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        const list = document.getElementById('waitingPatientsList');
+        if (list) list.innerHTML = '<div class="list-item" style="color:#ef4444;font-size:.85rem;">Failed to load queue</div>';
+    }
+}
+
 async function loadDashboard() {
     try {
         const res  = await fetch('/api/nurse/dashboard', {
@@ -114,6 +152,7 @@ async function loadDashboard() {
 
         initCharts(stats);
         renderRecentActivity(data.dashboard.recent_activity);
+        loadWaitingPatients();
 
     } catch (e) {
         const err = `<div class="list-item" style="justify-content:center;color:#ef4444;font-size:.85rem;">Failed to load: ${esc(e.message)}</div>`;
@@ -134,4 +173,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
     updateDate();
     loadDashboard();
+    setInterval(loadWaitingPatients, 30000);
 });

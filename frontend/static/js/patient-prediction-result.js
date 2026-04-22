@@ -143,7 +143,7 @@ async function loadResult() {
     const predId = new URLSearchParams(window.location.search).get('id');
     if (!predId) {
         const main = document.querySelector('.main');
-        if (main) main.innerHTML = '<div class="alert alert-warning m-4">No prediction ID found. <a href="/templates/patient/health_data_form.html">Create a new prediction</a>.</div>';
+        if (main) main.innerHTML = '<div class="alert alert-warning m-4"><i class="bi bi-exclamation-circle me-2"></i><strong>No prediction ID found.</strong><br><a href="/templates/patient/prediction_history.html" class="btn btn-sm btn-outline mt-2">View My Predictions</a><a href="/templates/patient/health_data_form.html" class="btn btn-sm btn-primary mt-2 ms-2">New Prediction</a></div>';
         return;
     }
 
@@ -151,14 +151,20 @@ async function loadResult() {
         const res = await fetch(API + '/patient/predictions/' + predId, {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
-        if (res.status === 401) { logout(); return; }
+        if (res.status === 401) { if (typeof logout === 'function') logout(); else window.location.href='/login'; return; }
 
-        const data = await res.json();
+        let data;
+        try { data = await res.json(); }
+        catch (jsonErr) {
+            throw new Error('Server returned invalid response (status ' + res.status + '). Check Render logs.');
+        }
         if (!data.success) {
             const main = document.querySelector('.main');
             if (main) {
-                const msg = res.status === 404
-                    ? 'Prediction not found. It may belong to a different account.'
+                const msg = res.status === 403
+                    ? 'This prediction belongs to a different account.'
+                    : res.status === 404
+                    ? 'Prediction not found. It may have been deleted.'
                     : (data.message || 'Could not load prediction.');
                 main.innerHTML = `<div class="alert alert-danger m-4">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
@@ -300,7 +306,14 @@ async function loadResult() {
     } catch (err) {
         console.error('loadResult error:', err);
         var main = document.querySelector('.main');
-        if (main) main.innerHTML = '<div class="alert alert-danger m-4"><i class="bi bi-exclamation-triangle me-2"></i>Failed to load prediction result. <a href="/templates/patient/prediction_history.html">View history</a>.</div>';
+        if (main) main.innerHTML = '<div class="alert alert-danger m-4">'
+            + '<i class="bi bi-exclamation-triangle-fill me-2"></i>'
+            + '<strong>Could not load prediction result.</strong><br>'
+            + '<span style="font-size:.85rem;color:#991b1b;">' + (err.message || 'Unknown error') + '</span><br><br>'
+            + '<a href="/templates/patient/prediction_history.html" class="btn btn-sm btn-outline mt-2">'
+            + '<i class="bi bi-clock-history"></i> View My Predictions</a>'
+            + '<a href="/templates/patient/health_data_form.html" class="btn btn-sm btn-primary mt-2 ms-2">'
+            + '<i class="bi bi-plus-circle"></i> New Prediction</a></div>';
     }
 }
 

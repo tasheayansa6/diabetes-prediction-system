@@ -476,6 +476,14 @@ def create_prescription(current_doctor):
         import uuid
         presc_id = f"RX{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
 
+        # Ensure doctor row exists (FK constraint for PostgreSQL)
+        from backend.models.doctor import Doctor as _Doctor
+        if not _Doctor.query.get(current_doctor['id']):
+            _u = User.query.get(current_doctor['id'])
+            if _u:
+                db.session.add(_Doctor(id=_u.id, doctor_id=f"DOC{_u.id:04d}"))
+                db.session.flush()
+
         # Drug interaction / allergy check (#20)
         patient_check = Patient.query.get(data['patient_id'])
         if patient_check:
@@ -1654,6 +1662,15 @@ def create_lab_request(current_doctor):
                     "message": f"Missing required field: {field}"
                 }), 400
         
+        # Ensure doctor row exists in doctors table (FK constraint)
+        from backend.models.doctor import Doctor
+        if not Doctor.query.get(current_doctor['id']):
+            doc_user = User.query.get(current_doctor['id'])
+            if doc_user:
+                new_doc = Doctor(id=doc_user.id, doctor_id=f"DOC{doc_user.id:04d}")
+                db.session.add(new_doc)
+                db.session.flush()
+
         # Generate a unique test_id
         import uuid
         test_id = f"LAB{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}"
@@ -1724,9 +1741,10 @@ def create_lab_request(current_doctor):
         
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f'create_lab_request error: {type(e).__name__}: {e}')
         return jsonify({
             "success": False,
-            "message": "Error creating lab request",
+            "message": f"Error creating lab request: {type(e).__name__}",
             "error": _safe_error(e)
         }), 500
 

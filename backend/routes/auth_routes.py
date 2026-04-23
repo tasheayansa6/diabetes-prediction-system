@@ -513,9 +513,75 @@ def login():
 import random
 import string
 
-# In-memory stores (use Redis/DB in production)
-_otp_store = {}        # email -> {otp, expiry, username}
-_reset_store = {}      # token -> {email, expiry}
+# OTP and reset tokens are stored in the DB (audit_log table) so they
+# survive server restarts and work across multiple Gunicorn workers.
+# Format: action='otp_store'|'reset_store', resource=email, description=token/otp, resource_id=expiry_unix
+
+def _store_otp(email, otp, expiry, username):
+    try:
+        from backend.models.audit_log import AuditLog
+        import time
+        # Remove any existing OTP for this email first
+        AuditLog.query.filter_by(action='otp_store', resource=email).delete()
+        db.session.add(AuditLog(
+            action='otp_store', resource=email,
+            description=f"{otp}|{username}",
+            resource_id=int(expiry.timestamp()),
+            status='pending', created_at=datetime.utcnow()
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+def _get_otp(email):
+    try:
+        from backend.models.audit_log import AuditLog
+        row = AuditLog.query.filter_by(action='otp_store', resource=email).first()
+        if not row: return None
+        parts = (row.description or '').split('|', 1)
+        return {'otp': parts[0], 'username': parts[1] if len(parts) > 1 else email.split('@')[0],
+                'expiry': datetime.utcfromtimestamp(row.resource_id or 0)}
+    except Exception:
+        return None
+
+def _delete_otp(email):
+    try:
+        from backend.models.audit_log import AuditLog
+        AuditLog.query.filter_by(action='otp_store', resource=email).delete()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+def _store_reset(token, email, expiry):
+    try:
+        from backend.models.audit_log import AuditLog
+        AuditLog.query.filter_by(action='reset_store', resource=email).delete()
+        db.session.add(AuditLog(
+            action='reset_store', resource=email,
+            description=token,
+            resource_id=int(expiry.timestamp()),
+            status='pending', created_at=datetime.utcnow()
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+def _get_reset(token):
+    try:
+        from backend.models.audit_log import AuditLog
+        row = AuditLog.query.filter_by(action='reset_store', description=token).first()
+        if not row: return None
+        return {'email': row.resource, 'expiry': datetime.utcfromtimestamp(row.resource_id or 0)}
+    except Exception:
+        return None
+
+def _delete_reset(token):
+    try:
+        from backend.models.audit_log import AuditLog
+        AuditLog.query.filter_by(action='reset_store', description=token).delete()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 # ============ SEND OTP (email verification) ============
@@ -537,7 +603,7 @@ def send_otp():
 
         otp = "".join(random.choices(string.digits, k=6))
         expiry = datetime.utcnow() + timedelta(seconds=current_app.config.get("OTP_EXPIRY", 900))
-        _otp_store[email] = {"otp": otp, "expiry": expiry, "username": username}
+        _store_otp(email, otp, expiry, username)
 
         from backend.services.notification_service import send_otp_email
         ok, err = send_otp_email(email, username, otp)
@@ -569,12 +635,12 @@ def verify_otp():
         if not email or not otp:
             return jsonify({"success": False, "message": "Email and OTP are required"}), 400
 
-        record = _otp_store.get(email)
+        record = _get_otp(email)
         if not record:
             return jsonify({"success": False, "message": "No OTP found for this email. Please request a new one."}), 400
 
         if datetime.utcnow() > record["expiry"]:
-            _otp_store.pop(email, None)
+            _delete_otp(email)
             return jsonify({"success": False, "message": "OTP has expired. Please request a new one."}), 400
 
         if otp != record["otp"]:
@@ -586,7 +652,7 @@ def verify_otp():
             user.email_verified = True
             db.session.commit()
 
-        _otp_store.pop(email, None)
+        _delete_otp(email)
         return jsonify({"success": True, "message": "Email verified successfully"}), 200
 
     except Exception as e:
@@ -617,7 +683,7 @@ def forgot_password():
         # Generate secure reset token
         token = "".join(random.choices(string.ascii_letters + string.digits, k=48))
         expiry = datetime.utcnow() + timedelta(seconds=current_app.config.get("RESET_TOKEN_EXPIRY", 3600))
-        _reset_store[token] = {"email": email, "expiry": expiry}
+        _store_reset(token, email, expiry)
 
         # Build reset URL — use request host
         base_url = request.host_url.rstrip("/")
@@ -652,12 +718,12 @@ def reset_password():
         if not all([token, email, new_password]):
             return jsonify({"success": False, "message": "Token, email, and new password are required"}), 400
 
-        record = _reset_store.get(token)
+        record = _get_reset(token)
         if not record:
             return jsonify({"success": False, "message": "Invalid or expired reset link. Please request a new one."}), 400
 
         if datetime.utcnow() > record["expiry"]:
-            _reset_store.pop(token, None)
+            _delete_reset(token)
             return jsonify({"success": False, "message": "Reset link has expired. Please request a new one."}), 400
 
         if record["email"] != email:
@@ -673,7 +739,7 @@ def reset_password():
 
         user.password_hash = generate_password_hash(new_password)
         db.session.commit()
-        _reset_store.pop(token, None)
+        _delete_reset(token)
 
         return jsonify({"success": True, "message": "Password reset successfully. You can now log in."}), 200
 

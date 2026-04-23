@@ -33,19 +33,22 @@ async function loadLabResults() {
         document.getElementById('sumCompleted').textContent = allResults.filter(r => r.status === 'completed').length;
         document.getElementById('sumValidated').textContent = allResults.filter(r => r.status === 'validated').length;
 
-        // ── Payment gate: if patient has any lab tests but hasn't paid, redirect to payment ──
+        // ── Payment gate: only redirect if patient has NO completed payment at all ──
         if (allResults.length > 0) {
             const returning = new URLSearchParams(window.location.search).get('paid') === 'true'
-                           || localStorage.getItem('labPaid') === 'true';
+                           || localStorage.getItem('labPaid') === 'true'
+                           || localStorage.getItem('labPaid_' + (JSON.parse(localStorage.getItem('user')||'{}').id||'')) === 'true';
             if (!returning) {
-                // Check if patient has a completed lab payment
-                const payRes = await apiFetch(`${API}/payments/check-lab-payment`);
-                const payData = await payRes.json();
-                if (payData.success && !payData.has_paid) {
-                    // No payment — redirect to payment page
-                    window.location.href = '/templates/payment/payment_page.html'
-                        + '?service=lab&return=lab_results';
-                    return;
+                try {
+                    const payRes = await apiFetch(`${API}/payments/check-lab-payment`);
+                    const payData = await payRes.json();
+                    // Only redirect if explicitly told no payment AND we got a clean response
+                    if (payData.success && payData.has_paid === false) {
+                        window.location.href = '/templates/payment/payment_page.html?service=lab&return=lab_results';
+                        return;
+                    }
+                } catch (_) {
+                    // Payment check failed — allow access, don't block patient
                 }
             }
         }

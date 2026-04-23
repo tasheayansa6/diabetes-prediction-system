@@ -318,21 +318,18 @@ def chapa_status():
 @payment_bp.route('/check-lab-payment', methods=['GET'])
 @token_required(['patient'])
 def check_lab_payment(current_user):
-    """Check if patient has a completed lab payment."""
+    """Check if patient has any completed payment (lab, prediction, or services)."""
     try:
-        from backend.models.payment import Payment
         paid = Payment.query.filter(
             Payment.patient_id == current_user['id'],
-            Payment.payment_type.in_(['lab', 'services', 'general']),
             Payment.payment_status == 'completed'
         ).first()
         return jsonify({
             'success': True,
             'has_paid': paid is not None,
-            'message': 'Payment verified.' if paid else 'Lab payment required.'
+            'message': 'Payment verified.' if paid else 'Payment required.'
         }), 200
-    except Exception as e:
-        # On error, allow access (don't block patient)
+    except Exception:
         return jsonify({'success': True, 'has_paid': True}), 200
 
 

@@ -693,7 +693,7 @@ def get_predictions(current_user):
                 {
                     "id": p.id,
                     "probability_percent": p.probability_percent,
-                    "risk_level": p.risk_level,
+                    "risk_level": p.risk_level or 'LOW RISK',
                     "input_data": {k: v for k, v in (p.input_data or {}).items()
                                    if not str(k).startswith('_')} if p.input_data else {},
                     "review": _safe_review(p),
@@ -752,7 +752,7 @@ def get_prediction(current_user, prediction_id):
                 "prediction": "Diabetic" if prediction.prediction == 1 else "Non-Diabetic",
                 "explanation": prediction.explanation,
                 "model_version": prediction.model_version,
-                "confidence": round(50.0 + (max(prediction.probability, 1 - prediction.probability) - 0.5) * 90.0, 1) if prediction.probability else 0,
+                "confidence": round(50.0 + (max(float(prediction.probability or 0.5), 1 - float(prediction.probability or 0.5)) - 0.5) * 90.0, 1),
                 "input_data": {k: v for k, v in (prediction.input_data or {}).items() if not k.startswith('_')},
                 "feature_importance": (prediction.input_data or {}).get('_feature_importance'),
                 "model_comparison":   (prediction.input_data or {}).get('_model_comparison'),

@@ -97,10 +97,30 @@ async function loadPredictions() {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         if (res.status === 401) { logout(); return; }
-        const data = await res.json();
+        
+        let data;
+        try {
+            data = await res.json();
+        } catch (jsonErr) {
+            console.error('JSON parse error:', jsonErr);
+            throw new Error('Server returned invalid JSON (status ' + res.status + ')');
+        }
+
+        console.log('API response:', data);
 
         const predictions = data.predictions || [];
-        if (!data.success || !predictions.length) {
+        if (!data.success) {
+            console.error('API returned success=false:', data.message);
+            document.getElementById('predictionsList').innerHTML = `<div class="empty-state">
+                <i class="bi bi-exclamation-circle" style="color:#dc2626;"></i>
+                <h4>Could Not Load Predictions</h4>
+                <p style="color:#dc2626;">${data.message || 'Unknown error'}</p>
+                <a href="javascript:loadPredictions()" class="btn btn-primary mt-3">Try Again</a>
+            </div>`;
+            return;
+        }
+        
+        if (!predictions.length) {
             document.getElementById('predictionsList').innerHTML = `<div class="empty-state">
                 <i class="bi bi-clipboard-x"></i>
                 <h4>No predictions yet</h4>

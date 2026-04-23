@@ -2,6 +2,7 @@ const API = '/api';
 
 function getToken() { return localStorage.getItem('token'); }
 function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+function handleLogout() { if(typeof logout==='function') logout(); else { localStorage.clear(); window.location.href='/login'; } }
 
 async function apiFetch(path) {
     try {
@@ -21,10 +22,9 @@ function renderAppointments(appointments) {
     if (!list) return;
 
     if (!appointments || !appointments.length) {
-        list.innerHTML = `
-            <div class="list-item" style="justify-content:center;color:#64748b;padding:1.5rem;">
-                <i class="bi bi-calendar-x"></i>&nbsp; No upcoming appointments today
-            </div>`;
+        list.innerHTML = `<div class="list-item" style="justify-content:center;color:#64748b;padding:1.5rem;">
+            <i class="bi bi-calendar-x"></i>&nbsp; No upcoming appointments today
+        </div>`;
         return;
     }
 
@@ -42,7 +42,7 @@ function renderAppointments(appointments) {
         </div>`).join('');
 }
 
-// ── Render high risk patients — single API call ───────────────────────────────
+// ── Render high risk patients — single efficient call ─────────────────────────
 async function loadHighRiskPatients() {
     const list = document.getElementById('highRiskList');
     if (!list) return;
@@ -52,28 +52,50 @@ async function loadHighRiskPatients() {
     </div>`;
 
     try {
-        // Single call — get all predictions with HIGH risk directly
-        const data = await apiFetch('/api/admin/statistics');
-
-        // Fallback: get patients and their latest prediction in one batch call
-        const patientsData = await apiFetch('/api/doctor/patients?limit=50');
-        if (!patientsData.success || !patientsData.patients.length) {
+        // Get all patients in one call
+        const patientsData = await apiFetch('/api/doctor/patients?limit=100');
+        if (!patientsData.success || !patientsData.patients?.length) {
             list.innerHTML = `<div class="list-item" style="justify-content:center;color:#64748b;padding:1.5rem;">
-                <i class="bi bi-people"></i>&nbsp; No patients found
+                <i class="bi bi-people"></i>&nbsp; No patients registered yet
             </div>`;
             return;
         }
 
-        // Get all predictions in ONE call per patient using Promise.all (parallel, not sequential)
-        const predRequests = patientsData.patients.slice(0, 20).map(p =>
-            apiFetch(`/api/doctor/patients/${p.id}/predictions?limit=1`)
-                .then(d => ({ patient: p, pred: d.success && d.predictions.length ? d.predictions[0] : null }))
-        );
+        // Update total patients count with real number
+        const totalEl = document.getElementById('totalPatientsCount');
+        if (totalEl) totalEl.textContent = patientsData.pagination?.total || patientsData.patients.length;
 
-        const results = await Promise.all(predRequests);
+        // Get nurse predictions view (all predictions) — single call
+        const predsData = await apiFetch('/api/nurse/predictions?limit=200');
+        if (!predsData.success || !predsData.predictions?.length) {
+            list.innerHTML = `<div class="list-item" style="justify-content:center;color:#059669;padding:1.5rem;">
+                <i class="bi bi-check-circle-fill"></i>&nbsp; No predictions yet
+            </div>`;
+            return;
+        }
 
-        const highRisk = results
-            .filter(r => r.pred && r.pred.risk_level && r.pred.risk_level.includes('HIGH'))
+        // Build patient map for quick lookup
+        const patientMap = {};
+        patientsData.patients.forEach(p => { patientMap[p.id] = p; });
+
+        // Find latest prediction per patient
+        const latestByPatient = {};
+        predsData.predictions.forEach(pred => {
+            const pid = pred.patient?.id;
+            if (!pid) return;
+            if (!latestByPatient[pid] || pred.created_at > latestByPatient[pid].created_at) {
+                latestByPatient[pid] = pred;
+            }
+        });
+
+        // Filter HIGH / VERY HIGH risk
+        const highRisk = Object.entries(latestByPatient)
+            .filter(([, pred]) => pred.risk_level && (pred.risk_level === 'HIGH' || pred.risk_level === 'VERY_HIGH'))
+            .map(([pid, pred]) => ({
+                patient: patientMap[pid] || pred.patient,
+                pred
+            }))
+            .filter(r => r.patient)
             .slice(0, 6);
 
         if (!highRisk.length) {
@@ -83,21 +105,24 @@ async function loadHighRiskPatients() {
             return;
         }
 
-        const riskBadge = r => r.includes('VERY')
+        const riskStyle = r => (r === 'VERY_HIGH')
             ? 'background:#fee2e2;color:#991b1b;'
             : 'background:#ffedd5;color:#9a3412;';
+        const riskLabel = r => (r === 'VERY_HIGH') ? 'VERY HIGH RISK' : 'HIGH RISK';
 
         list.innerHTML = highRisk.map(({ patient, pred }) => `
             <div class="list-item">
                 <div style="flex:1;min-width:0;">
-                    <div style="font-weight:700;font-size:0.875rem;color:#0f172a;">${esc(patient.username)}</div>
+                    <div style="font-weight:700;font-size:0.875rem;color:#0f172a;">
+                        ${esc(patient.username || patient.name || 'Patient')}
+                    </div>
                     <div style="font-size:0.75rem;color:#64748b;margin-top:0.1rem;">
-                        Last: ${pred.created_at ? new Date(pred.created_at).toLocaleDateString() : '—'}
+                        ${pred.created_at ? new Date(pred.created_at).toLocaleDateString() : '—'}
                         &nbsp;·&nbsp; ${pred.probability_percent ? Math.round(pred.probability_percent) + '%' : ''}
                     </div>
                 </div>
-                <span style="display:inline-flex;align-items:center;padding:0.25em 0.75em;border-radius:99px;font-size:0.72rem;font-weight:700;${riskBadge(pred.risk_level)}">
-                    ${esc(pred.risk_level)}
+                <span style="display:inline-flex;align-items:center;padding:0.25em 0.75em;border-radius:99px;font-size:0.72rem;font-weight:700;${riskStyle(pred.risk_level)}">
+                    ${riskLabel(pred.risk_level)}
                 </span>
             </div>`).join('');
 
@@ -113,7 +138,6 @@ async function loadDashboard() {
     const user = checkAuth('doctor');
     if (!user) return;
 
-    // Set name immediately — don't wait for API
     const name = user.name || user.username || 'Doctor';
     ['navUserName', 'sidebarDoctorName'].forEach(id => {
         const el = document.getElementById(id);
@@ -133,12 +157,11 @@ async function loadDashboard() {
     if (dashData.success) {
         const stats = dashData.dashboard.statistics;
         const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? 0; };
-        set('todayApptCount',      stats.today_appointments);
-        set('upcomingApptBadge',   stats.pending_appointments);
-        set('totalPatientsCount',  stats.total_patients);
-        set('prescriptionsCount',  stats.prescriptions_this_month);
+        set('todayApptCount',     stats.today_appointments);
+        set('upcomingApptBadge',  stats.pending_appointments);
+        set('prescriptionsCount', stats.prescriptions_this_month);
+        // Don't set totalPatientsCount here — loadHighRiskPatients sets it from real count
 
-        // Update doctor name from API if available
         if (dashData.dashboard.doctor_info?.name) {
             ['navUserName', 'sidebarDoctorName'].forEach(id => {
                 const el = document.getElementById(id);
@@ -163,7 +186,7 @@ async function loadDashboard() {
         if (el) el.textContent = labData.statistics?.by_status?.pending ?? 0;
     }
 
-    // Load high risk patients after main stats
+    // Load patients + high risk (sets totalPatientsCount)
     loadHighRiskPatients();
 }
 
@@ -229,9 +252,9 @@ async function loadAvailability() {
         const daysEl  = document.getElementById('availDays');
         const hoursEl = document.getElementById('availHours');
         const feeEl   = document.getElementById('consultFee');
-        if (daysEl  && a.available_days)  daysEl.value  = a.available_days;
-        if (hoursEl && a.available_hours) hoursEl.value = a.available_hours;
-        if (feeEl   && a.consultation_fee) feeEl.value  = a.consultation_fee;
+        if (daysEl  && a.available_days)   daysEl.value  = a.available_days;
+        if (hoursEl && a.available_hours)  hoursEl.value = a.available_hours;
+        if (feeEl   && a.consultation_fee) feeEl.value   = a.consultation_fee;
     } catch (_) {}
 }
 

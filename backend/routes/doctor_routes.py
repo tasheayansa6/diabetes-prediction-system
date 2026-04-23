@@ -133,11 +133,11 @@ def get_dashboard(current_doctor):
         except:
             pass
         
-        # Count total patients (distinct)
+        # Count total patients (ALL patients in system)
         try:
-            total_patients = db.session.query(Prescription.patient_id)\
-                .filter(Prescription.doctor_id == doctor_id)\
-                .distinct().count()
+            total_patients = db.session.execute(
+                text("SELECT COUNT(*) FROM users WHERE role = 'patient'")
+            ).scalar() or 0
         except:
             pass
         

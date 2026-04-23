@@ -291,8 +291,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const urlParams = new URLSearchParams(window.location.search);
     const highlightId = urlParams.get('highlight');
     if (highlightId) {
-        // Store highlight id to scroll/highlight after load
-        window._highlightPatientId = highlightId;
+        window._highlightPatientId = parseInt(highlightId, 10);
+        // Search by patient DB id so they always appear on page 1
+        const si = document.getElementById('searchInput');
+        if (si) si.value = highlightId;
     }
 
     // Search on Enter

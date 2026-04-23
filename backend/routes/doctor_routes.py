@@ -250,9 +250,11 @@ def get_patients(current_doctor):
             where_sql += (
                 f" AND (u.username {like_op} :search"
                 f" OR u.email {like_op} :search"
-                f" OR p.patient_id {like_op} :search)"
+                f" OR p.patient_id {like_op} :search"
+                f" OR CAST(u.id AS TEXT) = :exact_id)"
             )
             params['search'] = f'%{search}%'
+            params['exact_id'] = search
 
         count_row = db.session.execute(
             text(f"""

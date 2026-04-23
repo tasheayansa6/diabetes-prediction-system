@@ -45,6 +45,8 @@ async function loadPatients(offset) {
         if (!data.success) throw new Error(data.message || 'Failed to load patients');
 
         totalPatients = data.pagination?.total || 0;
+        const tc = document.getElementById('totalCount');
+        if (tc) tc.textContent = totalPatients;
         renderPatients(data.patients || []);
         renderPagination(data.pagination);
 

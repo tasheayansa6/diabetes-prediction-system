@@ -17,21 +17,28 @@ function showToast(msg, type) {
 async function loadPatients() {
     const select = document.getElementById('patient_id');
     try {
-        const res  = await fetch('/api/nurse/patients?limit=200', {
+        const res  = await fetch('/api/nurse/patients?limit=500', {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         const data = await res.json();
         if (data.success && data.patients.length) {
-            select.innerHTML = '<option value="">Choose patient...</option>' +
-                data.patients.map(p =>
-                    `<option value="${p.id}">${p.username} (${p.patient_id})</option>`
-                ).join('');
+            window._allPatients = data.patients;
+            _renderPatientOptions(data.patients);
         } else {
             select.innerHTML = '<option value="">No patients found</option>';
         }
     } catch {
         select.innerHTML = '<option value="">Error loading patients</option>';
     }
+}
+
+function _renderPatientOptions(patients) {
+    const select = document.getElementById('patient_id');
+    const current = select.value;
+    select.innerHTML = '<option value="">Choose patient...</option>' +
+        patients.map(p =>
+            `<option value="${p.id}"${p.id == current ? ' selected' : ''}>${p.username} (${p.patient_id || 'ID:' + p.id})</option>`
+        ).join('');
 }
 
 // When patient is selected, load their latest vitals to pre-fill form
@@ -263,15 +270,20 @@ document.addEventListener('DOMContentLoaded', function () {
     setCurrentDateTime();
     loadPatients();
 
-    // Patient search filter
+    // Patient search filter — live re-render
     const searchInput = document.getElementById('patientSearch');
     if (searchInput) {
         searchInput.addEventListener('input', function () {
-            const q = this.value.toLowerCase();
-            const select = document.getElementById('patient_id');
-            Array.from(select.options).forEach(opt => {
-                opt.style.display = (!q || opt.text.toLowerCase().includes(q)) ? '' : 'none';
-            });
+            const q = this.value.toLowerCase().trim();
+            const all = window._allPatients || [];
+            const filtered = q
+                ? all.filter(p =>
+                    (p.username || '').toLowerCase().includes(q) ||
+                    (p.patient_id || '').toLowerCase().includes(q) ||
+                    String(p.id).includes(q)
+                  )
+                : all;
+            _renderPatientOptions(filtered);
         });
     }
 

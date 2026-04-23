@@ -460,13 +460,13 @@ def enter_results(current_technician):
             # Notify patient — use test.patient_id directly as user_id
             db.session.add(Notification(
                 user_id=test.patient_id,
-                title='Lab Result Ready',
-                message=f'Your {test.test_name} result is now available. '
-                        f'Result: {result_preview}. Log in to view the full report.',
+                title='Lab Result Ready — Complete Your Prediction',
+                message=f'Your {test.test_name} result is ready: {result_preview}. '
+                        f'Go to New Prediction to run your diabetes risk assessment now.',
                 type='lab_result',
                 category='lab',
                 is_read=False,
-                link='/templates/patient/lab_results.html',
+                link='/templates/patient/health_data_form.html',
                 created_at=datetime.utcnow()
             ))
 

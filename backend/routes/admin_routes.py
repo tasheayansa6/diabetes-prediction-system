@@ -1094,11 +1094,36 @@ def admin_update_payment_status(current_admin, payment_id):
 
         payment.payment_status = new_status
         payment.updated_at = datetime.utcnow()
+        if new_status == 'completed':
+            payment.payment_date = datetime.utcnow()
+            # Reset prediction_consumed so patient can run a prediction
+            if hasattr(payment, 'prediction_consumed') and payment.payment_type == 'prediction':
+                payment.prediction_consumed = False
 
         invoice = Invoice.query.filter_by(payment_id=payment.id).first()
         if invoice:
             invoice.status = 'paid' if new_status == 'completed' else new_status
+            if new_status == 'completed':
+                invoice.paid_at = datetime.utcnow()
         db.session.commit()
+
+        # Notify patient when admin approves their payment
+        if new_status == 'completed':
+            try:
+                from backend.models.notification import Notification
+                db.session.add(Notification(
+                    user_id=payment.patient_id,
+                    title='Payment Approved',
+                    message=f'Your payment of ETB {float(payment.total_amount):.2f} '
+                            f'({payment.payment_method}) has been approved. '
+                            f'You can now proceed with your prediction.',
+                    type='payment', category='general', is_read=False,
+                    link='/templates/patient/health_data_form.html',
+                    created_at=datetime.utcnow()
+                ))
+                db.session.commit()
+            except Exception:
+                pass
 
         return jsonify({'success': True, 'message': f'Status updated to {new_status}', 'payment_id': payment.payment_id}), 200
     except Exception as e:

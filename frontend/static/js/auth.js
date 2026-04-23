@@ -130,3 +130,36 @@ function initAuth(requiredRole) {
     if (user) updateUserDisplay(user);
     return user;
 }
+
+// ── Token auto-refresh ────────────────────────────────────────────────────────
+// Silently renews the JWT when it has less than 7 days remaining.
+// Called once on page load — fire-and-forget, never blocks the page.
+async function _autoRefreshToken() {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const payload = _decodeToken(token);
+        if (!payload || !payload.exp) return;
+        const secsLeft = payload.exp - Math.floor(Date.now() / 1000);
+        // Refresh if less than 7 days (604800s) remaining
+        if (secsLeft > 604800) return;
+        const res = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && data.token) {
+            localStorage.setItem('token', data.token);
+            if (data.user) {
+                const stored = JSON.parse(localStorage.getItem('user') || '{}');
+                localStorage.setItem('user', JSON.stringify({ ...stored, ...data.user }));
+            }
+        }
+    } catch (_) { /* non-fatal */ }
+}
+
+// Run refresh check on every page load
+if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', _autoRefreshToken);
+}

@@ -759,6 +759,45 @@ def logout():
     return jsonify({'success': True, 'message': 'Logged out successfully'}), 200
 
 
+@auth_bp.route('/refresh', methods=['POST'])
+def refresh_token():
+    """
+    POST /api/auth/refresh
+    Silently renews a valid (non-expired) JWT and returns a fresh one.
+    Called by the frontend before expiry to keep the session alive.
+    """
+    token = request.headers.get('Authorization', '')
+    if token.startswith('Bearer '):
+        token = token[7:]
+    if not token:
+        return jsonify({'success': False, 'message': 'Token required'}), 401
+    try:
+        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+    except jwt.ExpiredSignatureError:
+        return jsonify({'success': False, 'message': 'Token expired — please log in again'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'success': False, 'message': 'Invalid token'}), 401
+
+    user = User.query.get(payload.get('user_id'))
+    if not user or not getattr(user, 'is_active', True):
+        return jsonify({'success': False, 'message': 'User not found or inactive'}), 401
+
+    expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 7776000)
+    new_token = jwt.encode({
+        'user_id': user.id,
+        'email': user.email,
+        'username': user.username,
+        'role': user.role,
+        'exp': datetime.utcnow() + timedelta(seconds=expiry_secs)
+    }, current_app.config['SECRET_KEY'], algorithm='HS256')
+
+    return jsonify({
+        'success': True,
+        'token': new_token,
+        'user': {'id': user.id, 'username': user.username, 'email': user.email, 'role': user.role}
+    }), 200
+
+
 # ============ SHARED NOTIFICATIONS (all roles) ============
 
 def _get_user_id_from_token():

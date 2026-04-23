@@ -338,7 +338,7 @@ async function checkLabResults() {
             return false;
         }
 
-        const thirtyDaysAgo = Date.now() - (90 * 24 * 3600000); // 90 days window
+        const thirtyDaysAgo = Date.now() - (180 * 24 * 3600000); // 180 days window
         const isDone = r => {
             const s = (r.status || '').toLowerCase();
             return (s === 'completed' || s === 'validated' || (s !== 'pending' && s !== 'cancelled')) && r.results;

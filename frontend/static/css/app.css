@@ -10,8 +10,8 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
 
 /* ── Layout ── */
-.app-layout { display: flex; min-height: 100vh; flex-direction: column; }
-.app-body   { display: flex; flex: 1; margin-left: 220px; }
+.app-layout { display: flex; min-height: 100vh; flex-direction: column; overflow-x: hidden; }
+.app-body   { display: flex; flex: 1; margin-left: 220px; min-height: 0; }
 
 /* ── Topbar ── */
 .topbar {
@@ -217,7 +217,9 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
     padding: 1.5rem 2rem 1rem;
     font-size: 0.78rem;
     margin-left: 220px;
-    margin-left: 220px;  /* same as sidebar width so footer doesn't overlap */
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
 }
 .footer-inner {
     display: flex;

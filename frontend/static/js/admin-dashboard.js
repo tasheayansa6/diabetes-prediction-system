@@ -417,16 +417,6 @@ async function loadSystemHealth() {
         }
         if (dbDot) dbDot.className = 'status-dot online';
 
-        // Disk space
-        if (data.disk) {
-            const pct = data.disk.used_pct;
-            const diskEl = document.getElementById('diskStatus');
-            if (diskEl) {
-                diskEl.textContent = `${data.disk.used_gb}GB / ${data.disk.total_gb}GB (${pct}%)`;
-                diskEl.className   = pct > 85 ? 'badge badge-red' : pct > 70 ? 'badge badge-yellow' : 'badge badge-green';
-            }
-        }
-
         // Alerts
         if (data.alerts && data.alerts.length) {
             const alertsEl = document.getElementById('healthAlerts');

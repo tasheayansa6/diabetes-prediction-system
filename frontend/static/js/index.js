@@ -19,17 +19,24 @@ function scrollToTop() {
 }
 
 // Fetch real model accuracy from backend
-fetch('/api/model/info')
-    .then(r => r.json())
-    .then(d => {
-        if (d.success && d.accuracy) {
-            document.getElementById('model-accuracy').textContent =
-                (d.accuracy * 100).toFixed(1) + '%';
-        }
-    })
-    .catch(() => {
-        document.getElementById('model-accuracy').textContent = '87.7%';
-    });
+(function () {
+    const el = document.getElementById('model-accuracy');
+    if (!el) return;
+    el.textContent = '...';
+    el.style.opacity = '0.5';
+    fetch('/api/model/info')
+        .then(r => r.json())
+        .then(d => {
+            el.style.opacity = '1';
+            el.textContent = (d.success && d.accuracy)
+                ? (d.accuracy * 100).toFixed(1) + '%'
+                : '87.7%';
+        })
+        .catch(() => {
+            el.style.opacity = '1';
+            el.textContent = '87.7%';
+        });
+})();
 
 // Scroll reveal motion for home page sections/cards
 document.addEventListener('DOMContentLoaded', function () {

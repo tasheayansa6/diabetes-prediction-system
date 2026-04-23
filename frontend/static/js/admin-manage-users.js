@@ -57,26 +57,77 @@ async function importUsers(input) {
         const data = await res.json();
         showToast(data.message || (data.success ? 'Import complete' : 'Import failed'),
                   data.success ? 'success' : 'danger');
-        if (data.success) loadUsers();
+        if (data.success) loadUsers(1);
     } catch (e) {
         showToast('Import error: ' + e.message, 'danger');
     }
     input.value = '';
 }
 
+// ── Pagination state ──────────────────────────────────────────────────────────
+let _currentPage = 1;
+const _perPage   = 20;
+let   _totalUsers = 0;
+
 // ── Load & Render ─────────────────────────────────────────────────────────────
-async function loadUsers() {
+async function loadUsers(page) {
+    page = page || _currentPage;
+    _currentPage = page;
+
+    const search = (document.getElementById('searchInput')?.value || '').trim();
+    const role   = document.getElementById('roleFilter')?.value || '';
+
     const tbody = document.getElementById('usersTable');
     if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:2rem;">Loading...</td></tr>';
+
+    const params = new URLSearchParams({ page, per_page: _perPage });
+    if (search) params.set('search', search);
+    if (role)   params.set('role',   role);
+
     try {
-        const res  = await fetch(API + '?per_page=200', { headers: authHeaders() });
+        const res  = await fetch(API + '?' + params, { headers: authHeaders() });
         const data = await res.json();
         if (!data.success) throw new Error(data.message || 'Failed to load users');
+        _totalUsers = data.pagination?.total || data.users?.length || 0;
         renderUsers(data.users || []);
+        renderPagination();
     } catch (e) {
         showToast('Failed to load users: ' + e.message, 'danger');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626;padding:2rem;">Error loading users: ' + esc(e.message) + '</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626;padding:2rem;">Error: ' + esc(e.message) + '</td></tr>';
     }
+}
+
+function renderPagination() {
+    const totalPages = Math.ceil(_totalUsers / _perPage);
+    let bar = document.getElementById('paginationBar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'paginationBar';
+        bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;border-top:1px solid #f1f5f9;flex-wrap:wrap;gap:.5rem;';
+        document.querySelector('.table-responsive')?.after(bar);
+    }
+    if (totalPages <= 1) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    const start = (_currentPage - 1) * _perPage + 1;
+    const end   = Math.min(_currentPage * _perPage, _totalUsers);
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= _currentPage - 2 && i <= _currentPage + 2)) {
+            pages.push(i);
+        } else if (pages[pages.length - 1] !== '...') {
+            pages.push('...');
+        }
+    }
+    bar.innerHTML =
+        '<span style="font-size:.82rem;color:#64748b;">Showing ' + start + '–' + end + ' of ' + _totalUsers + ' users</span>' +
+        '<div style="display:flex;gap:.4rem;align-items:center;">' +
+            '<button class="btn btn-sm btn-secondary" ' + (_currentPage <= 1 ? 'disabled' : '') + ' onclick="loadUsers(' + (_currentPage - 1) + ')"><i class="bi bi-chevron-left"></i></button>' +
+            pages.map(p => p === '...'
+                ? '<span style="padding:0 .4rem;color:#94a3b8;">...</span>'
+                : '<button class="btn btn-sm ' + (p === _currentPage ? 'btn-primary' : 'btn-secondary') + '" onclick="loadUsers(' + p + ')">' + p + '</button>'
+            ).join('') +
+            '<button class="btn btn-sm btn-secondary" ' + (_currentPage >= totalPages ? 'disabled' : '') + ' onclick="loadUsers(' + (_currentPage + 1) + ')"><i class="bi bi-chevron-right"></i></button>' +
+        '</div>';
 }
 
 const ROLE_COLORS = {
@@ -135,13 +186,7 @@ async function addUser(event) {
         return;
     }
 
-    const payload = {
-        username:  deriveUsername(email, full_name),
-        email,
-        full_name: full_name,
-        role,
-        password
-    };
+    const payload = { username: deriveUsername(email, full_name), email, full_name, role, password };
 
     try {
         const res  = await fetch(API, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
@@ -150,7 +195,7 @@ async function addUser(event) {
         document.getElementById('addUserModal').style.display = 'none';
         document.getElementById('addUserForm').reset();
         showToast('User "' + payload.username + '" added successfully!', 'success');
-        loadUsers();
+        loadUsers(1);
     } catch (e) {
         showToast('Failed to add user: ' + e.message, 'danger');
     }
@@ -172,25 +217,21 @@ async function saveEditUser() {
     const isActive = document.getElementById('editStatus').value === 'true';
 
     try {
-        // Update role
         const roleRes  = await fetch(API + '/' + id + '/role', {
-            method: 'PUT', headers: authHeaders(),
-            body: JSON.stringify({ role: newRole })
+            method: 'PUT', headers: authHeaders(), body: JSON.stringify({ role: newRole })
         });
         const roleData = await roleRes.json();
         if (!roleData.success) throw new Error(roleData.message || 'Role update failed');
 
-        // Update status
         const statusRes  = await fetch(API + '/' + id + '/toggle-status', {
-            method: 'POST', headers: authHeaders(),
-            body: JSON.stringify({ is_active: isActive })
+            method: 'POST', headers: authHeaders(), body: JSON.stringify({ is_active: isActive })
         });
         const statusData = await statusRes.json();
         if (!statusData.success) throw new Error(statusData.message || 'Status update failed');
 
         document.getElementById('editUserModal').style.display = 'none';
         showToast('User updated successfully!', 'success');
-        loadUsers();
+        loadUsers(_currentPage);
     } catch (e) {
         showToast('Update failed: ' + e.message, 'danger');
     }
@@ -204,47 +245,27 @@ async function deleteUser(id, username) {
         const data = await res.json();
         if (!data.success) throw new Error(data.message || 'Delete failed');
         showToast('User "' + username + '" deleted.', 'warning');
-        loadUsers();
+        // Go back a page if last item on current page was deleted
+        const newPage = _totalUsers % _perPage === 1 && _currentPage > 1 ? _currentPage - 1 : _currentPage;
+        loadUsers(newPage);
     } catch (e) {
         showToast('Delete failed: ' + e.message, 'danger');
     }
 }
 
-// ── Search / Filter ───────────────────────────────────────────────────────────
-let _allUsers = [];
-
-async function loadUsersWithFilter() {
-    try {
-        const res  = await fetch(API + '?per_page=200', { headers: authHeaders() });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.message);
-        _allUsers = data.users || [];
-        applyFilter();
-    } catch (e) {
-        showToast('Failed to load users: ' + e.message, 'danger');
-    }
-}
-
-function applyFilter() {
-    const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
-    const role   = document.getElementById('roleFilter')?.value || '';
-    let filtered = _allUsers;
-    if (search) {
-        filtered = filtered.filter(u =>
-            (u.username || '').toLowerCase().includes(search) ||
-            (u.email    || '').toLowerCase().includes(search)
-        );
-    }
-    if (role) {
-        filtered = filtered.filter(u => u.role === role);
-    }
-    renderUsers(filtered);
-}
+// ── Search / Filter — server-side ─────────────────────────────────────────────
+function applyFilter() { loadUsers(1); }
+function loadUsersWithFilter() { loadUsers(1); }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
     const user = checkAuth('admin');
     if (!user) return;
     document.getElementById('navUserName').textContent = user.name || user.username;
-    loadUsers();
+    loadUsers(1);
+
+    // Search on Enter key
+    document.getElementById('searchInput')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') loadUsers(1);
+    });
 });

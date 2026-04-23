@@ -131,6 +131,43 @@ function initAuth(requiredRole) {
     return user;
 }
 
+// ── Mobile sidebar hamburger ────────────────────────────────────────────────────────
+// Injects a hamburger toggle into the topbar and wires up the sidebar
+// on mobile. Runs on every page that includes auth.js.
+if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', function () {
+        const topbarLeft = document.querySelector('.topbar');
+        const sidebar    = document.querySelector('.sidebar');
+        if (!topbarLeft || !sidebar) return;
+
+        // Inject hamburger button before the brand
+        const btn = document.createElement('button');
+        btn.className   = 'sidebar-toggle';
+        btn.title       = 'Menu';
+        btn.innerHTML   = '<i class="bi bi-list"></i>';
+        btn.setAttribute('aria-label', 'Toggle sidebar');
+        topbarLeft.insertBefore(btn, topbarLeft.firstChild);
+
+        // Inject backdrop
+        const backdrop = document.createElement('div');
+        backdrop.className = 'sidebar-backdrop';
+        document.body.appendChild(backdrop);
+
+        function openSidebar()  { sidebar.classList.add('open');  backdrop.classList.add('show');  btn.innerHTML = '<i class="bi bi-x-lg"></i>'; }
+        function closeSidebar() { sidebar.classList.remove('open'); backdrop.classList.remove('show'); btn.innerHTML = '<i class="bi bi-list"></i>'; }
+
+        btn.addEventListener('click', function () {
+            sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+        });
+        backdrop.addEventListener('click', closeSidebar);
+
+        // Close sidebar when a nav link is clicked on mobile
+        sidebar.querySelectorAll('a').forEach(function (a) {
+            a.addEventListener('click', closeSidebar);
+        });
+    });
+}
+
 // ── Token auto-refresh ────────────────────────────────────────────────────────
 // Silently renews the JWT when it has less than 7 days remaining.
 // Called once on page load — fire-and-forget, never blocks the page.

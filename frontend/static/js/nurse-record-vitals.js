@@ -125,24 +125,36 @@ function setCurrentDateTime() {
 function calcBMI() {
     const h = parseFloat(document.getElementById('height').value);
     const w = parseFloat(document.getElementById('weight').value);
+    const bmiInput   = document.getElementById('bmi') || document.getElementById('bmiInput');
     const resultDiv  = document.getElementById('bmiResult');
     const bmiVal     = document.getElementById('bmiValue');
     const bmiCat     = document.getElementById('bmiCategory');
-    if (!h || !w || h <= 0) { resultDiv.style.display = 'none'; return; }
+    if (!h || !w || h <= 0) {
+        if (bmiInput) bmiInput.readOnly = false;
+        if (resultDiv) resultDiv.style.display = 'none';
+        return;
+    }
     const bmi = w / Math.pow(h / 100, 2);
     let cat = '', color = '';
     if      (bmi < 18.5) { cat = 'Underweight'; color = '#d97706'; }
     else if (bmi < 25)   { cat = 'Normal';       color = '#059669'; }
     else if (bmi < 30)   { cat = 'Overweight';   color = '#d97706'; }
     else                 { cat = 'Obese';         color = '#dc2626'; }
-    bmiVal.textContent  = bmi.toFixed(1);
-    bmiVal.style.color  = color;
-    bmiCat.textContent  = cat;
-    bmiCat.style.color  = color;
-    resultDiv.style.display = '';
-    resultDiv.style.background = '#f5f3ff';
-    resultDiv.style.borderRadius = '10px';
-    resultDiv.style.padding = '.75rem';
+    // Lock BMI field to calculated value — prevents contradictory manual entry
+    if (bmiInput) {
+        bmiInput.value    = bmi.toFixed(1);
+        bmiInput.readOnly = true;
+        bmiInput.classList.add('field-autofilled');
+        bmiInput.title    = 'Auto-calculated from height & weight';
+    }
+    if (bmiVal)  { bmiVal.textContent  = bmi.toFixed(1); bmiVal.style.color  = color; }
+    if (bmiCat)  { bmiCat.textContent  = cat;            bmiCat.style.color  = color; }
+    if (resultDiv) {
+        resultDiv.style.display    = '';
+        resultDiv.style.background = '#f5f3ff';
+        resultDiv.style.borderRadius = '10px';
+        resultDiv.style.padding    = '.75rem';
+    }
 }
 
 // BP status indicator

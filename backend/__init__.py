@@ -250,6 +250,24 @@ def create_app(config_name="development"):
     app.register_blueprint(payment_bp)
 
     # Health check route — real check, not just a static response
+    # 404 / 405 error handlers
+    @app.errorhandler(404)
+    def not_found(e):
+        from flask import request as _req
+        import os as _os
+        frontend = _os.path.join(_os.path.dirname(app.root_path), 'frontend')
+        if _req.path.startswith('/api/'):
+            return jsonify({'success': False, 'message': 'Endpoint not found'}), 404
+        p = _os.path.join(frontend, '404.html')
+        if _os.path.exists(p):
+            from flask import send_file as _sf
+            return _sf(p), 404
+        return jsonify({'success': False, 'message': 'Not found'}), 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return jsonify({'success': False, 'message': 'Method not allowed'}), 405
+
     @app.route("/health")
     def health_check():
         status = {"status": "healthy", "checks": {}}

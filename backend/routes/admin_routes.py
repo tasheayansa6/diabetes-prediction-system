@@ -326,11 +326,20 @@ def get_users(current_admin):
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
         role_filter = request.args.get('role')
+        search = request.args.get('search', '').strip()
         
         query = User.query
         
         if role_filter:
             query = query.filter_by(role=role_filter)
+        
+        if search:
+            query = query.filter(
+                db.or_(
+                    User.username.ilike(f'%{search}%'),
+                    User.email.ilike(f'%{search}%')
+                )
+            )
         
         paginated = query.order_by(desc(User.created_at)).paginate(
             page=page, per_page=per_page, error_out=False

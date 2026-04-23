@@ -280,7 +280,18 @@ document.addEventListener('DOMContentLoaded', function () {
     if (sb) sb.textContent = user.name || user.username;
 
     setCurrentDateTime();
-    loadPatients();
+
+    // Load patients, then auto-select from URL ?patient_id= if present
+    const urlPatientId = new URLSearchParams(window.location.search).get('patient_id');
+    loadPatients().then(function() {
+        if (urlPatientId) {
+            const select = document.getElementById('patient_id');
+            if (select) {
+                select.value = urlPatientId;
+                if (select.value == urlPatientId) onPatientChange();
+            }
+        }
+    });
 
     // Patient search filter — live re-render
     const searchInput = document.getElementById('patientSearch');

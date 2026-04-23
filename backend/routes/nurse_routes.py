@@ -370,7 +370,7 @@ def record_vitals(current_nurse):
                     type='vitals',
                     category='general',
                     is_read=False,
-                    link=f'/templates/doctor/lab_requests.html?patient_id={patient.id}',
+                    link=f'/templates/doctor/patient_list.html?highlight={patient.id}',
                     created_at=datetime.utcnow()
                 ))
             db.session.commit()

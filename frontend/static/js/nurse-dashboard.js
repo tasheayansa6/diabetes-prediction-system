@@ -126,7 +126,7 @@ async function loadWaitingPatients() {
                 </div>
                 <div style="display:flex;align-items:center;gap:.5rem;">
                     <span style="background:${priColor}20;color:${priColor};padding:.15rem .5rem;border-radius:99px;font-size:.7rem;font-weight:700;">${pri}</span>
-                    <a href="/templates/nurse/record_vitals.html" class="btn btn-sm btn-primary" style="padding:.25rem .6rem;font-size:.75rem;">Record Vitals</a>
+                    <a href="/templates/nurse/record_vitals.html?patient_id=${q.patient ? q.patient.id : ''}" class="btn btn-sm btn-primary" style="padding:.25rem .6rem;font-size:.75rem;">Record Vitals</a>
                 </div>
             </div>`;
         }).join('');

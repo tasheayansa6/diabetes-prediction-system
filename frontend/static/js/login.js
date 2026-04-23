@@ -126,4 +126,8 @@ window.addEventListener('DOMContentLoaded', function () {
     if (txRef) {
         showInfo('Your payment was processed. Please sign in to view your receipt.');
     }
+    const reason = params.get('reason');
+    if (reason === 'session_expired') {
+        showInfo('Your session has expired. Please sign in again.');
+    }
 });

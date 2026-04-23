@@ -96,7 +96,15 @@ async function loadPredictions() {
         const res  = await fetch(API + '/patient/predictions?limit=100', {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
-        if (res.status === 401) { logout(); return; }
+        
+        // Handle 401 — token expired or invalid after redeploy
+        if (res.status === 401) {
+            // Clear stale token and redirect to login
+            if (typeof _clearAllStorage === 'function') _clearAllStorage();
+            else { localStorage.removeItem('token'); localStorage.removeItem('user'); }
+            window.location.href = '/login?reason=session_expired';
+            return;
+        }
         
         let data;
         try {
@@ -114,7 +122,7 @@ async function loadPredictions() {
             document.getElementById('predictionsList').innerHTML = `<div class="empty-state">
                 <i class="bi bi-exclamation-circle" style="color:#dc2626;"></i>
                 <h4>Could Not Load Predictions</h4>
-                <p style="color:#dc2626;">${data.message || 'Unknown error'}</p>
+                <p style="color:#dc2626;font-size:.85rem;">${data.message || 'Unknown error'}</p>
                 <a href="javascript:loadPredictions()" class="btn btn-primary mt-3">Try Again</a>
             </div>`;
             return;

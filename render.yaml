@@ -18,11 +18,9 @@ services:
       - key: DATABASE_URL
         value: postgresql://diabetes_user:9IW4jzJynMq1ppQfeFvAtKf0hIknNTZG@dpg-d7kbhg8sfn5c73btr2k0-a/diabetes_792q?sslmode=require
       - key: SECRET_KEY
-        generateValue: true
+        value: "dps-2026-secure-key-diabetes-prediction-system-render-fixed"
       - key: ADMIN_BOOTSTRAP_EMAIL
         value: admin@system.com
-      - key: ADMIN_BOOTSTRAP_PASSWORD
-        value: Admin@1234
       - key: ADMIN_BOOTSTRAP_USERNAME
         value: admin
       - key: CHAPA_CALLBACK_URL

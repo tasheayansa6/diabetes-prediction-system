@@ -24,8 +24,8 @@ class BaseConfig:
     SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
     REMEMBER_COOKIE_HTTPONLY = True
     PREFERRED_URL_SCHEME = os.getenv('PREFERRED_URL_SCHEME', 'https')
-    # JWT expiry: 24h in dev, override with JWT_EXPIRY_SECONDS env var
-    JWT_EXPIRY_SECONDS = int(os.getenv('JWT_EXPIRY_SECONDS', '86400'))
+    # JWT expiry: 90 days (3 months) default, override with JWT_EXPIRY_SECONDS env var
+    JWT_EXPIRY_SECONDS = int(os.getenv('JWT_EXPIRY_SECONDS', '7776000'))  # 90 days
     # Never expose internal error details to clients
     EXPOSE_ERRORS = os.getenv('FLASK_ENV', 'development') == 'development'
     # Flask-Mail
@@ -102,7 +102,7 @@ class ProductionConfig(BaseConfig):
     }
     # Session timeout: 30 minutes of inactivity
     PERMANENT_SESSION_LIFETIME = 1800
-    JWT_EXPIRY_SECONDS = int(os.getenv('JWT_EXPIRY_SECONDS', '86400'))
+    JWT_EXPIRY_SECONDS = int(os.getenv('JWT_EXPIRY_SECONDS', '7776000'))  # 90 days = 3 months
     PROPAGATE_EXCEPTIONS = False
     EXPOSE_ERRORS = False
 

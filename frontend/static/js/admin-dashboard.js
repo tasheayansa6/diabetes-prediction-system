@@ -27,7 +27,9 @@ function set(id, val) {
 function showToast(message, type = 'danger') {
     const id = 'toast-' + Date.now();
     const bg = type === 'success' ? 'bg-success' : 'bg-danger';
-    document.getElementById('toastContainer').insertAdjacentHTML('beforeend', `
+    const c = document.getElementById('toastContainer');
+    if (!c) return;
+    c.insertAdjacentHTML('beforeend', `
         <div id="${id}" class="toast show mb-2" role="alert">
             <div class="toast-header ${bg} text-white">
                 <strong class="me-auto">${type === 'success' ? 'Success' : 'Error'}</strong>
@@ -53,34 +55,22 @@ async function loadDashboard() {
 
         const { statistics, role_distribution, recent_users, today_activity } = data.dashboard;
 
-        // ── Core stats ──
         set('totalUsersStat',      statistics.total_users       ?? 0);
         set('totalPatientsStat',   statistics.total_patients    ?? 0);
         set('totalPredictionsStat',statistics.total_predictions ?? 0);
         set('averageRiskStat',     (statistics.average_risk_percentage ?? 0).toFixed(1) + '%');
         set('totalDoctorsStat',    statistics.total_doctors     ?? 0);
-
-        // ── Today stats ──
-        set('todayRegistrations', today_activity?.new_registrations ?? 0);
-        set('todayPredictions',   today_activity?.predictions       ?? 0);
-
-        // ── Info pane extras ──
+        set('todayRegistrations',  today_activity?.new_registrations ?? 0);
+        set('todayPredictions',    today_activity?.predictions       ?? 0);
         set('totalPaymentsStat',     statistics.total_payments     ?? '—');
         set('totalAppointmentsStat', statistics.total_appointments ?? '—');
 
-        // ── DB health check ──
-        document.getElementById('dbStatus').textContent = 'Online';
+        const dbEl = document.getElementById('dbStatus');
+        if (dbEl) dbEl.textContent = 'Online';
 
-        // ── Load extra stats (risk distribution) ──
         loadRiskStats(role_distribution);
-
-        // ── Charts ──
         drawRoleChart(role_distribution);
-
-        // ── Recent users table ──
         renderRecentUsers(recent_users);
-
-        // ── Recent activity panel ──
         renderActivity(recent_users);
 
     } catch (err) {
@@ -88,7 +78,7 @@ async function loadDashboard() {
     }
 }
 
-// ── Load risk distribution from GET /api/admin/statistics ────────────────────
+// ── Load risk distribution ────────────────────────────────────────────────────
 async function loadRiskStats(roleDistribution) {
     try {
         const res = await fetch('/api/admin/statistics', {
@@ -102,13 +92,8 @@ async function loadRiskStats(roleDistribution) {
         set('riskModerate', rd['MODERATE RISK']  ?? 0);
         set('riskHigh',     rd['HIGH RISK']      ?? 0);
         set('riskVeryHigh', rd['VERY HIGH RISK'] ?? 0);
-
-        // High risk stat card = HIGH + VERY HIGH
         set('highRiskStat', (rd['HIGH RISK'] ?? 0) + (rd['VERY HIGH RISK'] ?? 0));
-
-        // Draw risk bar chart with real data
         drawRiskChart(rd);
-
     } catch (_) {}
 }
 
@@ -140,10 +125,7 @@ function drawRoleChart(roleDistribution) {
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#94a3b8', padding: 16, font: { size: 12 } }
-                },
+                legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 16, font: { size: 12 } } },
                 tooltip: {
                     callbacks: {
                         label: ctx => {
@@ -157,7 +139,7 @@ function drawRoleChart(roleDistribution) {
     });
 }
 
-// ── ML Risk Distribution Bar Chart (real DB data) ────────────────────────────
+// ── ML Risk Distribution Bar Chart ───────────────────────────────────────────
 function drawRiskChart(rd) {
     const ctx = document.getElementById('riskTrendChart');
     if (!ctx) return;
@@ -269,16 +251,16 @@ async function checkDbHealth() {
     }
 }
 
-// ── Load active model info from registry ─────────────────────────────────────
+// ── Load active model info ────────────────────────────────────────────────────
 async function loadActiveModel() {
     try {
-        // Prefer runtime stats endpoint (includes active model + dataset counts + fallback state).
         const statsRes = await fetch('/api/model/stats');
         const stats = await statsRes.json();
 
-        const nameEl = document.getElementById('activeModelName');
-        const subEl  = document.getElementById('activeModelSub');
+        const nameEl   = document.getElementById('activeModelName');
+        const subEl    = document.getElementById('activeModelSub');
         const mlNameEl = document.getElementById('mlModelName');
+        const mlStatus = document.getElementById('mlStatus');
 
         if (stats && stats.success && stats.active_model) {
             const active = stats.active_model;
@@ -291,29 +273,16 @@ async function loadActiveModel() {
             const acc = active.accuracy != null ? `${active.accuracy}%` : 'N/A';
 
             if (nameEl) nameEl.textContent = algo;
-            if (subEl) {
-                subEl.innerHTML = `${version} &nbsp;&middot;&nbsp; Accuracy: <strong>${acc}</strong><br>` +
-                                  `Dataset: <strong>${total}</strong> (train ${tr} / test ${te})`;
-            }
+            if (subEl) subEl.innerHTML = `${version} &nbsp;&middot;&nbsp; Accuracy: <strong>${acc}</strong><br>Dataset: <strong>${total}</strong> (train ${tr} / test ${te})`;
             if (mlNameEl) mlNameEl.textContent = `${algo} (${version})`;
-
-            const mlStatus = document.getElementById('mlStatus');
             if (mlStatus) {
-                if (active.status === 'fallback_active') {
-                    mlStatus.textContent = 'Fallback Active';
-                    mlStatus.className = 'badge badge-red';
-                } else {
-                    mlStatus.textContent = 'Active';
-                    mlStatus.className = 'badge badge-green';
-                }
+                mlStatus.textContent = active.status === 'fallback_active' ? 'Fallback Active' : 'Active';
+                mlStatus.className   = active.status === 'fallback_active' ? 'badge badge-red' : 'badge badge-green';
             }
             return;
         }
 
-        // Fallback to admin models endpoint if stats endpoint is unavailable.
-        const res = await fetch('/api/admin/models', {
-            headers: { 'Authorization': `Bearer ${token()}` }
-        });
+        const res = await fetch('/api/admin/models', { headers: { 'Authorization': `Bearer ${token()}` } });
         const data = await res.json();
         if (!data.success) return;
         const active = data.models.find(m => m.status === 'active') || data.models[0];
@@ -336,69 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadActiveModel();
 });
 
-// ── System Health Monitor ─────────────────────────────────────────────────────
-async function loadSystemHealth() {
-    const el = document.getElementById('systemHealthWidget');
-    if (!el) return;
-    try {
-        const res  = await fetch('/api/admin/system/health', {
-            headers: { 'Authorization': 'Bearer ' + token() }
-        });
-        const data = await res.json();
-        if (!data.success) { el.innerHTML = '<span style="color:#dc2626;">Health check failed</span>'; return; }
-
-        const disk   = data.disk   || {};
-        const mem    = data.memory || {};
-        const cpu    = data.cpu    || {};
-        const db     = data.database || {};
-        const alerts = data.alerts || [];
-
-        const diskPct = disk.used_pct || 0;
-        const memPct  = mem.used_pct  || 0;
-        const cpuPct  = cpu.used_pct  || 0;
-
-        const bar = (pct, color) => `
-            <div style="background:#334155;border-radius:99px;height:6px;overflow:hidden;margin-top:3px;">
-                <div style="width:${Math.min(pct,100)}%;height:100%;background:${color};border-radius:99px;"></div>
-            </div>`;
-
-        const alertHtml = alerts.length
-            ? alerts.map(a => `<div style="background:#7f1d1d;color:#fca5a5;border-radius:6px;padding:4px 8px;font-size:.72rem;margin-top:4px;">⚠️ ${a.message}</div>`).join('')
-            : '<div style="color:#22c55e;font-size:.72rem;margin-top:4px;">✅ All systems normal</div>';
-
-        el.innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;font-size:.78rem;">
-                <div>
-                    <div style="color:#94a3b8;margin-bottom:2px;">Disk</div>
-                    <div style="color:#e2e8f0;font-weight:700;">${diskPct}% used</div>
-                    ${bar(diskPct, diskPct > 85 ? '#ef4444' : '#22c55e')}
-                    <div style="color:#64748b;font-size:.7rem;">${disk.free_gb || '?'} GB free</div>
-                </div>
-                <div>
-                    <div style="color:#94a3b8;margin-bottom:2px;">Memory</div>
-                    <div style="color:#e2e8f0;font-weight:700;">${memPct ? memPct + '% used' : 'N/A'}</div>
-                    ${memPct ? bar(memPct, memPct > 85 ? '#ef4444' : '#3b82f6') : ''}
-                    <div style="color:#64748b;font-size:.7rem;">${mem.free_gb ? mem.free_gb + ' GB free' : 'Install psutil'}</div>
-                </div>
-                <div>
-                    <div style="color:#94a3b8;margin-bottom:2px;">Database</div>
-                    <div style="color:#e2e8f0;font-weight:700;">${db.size_mb || 0} MB</div>
-                    <div style="color:#64748b;font-size:.7rem;">${(db.records || {}).users || 0} users · ${(db.records || {}).predictions || 0} predictions</div>
-                </div>
-                <div>
-                    <div style="color:#94a3b8;margin-bottom:2px;">CPU</div>
-                    <div style="color:#e2e8f0;font-weight:700;">${cpuPct ? cpuPct + '%' : 'N/A'}</div>
-                    ${cpuPct ? bar(cpuPct, cpuPct > 85 ? '#ef4444' : '#f59e0b') : ''}
-                    <div style="color:#64748b;font-size:.7rem;">${cpuPct ? 'Current load' : 'Install psutil'}</div>
-                </div>
-            </div>
-            ${alertHtml}`;
-    } catch (e) {
-        el.innerHTML = '<span style="color:#64748b;font-size:.78rem;">Health data unavailable</span>';
-    }
-}
-
-// ── System Health Monitoring ──────────────────────────────────────────────────
+// ── System Health Monitor (single definition) ─────────────────────────────────
 async function loadSystemHealth() {
     try {
         const res  = await fetch('/api/admin/system/health', {
@@ -407,7 +314,6 @@ async function loadSystemHealth() {
         const data = await res.json();
         if (!data.success) return;
 
-        // DB status
         const dbStatus = document.getElementById('dbStatus');
         const dbDot    = document.getElementById('dbDot');
         if (dbStatus) {
@@ -417,7 +323,6 @@ async function loadSystemHealth() {
         }
         if (dbDot) dbDot.className = 'status-dot online';
 
-        // Alerts
         if (data.alerts && data.alerts.length) {
             const alertsEl = document.getElementById('healthAlerts');
             if (alertsEl) {
@@ -429,6 +334,5 @@ async function loadSystemHealth() {
                 alertsEl.style.display = '';
             }
         }
-
     } catch (_) {}
 }

@@ -58,7 +58,7 @@ function filterTable() {
     const risk   = document.getElementById('riskFilter').value;
     const filtered = allPredictions.filter(p => {
         const name = p.patient ? p.patient.name.toLowerCase() : '';
-        const pid  = p.patient ? p.patient.patient_id.toLowerCase() : '';
+        const pid  = p.patient ? (p.patient.patient_id || '').toLowerCase() : '';
         return (!search || name.includes(search) || pid.includes(search)) &&
                (!risk   || p.risk_level === risk);
     });

@@ -351,35 +351,36 @@ def record_vitals(current_nurse):
         db.session.add(vital)
         db.session.commit()
 
-        # Notify all doctors that vitals were recorded for this patient
-        try:
-            from backend.models.notification import Notification
-            bp_str = ''
-            if data.get('blood_pressure_systolic') and data.get('blood_pressure_diastolic'):
-                bp_str = f", BP: {data['blood_pressure_systolic']}/{data['blood_pressure_diastolic']}"
-            bmi_str = f", BMI: {bmi}" if bmi else ''
-            msg = (f"Nurse {current_nurse['username']} recorded vitals for "
-                   f"{patient.username} (ID: {getattr(patient, 'patient_id', None)}){bp_str}{bmi_str}. "
-                   f"Patient is ready for consultation.")
-            doctors = User.query.filter_by(role='doctor', is_active=True).all()
-            for doc in doctors:
-                db.session.add(Notification(
-                    user_id=doc.id,
-                    title='Vitals Recorded',
-                    message=msg,
-                    type='vitals',
-                    category='general',
-                    is_read=False,
-                    link=f'/templates/doctor/patient_list.html?highlight={patient.id}',
-                    created_at=datetime.utcnow()
-                ))
-            db.session.commit()
-        except Exception as notif_err:
-            current_app.logger.error(f'Vitals notification error: {notif_err}')
+        # Only notify doctors when ML-relevant vitals are recorded (BP diastolic required)
+        if data.get('blood_pressure_diastolic'):
             try:
-                db.session.rollback()
-            except Exception:
-                pass
+                from backend.models.notification import Notification
+                bp_str = ''
+                if data.get('blood_pressure_systolic') and data.get('blood_pressure_diastolic'):
+                    bp_str = f", BP: {data['blood_pressure_systolic']}/{data['blood_pressure_diastolic']}"
+                bmi_str = f", BMI: {bmi}" if bmi else ''
+                msg = (f"Nurse {current_nurse['username']} recorded vitals for "
+                       f"{patient.username} (ID: {getattr(patient, 'patient_id', None)}){bp_str}{bmi_str}. "
+                       f"Patient is ready for consultation.")
+                doctors = User.query.filter_by(role='doctor', is_active=True).all()
+                for doc in doctors:
+                    db.session.add(Notification(
+                        user_id=doc.id,
+                        title='Vitals Recorded',
+                        message=msg,
+                        type='vitals',
+                        category='general',
+                        is_read=False,
+                        link=f'/templates/doctor/patient_list.html?highlight={patient.id}',
+                        created_at=datetime.utcnow()
+                    ))
+                db.session.commit()
+            except Exception as notif_err:
+                current_app.logger.error(f'Vitals notification error: {notif_err}')
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
 
         return jsonify({
             "success": True,

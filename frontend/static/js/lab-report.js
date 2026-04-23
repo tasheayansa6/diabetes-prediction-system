@@ -125,8 +125,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const name = user.name || user.username;
     document.getElementById('topUserName').textContent = name;
     document.getElementById('userName').textContent = name;
-    document.getElementById('statTech').textContent = name;
-    document.getElementById('reportDate').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    const techEl = document.getElementById('statTech');
+    if (techEl) techEl.textContent = name;
+    const dateEl = document.getElementById('reportDate');
+    if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
     loadReports();
 });
 

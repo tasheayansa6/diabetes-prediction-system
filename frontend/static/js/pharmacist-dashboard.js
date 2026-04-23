@@ -27,7 +27,7 @@ function renderPending(list) {
         el.innerHTML = pending.map(p => `
         <div class="list-item justify-between">
             <div>
-                <div class="font-medium text-sm">${p.patient_name} — ${p.medication}</div>
+                <div class="font-medium text-sm">${p.patient?.name || p.patient_name || '—'} — ${p.medication}</div>
                 <div class="text-xs text-muted">Prescribed: ${p.created_at ? p.created_at.split('T')[0] : '—'}</div>
             </div>
             <a href="/templates/pharmacist/prescription_review.html?status=pending" class="btn btn-sm btn-primary">Review</a>
@@ -42,7 +42,7 @@ function renderDispensed(list) {
     el.innerHTML = dispensed.map(p => `
         <div class="list-item">
             <div>
-                <div class="font-medium text-sm">${p.patient_name} — ${p.medication}</div>
+                <div class="font-medium text-sm">${p.patient?.name || p.patient_name || '—'} — ${p.medication}</div>
                 <div class="text-xs text-muted">${statusBadge(p.status)} ${p.created_at ? p.created_at.split('T')[0] : ''}</div>
             </div>
         </div>`).join('');

@@ -24,12 +24,13 @@ class MLService:
     Handles model loading, predictions, and risk assessment
     """
     
-    # Risk thresholds as class constants for easy modification
+    # Risk thresholds calibrated for GradientBoosting on Pima dataset
+    # Model outputs: ~5-15% for clearly non-diabetic, ~70-99% for clearly diabetic
     RISK_THRESHOLDS = {
-        'low': {'min': 0, 'max': 30, 'level': 'LOW RISK', 'color': 'green'},
-        'moderate': {'min': 30, 'max': 60, 'level': 'MODERATE RISK', 'color': 'yellow'},
-        'high': {'min': 60, 'max': 80, 'level': 'HIGH RISK', 'color': 'orange'},
-        'very_high': {'min': 80, 'max': 100, 'level': 'VERY HIGH RISK', 'color': 'red'}
+        'low':       {'min': 0,  'max': 30, 'level': 'LOW RISK',       'color': 'green'},
+        'moderate':  {'min': 30, 'max': 50, 'level': 'MODERATE RISK',  'color': 'yellow'},
+        'high':      {'min': 50, 'max': 70, 'level': 'HIGH RISK',      'color': 'orange'},
+        'very_high': {'min': 70, 'max': 100,'level': 'VERY HIGH RISK', 'color': 'red'}
     }
     
     # Default values for missing features
@@ -341,8 +342,15 @@ class MLService:
                 feature_values.append(float(value))
             
             # Convert to numpy array and scale
-            feature_array = np.array([feature_values])
-            feature_scaled = self.scaler.transform(feature_array)
+            # Use DataFrame with feature names to match how scaler was fitted
+            try:
+                import pandas as _pd
+                feature_df = _pd.DataFrame([feature_values], columns=self.feature_names)
+                feature_scaled = self.scaler.transform(feature_df)
+            except Exception:
+                # Fallback to plain numpy if pandas fails
+                feature_array = np.array([feature_values])
+                feature_scaled = self.scaler.transform(feature_array)
             
             # Make prediction
             prediction = self.model.predict(feature_scaled)[0]
@@ -492,24 +500,24 @@ class MLService:
                 'action': 'Maintain healthy lifestyle',
                 'recommendation': 'Regular checkups every 2-3 years'
             }
-        elif prob_percent < 60:
+        elif prob_percent < 50:
             return {
                 'level': 'MODERATE RISK', 'color': 'yellow', 'category': 'Moderate Risk',
-                'interpretation': 'Needs lifestyle monitoring',
+                'interpretation': 'Some risk factors present — monitor closely',
                 'action': 'Consider dietary changes and exercise',
                 'recommendation': 'Annual checkup recommended'
             }
-        elif prob_percent < 80:
+        elif prob_percent < 70:
             return {
                 'level': 'HIGH RISK', 'color': 'orange', 'category': 'High Risk',
-                'interpretation': 'Medical consultation recommended',
-                'action': 'Consult healthcare provider',
+                'interpretation': 'Significant diabetes risk — medical consultation recommended',
+                'action': 'Consult healthcare provider soon',
                 'recommendation': 'Schedule appointment within 1 month'
             }
         else:
             return {
                 'level': 'VERY HIGH RISK', 'color': 'red', 'category': 'Very High Risk',
-                'interpretation': 'Strong likelihood of diabetes',
+                'interpretation': 'Strong likelihood of diabetes — immediate action needed',
                 'action': 'Immediate medical attention needed',
                 'recommendation': 'Consult doctor within 1 week'
             }

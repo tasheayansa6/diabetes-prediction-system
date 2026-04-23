@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prediction Result - Diabetes Prediction System</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
-    <script src="../../static/vendor/js/tailwind.min.js"></script>
-    <link href="../../static/vendor/css/bootstrap-icons.css" rel="stylesheet">
-    <link href="../../static/css/app.css" rel="stylesheet">
+    <script src="/static/vendor/js/tailwind.min.js"></script>
+    <link href="/static/vendor/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/app.css" rel="stylesheet">
     <style>
       /* Risk gauge styles */
       .risk-label { font-size: 2.5rem; font-weight: 800; letter-spacing: 0.05em; }
@@ -197,14 +197,14 @@
           <p class="text-sm mb-3">Your AI-powered diabetes risk assessment is ready. Download your full report below.</p>
           <div class="flex gap-3 flex-wrap">
             <button onclick="downloadReport()" class="btn btn-success"><i class="bi bi-download"></i> Download Full Report</button>
-            <a href="health_data_form.html" class="btn btn-outline"><i class="bi bi-plus-circle"></i> New Prediction</a>
+            <a href="/templates/patient/health_data_form.html" class="btn btn-outline"><i class="bi bi-plus-circle"></i> New Prediction</a>
           </div>
         </div>
       </div>
 
       <div class="text-center mb-4 flex gap-3 justify-center">
-        <a href="dashboard.html" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
-        <a href="prediction_history.html" class="btn btn-outline"><i class="bi bi-clock-history"></i> View History</a>
+        <a href="/templates/patient/dashboard.html" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+        <a href="/templates/patient/prediction_history.html" class="btn btn-outline"><i class="bi bi-clock-history"></i> View History</a>
       </div>
     </main>
   </div>
@@ -229,9 +229,9 @@
     </div>
   </div>
 </footer>
-<script src="../../static/js/auth.js"></script>
-<script src="../../static/js/notifications.js"></script>
-<script src="../../static/js/patient-prediction-result.js"></script>
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/notifications.js"></script>
+<script src="/static/js/patient-prediction-result.js"></script>
 <script>if(typeof initNotifications==='function') initNotifications('patient');</script>
 </body>
 </html>

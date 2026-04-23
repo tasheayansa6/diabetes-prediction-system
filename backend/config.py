@@ -102,7 +102,7 @@ class ProductionConfig(BaseConfig):
     }
     # Session timeout: 30 minutes of inactivity
     PERMANENT_SESSION_LIFETIME = 1800
-    JWT_EXPIRY_SECONDS = int(os.getenv('JWT_EXPIRY_SECONDS', '1800'))
+    JWT_EXPIRY_SECONDS = int(os.getenv('JWT_EXPIRY_SECONDS', '86400'))
     PROPAGATE_EXCEPTIONS = False
     EXPOSE_ERRORS = False
 

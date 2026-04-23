@@ -12,8 +12,8 @@ const RISK_CONFIG = {
             '<div><div style="font-weight:700;color:#166534;font-size:1rem;margin-bottom:.35rem;">You are not at risk right now</div>' +
             '<div style="color:#15803d;font-size:.875rem;line-height:1.6;">Keep up your healthy habits. No doctor visit is required at this time. Come back for a check-up in 12 months or if you notice any symptoms.</div>' +
             '<div style="margin-top:.85rem;display:flex;gap:.6rem;flex-wrap:wrap;">' +
-            '<a href="health_data_form.html" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;">New Prediction</a>' +
-            '<a href="prediction_history.html" class="btn btn-sm btn-outline">View History</a>' +
+            '<a href="/templates/patient/health_data_form.html" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;">New Prediction</a>' +
+            '<a href="/templates/patient/prediction_history.html" class="btn btn-sm btn-outline">View History</a>' +
             '</div></div></div>'
     },
     'MODERATE RISK': {
@@ -26,8 +26,8 @@ const RISK_CONFIG = {
             '<div><div style="font-weight:700;color:#92400e;font-size:1rem;margin-bottom:.35rem;">No doctor needed — focus on lifestyle</div>' +
             '<div style="color:#b45309;font-size:.875rem;line-height:1.6;">You do <strong>not</strong> have diabetes. Cut down on sugar, exercise 30 min daily, maintain healthy weight, and recheck in 3 months.</div>' +
             '<div style="margin-top:.85rem;display:flex;gap:.6rem;flex-wrap:wrap;">' +
-            '<a href="health_data_form.html" class="btn btn-sm" style="background:#d97706;color:#fff;border:none;">New Prediction in 3 Months</a>' +
-            '<a href="prediction_history.html" class="btn btn-sm btn-outline">View History</a>' +
+            '<a href="/templates/patient/health_data_form.html" class="btn btn-sm" style="background:#d97706;color:#fff;border:none;">New Prediction in 3 Months</a>' +
+            '<a href="/templates/patient/prediction_history.html" class="btn btn-sm btn-outline">View History</a>' +
             '</div></div></div>'
     },
     'HIGH RISK': {
@@ -40,7 +40,7 @@ const RISK_CONFIG = {
             '<div><div style="font-weight:700;color:#fff;font-size:1rem;margin-bottom:.35rem;">High Risk — Please See a Doctor Soon</div>' +
             '<div style="color:#fecaca;font-size:.875rem;line-height:1.6;">Your result shows a high diabetes risk. Early intervention significantly reduces your chance of developing diabetes. Please book an appointment with your doctor.</div>' +
             '<div style="margin-top:.85rem;display:flex;gap:.6rem;flex-wrap:wrap;">' +
-            '<a href="appointment.html?reason=High+Risk+Diabetes+Review" class="btn btn-sm" style="background:#fff;color:#991b1b;border:none;font-weight:700;">Book Doctor Appointment</a>' +
+            '<a href="/templates/patient/appointment.html?reason=High+Risk+Diabetes+Review" class="btn btn-sm" style="background:#fff;color:#991b1b;border:none;font-weight:700;">Book Doctor Appointment</a>' +
             '<button onclick="downloadReport()" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fecaca;border:1px solid rgba(255,255,255,.3);">Download Report</button>' +
             '</div></div></div>'
     },
@@ -54,7 +54,7 @@ const RISK_CONFIG = {
             '<div><div style="font-weight:700;color:#fff;font-size:1rem;margin-bottom:.35rem;">Very High Risk — See a Doctor Immediately</div>' +
             '<div style="color:#ddd6fe;font-size:.875rem;line-height:1.6;">Your result indicates a very high diabetes risk. Immediate medical consultation is required. You may need diagnostic tests, medication, or a diabetes management program.</div>' +
             '<div style="margin-top:.85rem;display:flex;gap:.6rem;flex-wrap:wrap;">' +
-            '<a href="appointment.html?reason=Very+High+Risk+Diabetes+Urgent" class="btn btn-sm" style="background:#fff;color:#6d28d9;border:none;font-weight:700;">Book Urgent Appointment</a>' +
+            '<a href="/templates/patient/appointment.html?reason=Very+High+Risk+Diabetes+Urgent" class="btn btn-sm" style="background:#fff;color:#6d28d9;border:none;font-weight:700;">Book Urgent Appointment</a>' +
             '<button onclick="downloadReport()" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#ddd6fe;border:1px solid rgba(255,255,255,.3);">Download Report</button>' +
             '</div></div></div>'
     }

@@ -336,8 +336,11 @@ def check_lab_payment(current_user):
 @payment_bp.route('/check-prediction-access', methods=['GET'])
 @token_required(['patient'])
 def check_prediction_access(current_user):
-    """Returns whether the patient has an unused paid prediction slot."""
+    """Returns whether the patient has an unused paid prediction slot.
+    Accepts: completed payments OR pending cash/insurance payments made within last 2 hours.
+    """
     try:
+        # First check: completed prediction payment (unconsumed)
         payment = Payment.query.filter(
             Payment.patient_id == current_user['id'],
             Payment.payment_type == 'prediction',
@@ -351,19 +354,37 @@ def check_prediction_access(current_user):
                 'payment_id': payment.payment_id,
                 'message': 'Payment verified. You may proceed.',
             }), 200
+
+        # Second check: pending cash/insurance payment made within last 2 hours
+        # (patient paid at cashier but admin hasn't approved yet)
+        two_hours_ago = datetime.utcnow() - timedelta(hours=2)
+        pending_cash = Payment.query.filter(
+            Payment.patient_id == current_user['id'],
+            Payment.payment_type == 'prediction',
+            Payment.payment_status == 'pending',
+            Payment.payment_method.in_(['cash', 'insurance', 'bank_transfer']),
+            Payment.created_at >= two_hours_ago,
+        ).order_by(Payment.created_at.desc()).first()
+
+        if pending_cash:
+            return jsonify({
+                'success': True, 'has_access': True,
+                'payment_id': pending_cash.payment_id,
+                'message': 'Cash payment pending confirmation. Prediction allowed.',
+            }), 200
+
         return jsonify({
             'success': True, 'has_access': False,
             'message': 'Payment required to run prediction.',
         }), 200
 
     except AttributeError:
-        # prediction_consumed column missing — degrade gracefully
-        # Fall back to checking any completed prediction payment
+        # prediction_consumed column missing — fallback
         try:
             payment = Payment.query.filter(
                 Payment.patient_id == current_user['id'],
                 Payment.payment_type == 'prediction',
-                Payment.payment_status == 'completed',
+                Payment.payment_status.in_(['completed', 'pending']),
             ).order_by(Payment.created_at.desc()).first()
             return jsonify({
                 'success': True,
@@ -371,8 +392,7 @@ def check_prediction_access(current_user):
                 'message': 'Payment verified (fallback).' if payment else 'Payment required.',
             }), 200
         except Exception:
-            return jsonify({'success': True, 'has_access': False,
-                            'message': 'Payment required.'}), 200
+            return jsonify({'success': True, 'has_access': False, 'message': 'Payment required.'}), 200
     except Exception as e:
         current_app.logger.error(f'check-prediction-access error: {e}')
         return jsonify({'success': False, 'has_access': False,

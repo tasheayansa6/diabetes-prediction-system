@@ -481,13 +481,25 @@ def predict(current_user):
         # ── Enforce payment before prediction ────────────────────────────────
         try:
             from backend.models.payment import Payment
-            # No date filter — an unconsumed paid slot is valid regardless of when it was purchased
+            # Check completed unconsumed prediction payment
             paid = Payment.query.filter(
                 Payment.patient_id == current_user['id'],
                 Payment.payment_type == 'prediction',
                 Payment.payment_status == 'completed',
                 Payment.prediction_consumed == False,
             ).order_by(Payment.created_at.desc()).first()
+
+            if not paid:
+                # Also allow pending cash/insurance payments made within last 2 hours
+                two_hours_ago = datetime.utcnow() - timedelta(hours=2)
+                paid = Payment.query.filter(
+                    Payment.patient_id == current_user['id'],
+                    Payment.payment_type == 'prediction',
+                    Payment.payment_status == 'pending',
+                    Payment.payment_method.in_(['cash', 'insurance', 'bank_transfer']),
+                    Payment.created_at >= two_hours_ago,
+                ).order_by(Payment.created_at.desc()).first()
+
             if not paid:
                 return jsonify({
                     "success": False,
@@ -495,10 +507,8 @@ def predict(current_user):
                     "requires_payment": True
                 }), 402
         except AttributeError as pay_err:
-            # Only degrade if prediction_consumed column is missing (schema migration issue)
             current_app.logger.warning(f'Payment check column missing (allowing): {pay_err}')
         except Exception as pay_err:
-            # Any other DB error — block the prediction, don't silently allow
             current_app.logger.error(f'Payment check error (blocking): {pay_err}')
             return jsonify({
                 "success": False,

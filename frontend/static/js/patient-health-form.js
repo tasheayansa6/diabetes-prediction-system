@@ -652,6 +652,56 @@ function applyRestoredData(d) {
     updateLiveRiskHint();
 }
 
+// ── Run ML prediction (direct — no payment check) ───────────────────────────
+async function runPredictionDirect(body) {
+    showOverlay();
+    try {
+        setStep(1); await delay(400);
+        setStep(2);
+
+        const res  = await fetch(API + '/patient/predict', {
+            method: 'POST', headers: authHeaders(), body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+            hideOverlay();
+            // If payment required, the localStorage flag was wrong — redirect to payment
+            if (res.status === 402 || data.requires_payment) {
+                goToPayment(body);
+                return;
+            }
+            if (res.status === 403 && data.requires_consent) {
+                document.getElementById('consentModal').style.display = 'flex';
+                resetBtn();
+                return;
+            }
+            showAlert(data.message || 'Prediction failed. Please try again.');
+            resetBtn();
+            return;
+        }
+
+        setStep(3); await delay(400);
+        setStep(4); await delay(400);
+
+        // Consume payment token (fire-and-forget)
+        fetch(API + '/payments/consume-prediction-payment', {
+            method: 'POST', headers: authHeaders()
+        }).catch(() => {});
+
+        // Clean up localStorage
+        _clearPendingData();
+        clearPredictionPaid();
+
+        window.location.href = '/templates/patient/prediction_result.html?id=' + data.prediction.id;
+
+    } catch {
+        hideOverlay();
+        showAlert('Network error. Please check your connection and try again.');
+        resetBtn();
+    }
+}
+
 // ── Run ML prediction ─────────────────────────────────────────────────────────
 async function runPrediction(body) {
     showOverlay();
@@ -827,13 +877,25 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (paid && pending) {
         clearPredictionPaid();
         _clearPendingData();
+        // Wait for all async auto-fills to complete
+        await delay(600);
         const body = collectFormData();
         const err  = validateForm(body);
         if (!err) {
             showAlert('Payment confirmed! Running your prediction now...', 'success');
-            await delay(800);
+            await delay(600);
             hideAlert();
-            await runPrediction(body);
+            // Run prediction directly — bypass server payment check
+            // (cash/insurance payments are pending in DB but patient has paid)
+            await runPredictionDirect(body);
+        } else {
+            showAlert(
+                '<i class="bi bi-check-circle-fill me-2" style="color:#059669;"></i>' +
+                '<strong>Payment confirmed!</strong> Your form is ready. Click <strong>Get Prediction</strong> to run your assessment.',
+                'success'
+            );
+            const btn = document.getElementById('submitBtn');
+            if (btn) btn.disabled = false;
         }
     }
     updateLiveRiskHint();

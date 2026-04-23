@@ -42,93 +42,71 @@ function renderAppointments(appointments) {
         </div>`).join('');
 }
 
-// ── Render high risk patients — single efficient call ─────────────────────────
-async function loadHighRiskPatients() {
+// ── Load patients list for dashboard ─────────────────────────────────────────
+async function loadPatientsList() {
     const list = document.getElementById('highRiskList');
     if (!list) return;
 
     list.innerHTML = `<div class="list-item" style="justify-content:center;color:#64748b;">
-        <i class="bi bi-hourglass-split"></i>&nbsp; Loading...
+        <i class="bi bi-hourglass-split"></i>&nbsp; Loading patients...
     </div>`;
 
     try {
-        // Get all patients in one call
-        const patientsData = await apiFetch('/api/doctor/patients?limit=100');
-        if (!patientsData.success || !patientsData.patients?.length) {
+        // Single call — get all patients using doctor API
+        const data = await apiFetch('/api/doctor/patients?limit=50');
+
+        if (!data.success) {
+            list.innerHTML = `<div class="list-item" style="justify-content:center;color:#dc2626;padding:1.5rem;">
+                <i class="bi bi-exclamation-circle"></i>&nbsp; ${esc(data.message || 'Failed to load patients')}
+            </div>`;
+            return;
+        }
+
+        const patients = data.patients || [];
+        const total = data.pagination?.total || patients.length;
+
+        // Update total patients count
+        const totalEl = document.getElementById('totalPatientsCount');
+        if (totalEl) totalEl.textContent = total;
+
+        if (!patients.length) {
             list.innerHTML = `<div class="list-item" style="justify-content:center;color:#64748b;padding:1.5rem;">
                 <i class="bi bi-people"></i>&nbsp; No patients registered yet
             </div>`;
             return;
         }
 
-        // Update total patients count with real number
-        const totalEl = document.getElementById('totalPatientsCount');
-        if (totalEl) totalEl.textContent = patientsData.pagination?.total || patientsData.patients.length;
-
-        // Get nurse predictions view (all predictions) — single call
-        const predsData = await apiFetch('/api/nurse/predictions?limit=200');
-        if (!predsData.success || !predsData.predictions?.length) {
-            list.innerHTML = `<div class="list-item" style="justify-content:center;color:#059669;padding:1.5rem;">
-                <i class="bi bi-check-circle-fill"></i>&nbsp; No predictions yet
-            </div>`;
-            return;
-        }
-
-        // Build patient map for quick lookup
-        const patientMap = {};
-        patientsData.patients.forEach(p => { patientMap[p.id] = p; });
-
-        // Find latest prediction per patient
-        const latestByPatient = {};
-        predsData.predictions.forEach(pred => {
-            const pid = pred.patient?.id;
-            if (!pid) return;
-            if (!latestByPatient[pid] || pred.created_at > latestByPatient[pid].created_at) {
-                latestByPatient[pid] = pred;
-            }
-        });
-
-        // Filter HIGH / VERY HIGH risk
-        const highRisk = Object.entries(latestByPatient)
-            .filter(([, pred]) => pred.risk_level && (pred.risk_level === 'HIGH' || pred.risk_level === 'VERY_HIGH'))
-            .map(([pid, pred]) => ({
-                patient: patientMap[pid] || pred.patient,
-                pred
-            }))
-            .filter(r => r.patient)
-            .slice(0, 6);
-
-        if (!highRisk.length) {
-            list.innerHTML = `<div class="list-item" style="justify-content:center;color:#059669;padding:1.5rem;">
-                <i class="bi bi-check-circle-fill"></i>&nbsp; No high risk patients found
-            </div>`;
-            return;
-        }
-
-        const riskStyle = r => (r === 'VERY_HIGH')
-            ? 'background:#fee2e2;color:#991b1b;'
-            : 'background:#ffedd5;color:#9a3412;';
-        const riskLabel = r => (r === 'VERY_HIGH') ? 'VERY HIGH RISK' : 'HIGH RISK';
-
-        list.innerHTML = highRisk.map(({ patient, pred }) => `
-            <div class="list-item">
+        // Show patient list with link to patient list page
+        list.innerHTML = patients.slice(0, 8).map(p => `
+            <div class="list-item" style="justify-content:space-between;align-items:center;">
                 <div style="flex:1;min-width:0;">
-                    <div style="font-weight:700;font-size:0.875rem;color:#0f172a;">
-                        ${esc(patient.username || patient.name || 'Patient')}
-                    </div>
+                    <div style="font-weight:700;font-size:0.875rem;color:#0f172a;">${esc(p.username)}</div>
                     <div style="font-size:0.75rem;color:#64748b;margin-top:0.1rem;">
-                        ${pred.created_at ? new Date(pred.created_at).toLocaleDateString() : '—'}
-                        &nbsp;·&nbsp; ${pred.probability_percent ? Math.round(pred.probability_percent) + '%' : ''}
+                        <span class="badge badge-blue" style="font-size:.65rem;">${esc(p.patient_id || 'N/A')}</span>
+                        &nbsp;${p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}
                     </div>
                 </div>
-                <span style="display:inline-flex;align-items:center;padding:0.25em 0.75em;border-radius:99px;font-size:0.72rem;font-weight:700;${riskStyle(pred.risk_level)}">
-                    ${riskLabel(pred.risk_level)}
-                </span>
-            </div>`).join('');
+                <div style="display:flex;gap:4px;flex-shrink:0;">
+                    <a href="/templates/doctor/diagnosis.html?patient_id=${p.id}"
+                       class="btn btn-sm btn-primary" style="padding:.2rem .5rem;font-size:.72rem;">
+                        <i class="bi bi-clipboard-pulse"></i>
+                    </a>
+                    <a href="/templates/doctor/lab_requests.html?patient_id=${p.id}"
+                       class="btn btn-sm btn-outline" style="padding:.2rem .5rem;font-size:.72rem;">
+                        <i class="bi bi-flask"></i>
+                    </a>
+                </div>
+            </div>`).join('') +
+            (total > 8 ? `
+            <div class="list-item" style="justify-content:center;padding:.75rem;">
+                <a href="/templates/doctor/patient_list.html" class="btn btn-sm btn-outline" style="width:100%;justify-content:center;">
+                    <i class="bi bi-people"></i> View All ${total} Patients
+                </a>
+            </div>` : '');
 
     } catch (err) {
         list.innerHTML = `<div class="list-item" style="justify-content:center;color:#dc2626;padding:1.5rem;">
-            <i class="bi bi-exclamation-circle"></i>&nbsp; Failed to load
+            <i class="bi bi-exclamation-circle"></i>&nbsp; Failed to load patients
         </div>`;
     }
 }
@@ -160,7 +138,6 @@ async function loadDashboard() {
         set('todayApptCount',     stats.today_appointments);
         set('upcomingApptBadge',  stats.pending_appointments);
         set('prescriptionsCount', stats.prescriptions_this_month);
-        // Don't set totalPatientsCount here — loadHighRiskPatients sets it from real count
 
         if (dashData.dashboard.doctor_info?.name) {
             ['navUserName', 'sidebarDoctorName'].forEach(id => {
@@ -186,8 +163,8 @@ async function loadDashboard() {
         if (el) el.textContent = labData.statistics?.by_status?.pending ?? 0;
     }
 
-    // Load patients + high risk (sets totalPatientsCount)
-    loadHighRiskPatients();
+    // Load patient list (sets totalPatientsCount)
+    loadPatientsList();
 }
 
 // ── Charts ────────────────────────────────────────────────────────────────────
@@ -249,12 +226,9 @@ async function loadAvailability() {
         const data = await res.json();
         if (!data.success) return;
         const a = data.availability;
-        const daysEl  = document.getElementById('availDays');
-        const hoursEl = document.getElementById('availHours');
-        const feeEl   = document.getElementById('consultFee');
-        if (daysEl  && a.available_days)   daysEl.value  = a.available_days;
-        if (hoursEl && a.available_hours)  hoursEl.value = a.available_hours;
-        if (feeEl   && a.consultation_fee) feeEl.value   = a.consultation_fee;
+        if (document.getElementById('availDays')  && a.available_days)   document.getElementById('availDays').value  = a.available_days;
+        if (document.getElementById('availHours') && a.available_hours)  document.getElementById('availHours').value = a.available_hours;
+        if (document.getElementById('consultFee') && a.consultation_fee) document.getElementById('consultFee').value  = a.consultation_fee;
     } catch (_) {}
 }
 
@@ -271,7 +245,7 @@ async function saveAvailability() {
         const data = await res.json();
         const msg  = document.getElementById('availSaveMsg');
         if (msg) {
-            msg.style.display = data.success ? '' : 'none';
+            msg.style.display = '';
             msg.style.color   = data.success ? '#059669' : '#dc2626';
             msg.innerHTML     = data.success
                 ? '<i class="bi bi-check-circle-fill"></i> Saved successfully'

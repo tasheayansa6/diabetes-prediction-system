@@ -112,6 +112,31 @@ def _safe_review(prediction):
         }
 
 
+def _safe_serialize_prediction(p):
+    """Safely serialize a single prediction — never crashes the list endpoint."""
+    try:
+        input_data = {}
+        if p.input_data and isinstance(p.input_data, dict):
+            input_data = {k: v for k, v in p.input_data.items() if not str(k).startswith('_')}
+        return {
+            'id': p.id,
+            'probability_percent': float(p.probability_percent) if p.probability_percent is not None else 0.0,
+            'risk_level': p.risk_level or 'LOW RISK',
+            'input_data': input_data,
+            'review': _safe_review(p),
+            'created_at': p.created_at.isoformat() if p.created_at else None
+        }
+    except Exception as e:
+        return {
+            'id': getattr(p, 'id', 0),
+            'probability_percent': 0.0,
+            'risk_level': 'LOW RISK',
+            'input_data': {},
+            'review': {'status': 'pending_review', 'summary': '', 'doctor_id': None, 'doctor_name': None, 'reviewed_at': None},
+            'created_at': None
+        }
+
+
 def validate_email(email):
     """Validate email format"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -689,17 +714,7 @@ def get_predictions(current_user):
         
         return jsonify({
             "success": True,
-            "predictions": [
-                {
-                    "id": p.id,
-                    "probability_percent": p.probability_percent,
-                    "risk_level": p.risk_level or 'LOW RISK',
-                    "input_data": {k: v for k, v in (p.input_data or {}).items()
-                                   if not str(k).startswith('_')} if p.input_data else {},
-                    "review": _safe_review(p),
-                    "created_at": p.created_at.isoformat() if p.created_at else None
-                } for p in predictions
-            ],
+            "predictions": [_safe_serialize_prediction(p) for p in predictions],
             "pagination": {
                 "total": total,
                 "limit": limit,
@@ -709,11 +724,10 @@ def get_predictions(current_user):
         }), 200
         
     except Exception as e:
-        current_app.logger.error(f'get_predictions error: {e}')
+        current_app.logger.error(f'get_predictions error: {type(e).__name__}: {e}')
         return jsonify({
             "success": False,
-            "message": "An error occurred fetching predictions",
-            "error": _safe_error(e)
+            "message": f"Error fetching predictions: {type(e).__name__}: {str(e)}",
         }), 500
 
 

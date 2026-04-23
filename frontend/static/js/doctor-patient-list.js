@@ -74,7 +74,7 @@ function renderPatients(patients) {
     }
 
     tbody.innerHTML = patients.map(p => `
-        <tr>
+        <tr id="patient-row-${p.id}" style="${window._highlightPatientId == p.id ? 'background:#eff6ff;border-left:4px solid #2563eb;' : ''}">
             <td><span class="badge badge-blue">${esc(p.patient_id || 'N/A')}</span></td>
             <td><strong>${esc(p.username)}</strong></td>
             <td style="color:#64748b;">${esc(p.email)}</td>
@@ -108,6 +108,23 @@ function renderPatients(patients) {
             quickReview(this.dataset.patientId, 'approved');
         });
     });
+
+    // Scroll to highlighted patient if coming from notification
+    if (window._highlightPatientId) {
+        const row = document.getElementById('patient-row-' + window._highlightPatientId);
+        if (row) {
+            setTimeout(() => {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Show banner
+                const banner = document.getElementById('notifBanner');
+                if (banner) banner.style.display = '';
+            }, 300);
+        } else {
+            // Patient not on this page — show banner anyway
+            const banner = document.getElementById('notifBanner');
+            if (banner) banner.style.display = '';
+        }
+    }
 }
 
 // ── Render pagination ─────────────────────────────────────────────────────────
@@ -267,6 +284,14 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('navUserName').textContent = user.name || user.username;
     const sb = document.getElementById('sidebarDoctorName');
     if (sb) sb.textContent = user.name || user.username;
+
+    // Pre-fill search if ?highlight=<patient_id> from nurse vitals notification
+    const urlParams = new URLSearchParams(window.location.search);
+    const highlightId = urlParams.get('highlight');
+    if (highlightId) {
+        // Store highlight id to scroll/highlight after load
+        window._highlightPatientId = highlightId;
+    }
 
     // Search on Enter
     document.getElementById('searchInput')?.addEventListener('keydown', e => {

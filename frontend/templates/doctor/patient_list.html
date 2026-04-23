@@ -36,12 +36,17 @@
     </aside>
     <main class="main">
       <h2 class="page-title"><i class="bi bi-people"></i> Patient List</h2>
-      <div class="flex gap-3 mb-4">
+      <div class="flex gap-3 mb-4" style="flex-wrap:wrap;align-items:center;">
         <input type="text" id="searchInput" class="form-input" placeholder="Search by name, email or ID..." style="max-width:320px;">
-        <button class="btn btn-primary" onclick="loadPatients()"><i class="bi bi-search"></i> Search</button>
+        <button class="btn btn-primary" onclick="loadPatients(0)"><i class="bi bi-search"></i> Search</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('searchInput').value='';loadPatients(0);"><i class="bi bi-x-circle"></i> Clear</button>
+        <span style="font-size:.82rem;color:#64748b;margin-left:auto;">Total: <strong id="totalCount">—</strong> patients</span>
       </div>
-      <div id="loadingSpinner" class="text-center py-4 hidden"><div class="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>
-      <div id="errorAlert" class="alert alert-danger hidden"></div>
+      <div id="loadingSpinner" style="display:none;text-align:center;padding:1rem;">
+        <div style="display:inline-block;width:24px;height:24px;border:3px solid #3b82f6;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;"></div>
+        <span style="margin-left:.5rem;color:#64748b;">Loading patients...</span>
+      </div>
+      <div id="errorAlert" style="display:none;" class="alert alert-danger"></div>
       <div class="card">
         <div class="table-responsive">
           <table class="table">
@@ -49,7 +54,7 @@
             <tbody id="patientTableBody"><tr><td colspan="5" class="text-center text-gray-400">Loading patients...</td></tr></tbody>
           </table>
         </div>
-        <div id="paginationInfo" class="text-gray-500 text-sm mt-2"></div>
+        <div id="paginationInfo" style="margin-top:.5rem;"></div>
       </div>
       <div class="text-center mt-4">
         <a href="/templates/doctor/dashboard.html" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
@@ -57,6 +62,7 @@
     </main>
   </div>
 </div>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 <footer class="footer">
   <div class="footer-inner">
     <div class="footer-brand">

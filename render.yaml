@@ -32,8 +32,13 @@ services:
       - key: MAIL_SUPPRESS_SEND
         value: "False"
       - key: CHAPA_SECRET_KEY
-        value: CHASECK_TEST-Ro4smOXVYAhpemheaNeMtNlyNyUIFXYR
+        sync: false
       - key: CHAPA_PUBLIC_KEY
-        value: CHAPUBK_TEST-QOWKS1hsRDeucGrvUDmtxg2lfKwQN1DT
+        sync: false
       - key: CHAPA_WEBHOOK_SECRET
-        value: rS2oeymtZgrgJ7WIGcmBUjg
+        sync: false
+      - key: ADMIN_BOOTSTRAP_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+    healthCheckPath: /health

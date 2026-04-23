@@ -744,43 +744,66 @@ def get_prediction(current_user, prediction_id):
         ).first()
 
         if not prediction:
-            # Check if prediction exists at all (wrong patient vs not found)
-            exists = Prediction.query.get(prediction_id)
+            exists = db.session.execute(
+                text('SELECT patient_id FROM predictions WHERE id = :id'),
+                {'id': prediction_id}
+            ).fetchone()
             if exists:
-                return jsonify({
-                    "success": False,
-                    "message": "This prediction belongs to a different account."
-                }), 403
-            return jsonify({
-                "success": False,
-                "message": "Prediction not found."
-            }), 404
-        
+                return jsonify({'success': False, 'message': 'This prediction belongs to a different account.'}), 403
+            return jsonify({'success': False, 'message': 'Prediction not found.'}), 404
+
+        # Safe input_data extraction
+        try:
+            raw_input = prediction.input_data or {}
+            if isinstance(raw_input, str):
+                import json as _json
+                raw_input = _json.loads(raw_input)
+            input_data  = {k: v for k, v in raw_input.items() if not str(k).startswith('_')}
+            feat_import = raw_input.get('_feature_importance')
+            model_comp  = raw_input.get('_model_comparison')
+        except Exception:
+            input_data  = {}
+            feat_import = None
+            model_comp  = None
+
+        # Safe probability / confidence
+        try:
+            prob = float(prediction.probability or 0.5)
+            prob_pct = float(prediction.probability_percent or 0.0)
+            confidence = round(50.0 + (max(prob, 1 - prob) - 0.5) * 90.0, 1)
+        except Exception:
+            prob = 0.5
+            prob_pct = 0.0
+            confidence = 50.0
+
+        # Safe review
+        review = _safe_review(prediction)
+
         return jsonify({
-            "success": True,
-            "prediction": {
-                "id": prediction.id,
-                "probability": prediction.probability,
-                "probability_percent": prediction.probability_percent,
-                "risk_level": prediction.risk_level,
-                "prediction": "Diabetic" if prediction.prediction == 1 else "Non-Diabetic",
-                "explanation": prediction.explanation,
-                "model_version": prediction.model_version,
-                "confidence": round(50.0 + (max(float(prediction.probability or 0.5), 1 - float(prediction.probability or 0.5)) - 0.5) * 90.0, 1),
-                "input_data": {k: v for k, v in (prediction.input_data or {}).items() if not k.startswith('_')},
-                "feature_importance": (prediction.input_data or {}).get('_feature_importance'),
-                "model_comparison":   (prediction.input_data or {}).get('_model_comparison'),
-                "review": _extract_prediction_review(prediction),
-                "created_at": prediction.created_at.isoformat() if prediction.created_at else None,
-                "health_record_id": prediction.health_record_id
+            'success': True,
+            'prediction': {
+                'id': prediction.id,
+                'probability': prob,
+                'probability_percent': prob_pct,
+                'risk_level': prediction.risk_level or 'LOW RISK',
+                'prediction': 'Diabetic' if prediction.prediction == 1 else 'Non-Diabetic',
+                'explanation': prediction.explanation or '',
+                'model_version': prediction.model_version or 'v1.0',
+                'confidence': confidence,
+                'input_data': input_data,
+                'feature_importance': feat_import,
+                'model_comparison': model_comp,
+                'review': review,
+                'created_at': prediction.created_at.isoformat() if prediction.created_at else None,
+                'health_record_id': prediction.health_record_id
             }
         }), 200
-        
+
     except Exception as e:
+        current_app.logger.error(f'get_prediction error: {type(e).__name__}: {e}')
         return jsonify({
-            "success": False,
-            "message": "An error occurred",
-            "error": _safe_error(e)
+            'success': False,
+            'message': f'Error loading prediction: {type(e).__name__}: {str(e)}'
         }), 500
 
 

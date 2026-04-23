@@ -166,11 +166,14 @@ async function loadResult() {
                     : res.status === 404
                     ? 'Prediction not found. It may have been deleted.'
                     : (data.message || 'Could not load prediction.');
-                main.innerHTML = `<div class="alert alert-danger m-4">
+                main.innerHTML = `<div class="alert alert-danger m-4" style="max-width:600px;margin:2rem auto!important;">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
                     <strong>${msg}</strong><br>
-                    <a href="/templates/patient/prediction_history.html" class="btn btn-sm btn-outline mt-2">View My Predictions</a>
-                    <a href="/templates/patient/health_data_form.html" class="btn btn-sm btn-primary mt-2 ms-2">New Prediction</a>
+                    <small style="color:#991b1b;display:block;margin-top:.5rem;word-break:break-all;">${data.message || ''}</small>
+                    <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;">
+                    <a href="/templates/patient/prediction_history.html" class="btn btn-sm btn-outline">View My Predictions</a>
+                    <a href="/templates/patient/health_data_form.html" class="btn btn-sm btn-primary">New Prediction</a>
+                    </div>
                 </div>`;
             }
             return;

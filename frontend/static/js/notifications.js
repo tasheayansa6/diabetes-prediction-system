@@ -19,7 +19,7 @@ const ICON_MAP = {
 const NOTIF_URLS = {
     'high_risk_alert': '/templates/patient/prediction_history.html',
     'prediction':      '/templates/patient/prediction_history.html',
-    'vitals':          '/templates/patient/dashboard.html',
+    'vitals':          '/templates/doctor/patient_list.html',
     'lab_result':      '/templates/patient/lab_results.html',
     'lab_order':       '/templates/lab/enter_lab_results.html',
     'prescription':    '/templates/patient/prescriptions.html',

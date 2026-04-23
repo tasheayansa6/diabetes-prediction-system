@@ -901,9 +901,10 @@ def get_all_patients(current_nurse):
         if created_any:
             db.session.commit()
 
-        total = db.session.execute(
-            text("SELECT COUNT(*) AS c FROM users WHERE role = 'patient'")
-        ).fetchone().c
+        total_row = db.session.execute(
+            text("SELECT COUNT(*) FROM users WHERE role = 'patient'")
+        ).fetchone()
+        total = total_row[0] if total_row else 0
 
         rows = db.session.execute(text("""
             SELECT
@@ -922,19 +923,16 @@ def get_all_patients(current_nurse):
 
         patients_list = []
         for r in rows:
-            raw_created_at = getattr(r, 'created_at', None)
-            if raw_created_at is None:
+            try:
+                created_at = r[3].isoformat() if hasattr(r[3], 'isoformat') else str(r[3]) if r[3] else None
+            except Exception:
                 created_at = None
-            elif hasattr(raw_created_at, 'isoformat'):
-                created_at = raw_created_at.isoformat()
-            else:
-                created_at = str(raw_created_at)
             patients_list.append({
-                "id": r.id,
-                "patient_id": r.patient_id or f"PAT{int(r.id):06d}",
-                "username": r.username,
-                "email": r.email,
-                "blood_group": r.blood_group,
+                "id": r[0],
+                "patient_id": r[4] or f"PAT{int(r[0]):06d}",
+                "username": r[1] or f"Patient #{r[0]}",
+                "email": r[2] or '',
+                "blood_group": r[5],
                 "created_at": created_at
             })
         

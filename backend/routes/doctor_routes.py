@@ -1900,7 +1900,96 @@ def cancel_lab_request(current_doctor, request_id):
         }), 500
 
 
-# ============ DOCTOR AVAILABILITY SETTINGS ============
+# ============ DOCTOR → PATIENT MESSAGING ============
+
+@doctor_bp.route('/messages', methods=['POST'])
+@token_required
+def send_message_to_patient(current_doctor):
+    """
+    POST /api/doctor/messages
+    Doctor sends a message to a patient (stored as a Note + in-app notification).
+    """
+    try:
+        data = request.get_json() or {}
+        patient_id = data.get('patient_id')
+        content    = (data.get('content') or '').strip()
+
+        if not patient_id:
+            return jsonify({'success': False, 'message': 'patient_id required'}), 400
+        if not content:
+            return jsonify({'success': False, 'message': 'Message content required'}), 400
+
+        patient = Patient.query.get(patient_id)
+        if not patient:
+            return jsonify({'success': False, 'message': 'Patient not found'}), 404
+
+        note = Note(
+            note_id=f"MSG{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4]}",
+            patient_id=patient_id,
+            doctor_id=current_doctor['id'],
+            title=f"Message from Dr. {current_doctor['username']}",
+            content=content,
+            category='message',
+            is_private=False,
+            is_important=True,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        db.session.add(note)
+        db.session.flush()
+
+        from backend.models.notification import Notification
+        db.session.add(Notification(
+            user_id=patient_id,
+            title=f'Message from Dr. {current_doctor["username"]}',
+            message=content[:200],
+            type='info',
+            category='general',
+            is_read=False,
+            link='/templates/patient/dashboard.html',
+            created_at=datetime.utcnow()
+        ))
+        db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Message sent to patient'}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@doctor_bp.route('/messages/<int:patient_id>', methods=['GET'])
+@token_required
+def get_messages_with_patient(current_doctor, patient_id):
+    """
+    GET /api/doctor/messages/<patient_id>
+    Returns full message thread (both directions) for a patient.
+    """
+    try:
+        sent = Note.query.filter_by(
+            doctor_id=current_doctor['id'],
+            patient_id=patient_id,
+            category='message'
+        ).order_by(Note.created_at.asc()).all()
+
+        received = Note.query.filter_by(
+            patient_id=patient_id,
+            category='message'
+        ).filter(
+            Note.doctor_id == current_doctor['id']
+        ).order_by(Note.created_at.asc()).all()
+
+        all_msgs = sorted(
+            [{'from': 'doctor', 'content': n.content,
+              'created_at': n.created_at.isoformat() if n.created_at else None} for n in sent] +
+            [{'from': 'patient', 'content': n.content,
+              'created_at': n.created_at.isoformat() if n.created_at else None} for n in received],
+            key=lambda x: x['created_at'] or ''
+        )
+        return jsonify({'success': True, 'messages': all_msgs}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 
 @doctor_bp.route('/availability', methods=['GET'])
 @token_required

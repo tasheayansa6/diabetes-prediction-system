@@ -794,6 +794,83 @@ def get_prescription_prediction(current_pharmacist, prescription_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+# ============ INVENTORY ADD / UPDATE ============
+
+@pharmacist_bp.route('/inventory', methods=['POST'])
+@token_required
+def add_inventory_item(current_pharmacist):
+    """POST /api/pharmacy/inventory — add a new medicine to inventory"""
+    try:
+        data = request.get_json() or {}
+        if not data.get('name'):
+            return jsonify({'success': False, 'message': 'Medicine name is required'}), 400
+
+        med_id = f"MED{datetime.utcnow().strftime('%y%m%d%H%M%S')}{uuid.uuid4().hex[:4].upper()}"
+        item = MedicineInventory(
+            medicine_id=med_id,
+            name=data['name'],
+            generic_name=data.get('generic_name', ''),
+            category=data.get('category', 'General'),
+            quantity=int(data.get('quantity', 0)),
+            unit=data.get('unit', 'tablets'),
+            minimum_stock=int(data.get('minimum_stock', 10)),
+            maximum_stock=int(data.get('maximum_stock', 500)),
+            selling_price=float(data.get('selling_price', 0)),
+            manufacturer=data.get('manufacturer', ''),
+            location=data.get('location', ''),
+            requires_prescription=bool(data.get('requires_prescription', True)),
+            is_active=True,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        if data.get('expiry_date'):
+            try:
+                item.expiry_date = datetime.strptime(data['expiry_date'], '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        db.session.add(item)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Medicine added to inventory',
+                        'item': {'id': item.id, 'name': item.name, 'quantity': item.quantity}}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@pharmacist_bp.route('/inventory/<int:item_id>', methods=['PUT'])
+@token_required
+def update_inventory_item(current_pharmacist, item_id):
+    """PUT /api/pharmacy/inventory/<id> — update stock or details"""
+    try:
+        item = MedicineInventory.query.get(item_id)
+        if not item:
+            return jsonify({'success': False, 'message': 'Item not found'}), 404
+        data = request.get_json() or {}
+        for field in ['name', 'generic_name', 'category', 'unit', 'manufacturer', 'location']:
+            if field in data:
+                setattr(item, field, data[field])
+        for field in ['quantity', 'minimum_stock', 'maximum_stock']:
+            if field in data:
+                setattr(item, field, int(data[field]))
+        if 'selling_price' in data:
+            item.selling_price = float(data['selling_price'])
+        if 'requires_prescription' in data:
+            item.requires_prescription = bool(data['requires_prescription'])
+        if 'expiry_date' in data and data['expiry_date']:
+            try:
+                item.expiry_date = datetime.strptime(data['expiry_date'], '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        item.updated_at = datetime.utcnow()
+        db.session.commit()
+        status = 'Out of Stock' if item.quantity <= 0 else ('Low Stock' if item.quantity <= item.minimum_stock else 'In Stock')
+        return jsonify({'success': True, 'message': 'Inventory updated',
+                        'item': {'id': item.id, 'name': item.name, 'quantity': item.quantity, 'status': status}}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 # ============ STEP 102: TEST ALL PHARMACY ENDPOINTS ============
 
 @pharmacist_bp.route('/test-all', methods=['GET'])

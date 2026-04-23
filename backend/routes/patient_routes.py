@@ -2056,10 +2056,13 @@ def download_patient_pdf(current_user):
 
         pdf_buf = generate_patient_pdf(patient_info, pred_list, rx_list, lab_list, apt_list)
 
-        filename = f"health_report_{getattr(patient, 'patient_id', None)}_{datetime.utcnow().strftime('%Y%m%d')}.pdf"
+        from backend.services.report_service import _REPORTLAB
+        mimetype = 'application/pdf' if _REPORTLAB else 'text/html'
+        filename = f"health_report_{getattr(patient, 'patient_id', None)}_{datetime.utcnow().strftime('%Y%m%d')}"
+        filename += '.pdf' if _REPORTLAB else '.html'
         return send_file(
             pdf_buf,
-            mimetype='application/pdf',
+            mimetype=mimetype,
             as_attachment=True,
             download_name=filename
         )

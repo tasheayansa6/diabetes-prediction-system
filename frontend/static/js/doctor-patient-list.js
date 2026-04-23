@@ -125,6 +125,10 @@ async function loadPatients() {
                         <button class="btn btn-sm btn-outline quick-followup-btn" data-patient-id="${p.id}" style="margin-left:4px;">
                             <i class="bi bi-exclamation-circle"></i> Needs Follow-up
                         </button>
+                        <button class="btn btn-sm btn-outline" style="margin-left:4px;color:#0891b2;border-color:#bae6fd;" onclick="openMessageModal(${p.id},'${p.username.replace(/'/g,\"\\'\")}')"
+                            title="Send message to patient">
+                            <i class="bi bi-chat-dots"></i> Message
+                        </button>
                     </td>
                 </tr>
             `).join('');
@@ -167,3 +171,66 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     loadPatients();
 });
+
+// ── Doctor → Patient Message Modal ───────────────────────────────────────────
+let _msgPatientId = null;
+
+function openMessageModal(patientId, patientName) {
+    _msgPatientId = patientId;
+    let modal = document.getElementById('msgModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'msgModal';
+        modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;';
+        modal.innerHTML = `
+            <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+                <div style="background:linear-gradient(90deg,#0891b2,#38bdf8);color:#fff;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+                    <h5 style="margin:0;font-weight:700;"><i class="bi bi-chat-dots"></i> Message Patient</h5>
+                    <button onclick="document.getElementById('msgModal').style.display='none'" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;">&times;</button>
+                </div>
+                <div style="padding:1.5rem;">
+                    <p style="font-size:.875rem;color:#64748b;margin-bottom:1rem;">To: <strong id="msgPatientName"></strong></p>
+                    <textarea id="msgContent" class="form-input" rows="4" placeholder="Type your message to the patient..."
+                        style="width:100%;resize:vertical;"></textarea>
+                    <div id="msgAlert" style="margin-top:.75rem;"></div>
+                </div>
+                <div style="padding:1rem 1.5rem;border-top:1px solid #f1f5f9;display:flex;gap:.75rem;justify-content:flex-end;">
+                    <button class="btn btn-secondary" onclick="document.getElementById('msgModal').style.display='none'">Cancel</button>
+                    <button class="btn btn-primary" onclick="sendMessage()" id="msgSendBtn"><i class="bi bi-send"></i> Send</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    }
+    document.getElementById('msgPatientName').textContent = patientName;
+    document.getElementById('msgContent').value = '';
+    document.getElementById('msgAlert').innerHTML = '';
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('msgContent').focus(), 100);
+}
+
+async function sendMessage() {
+    const content = (document.getElementById('msgContent').value || '').trim();
+    const alertEl = document.getElementById('msgAlert');
+    if (!content) {
+        alertEl.innerHTML = '<div class="alert alert-warning">Please enter a message.</div>';
+        return;
+    }
+    const btn = document.getElementById('msgSendBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Sending...';
+    try {
+        const res = await fetch('/api/doctor/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+            body: JSON.stringify({ patient_id: _msgPatientId, content })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        alertEl.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> Message sent!</div>';
+        setTimeout(() => { document.getElementById('msgModal').style.display = 'none'; }, 1200);
+    } catch (e) {
+        alertEl.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send"></i> Send';
+    }
+}

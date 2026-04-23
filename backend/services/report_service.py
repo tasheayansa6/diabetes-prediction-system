@@ -1,30 +1,37 @@
 """
-Report Service - Real PDF generation using reportlab
+Report Service - PDF generation with reportlab fallback to HTML
 """
 from io import BytesIO
 from datetime import datetime
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import mm
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-)
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
+# Try to import reportlab; fall back gracefully if not installed
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    )
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    _REPORTLAB = True
+except ImportError:
+    _REPORTLAB = False
 
 
-# ── Colour palette ──────────────────────────────────────────────────────────
-BLUE_DARK  = colors.HexColor("#1e3a8a")
-BLUE_MID   = colors.HexColor("#2563eb")
-BLUE_LIGHT = colors.HexColor("#eff6ff")
-GREEN      = colors.HexColor("#059669")
-RED        = colors.HexColor("#dc2626")
-YELLOW     = colors.HexColor("#d97706")
-PURPLE     = colors.HexColor("#7c3aed")
-GRAY_DARK  = colors.HexColor("#334155")
-GRAY_MID   = colors.HexColor("#64748b")
-GRAY_LIGHT = colors.HexColor("#f1f5f9")
-WHITE      = colors.white
+# ── Colour palette (only defined when reportlab is available) ──────────────
+if _REPORTLAB:
+    BLUE_DARK  = colors.HexColor("#1e3a8a")
+    BLUE_MID   = colors.HexColor("#2563eb")
+    BLUE_LIGHT = colors.HexColor("#eff6ff")
+    GREEN      = colors.HexColor("#059669")
+    RED        = colors.HexColor("#dc2626")
+    YELLOW     = colors.HexColor("#d97706")
+    PURPLE     = colors.HexColor("#7c3aed")
+    GRAY_DARK  = colors.HexColor("#334155")
+    GRAY_MID   = colors.HexColor("#64748b")
+    GRAY_LIGHT = colors.HexColor("#f1f5f9")
+    WHITE      = colors.white
 
 
 def _risk_color(risk_level):
@@ -72,9 +79,11 @@ def _tbl_style(header_color=BLUE_DARK):
 def generate_patient_pdf(patient_info, predictions, prescriptions, lab_results, appointments):
     """
     Generate a patient health report PDF.
-
-    Returns: BytesIO buffer containing the PDF.
+    Falls back to a plain HTML-as-bytes report if reportlab is not installed.
+    Returns: BytesIO buffer.
     """
+    if not _REPORTLAB:
+        return _html_patient_report(patient_info, predictions, prescriptions, lab_results, appointments)
     buf = BytesIO()
     doc = SimpleDocTemplate(
         buf, pagesize=A4,
@@ -230,8 +239,11 @@ def generate_patient_pdf(patient_info, predictions, prescriptions, lab_results, 
 def generate_payment_receipt_pdf(payment_info, patient_info):
     """
     Generate a payment receipt PDF.
+    Falls back to HTML if reportlab is not installed.
     Returns: BytesIO buffer.
     """
+    if not _REPORTLAB:
+        return _html_payment_receipt(payment_info, patient_info)
     buf = BytesIO()
     doc = SimpleDocTemplate(
         buf, pagesize=A4,
@@ -338,5 +350,108 @@ def generate_payment_receipt_pdf(payment_info, patient_info):
     ))
 
     doc.build(story)
+    buf.seek(0)
+    return buf
+
+
+# ── HTML fallbacks (used when reportlab is not installed) ────────────────────
+
+def _html_patient_report(patient_info, predictions, prescriptions, lab_results, appointments):
+    """Return a printable HTML report as BytesIO when reportlab is unavailable."""
+    pi = patient_info or {}
+    now = datetime.utcnow().strftime('%d %b %Y, %H:%M UTC')
+
+    def rows(data, cols):
+        if not data:
+            return '<tr><td colspan="' + str(len(cols)) + '" style="text-align:center;color:#94a3b8;">No records</td></tr>'
+        return ''.join(
+            '<tr>' + ''.join(f'<td style="padding:6px 10px;border-bottom:1px solid #f1f5f9;">{str(row.get(c,"—"))}</td>' for c in cols) + '</tr>'
+            for row in data
+        )
+
+    def thead(cols):
+        return '<tr>' + ''.join(f'<th style="padding:8px 10px;background:#1e3a8a;color:#fff;text-align:left;">{c}</th>' for c in cols) + '</tr>'
+
+    html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Health Report - {pi.get('name','Patient')}</title>
+<style>body{{font-family:Arial,sans-serif;color:#334155;margin:0;padding:20px;}}
+h1{{background:#1e3a8a;color:#fff;padding:16px;margin:0;}}
+h2{{color:#1e3a8a;border-bottom:2px solid #2563eb;padding-bottom:4px;margin-top:24px;}}
+table{{width:100%;border-collapse:collapse;margin-bottom:16px;}}
+th{{background:#1e3a8a;color:#fff;}}
+tr:nth-child(even){{background:#f1f5f9;}}
+.info-grid{{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#eff6ff;padding:12px;border-radius:8px;}}
+.info-item span{{font-weight:700;color:#1e3a8a;}}
+footer{{margin-top:32px;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:8px;}}
+@media print{{body{{padding:0;}}}}
+</style></head><body>
+<h1>🏥 Diabetes Prediction System — Patient Health Report</h1>
+<p style="color:#64748b;font-size:13px;">Generated: {now}</p>
+<h2>Patient Information</h2>
+<div class="info-grid">
+  <div class="info-item"><span>Patient ID:</span> {pi.get('patient_id','—')}</div>
+  <div class="info-item"><span>Name:</span> {pi.get('name', pi.get('username','—'))}</div>
+  <div class="info-item"><span>Email:</span> {pi.get('email','—')}</div>
+  <div class="info-item"><span>Blood Group:</span> {pi.get('blood_group','—')}</div>
+</div>
+<h2>Prediction History</h2>
+<table>{thead(['Date','Result','Risk Level','Probability %'])}
+{''.join(f"<tr><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{str(p.get('date',p.get('created_at',''))[:10])}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{p.get('result','—')}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{p.get('risk_level','—')}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{p.get('probability_percent',0):.1f}%</td></tr>" for p in (predictions or [])) or '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:8px;">No records</td></tr>'}
+</table>
+<h2>Prescriptions</h2>
+<table>{thead(['Date','Medication','Dosage','Status'])}
+{''.join(f"<tr><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{str(r.get('date',r.get('created_at',''))[:10])}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{r.get('medication','—')}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{r.get('dosage','—')}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{r.get('status','—')}</td></tr>" for r in (prescriptions or [])) or '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:8px;">No records</td></tr>'}
+</table>
+<h2>Lab Results</h2>
+<table>{thead(['Date','Test Name','Result','Status'])}
+{''.join(f"<tr><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{str(l.get('date',l.get('created_at',''))[:10])}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{l.get('test_name','—')}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{str(l.get('results','—'))}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{l.get('status','—')}</td></tr>" for l in (lab_results or [])) or '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:8px;">No records</td></tr>'}
+</table>
+<h2>Appointments</h2>
+<table>{thead(['Date','Time','Reason','Status'])}
+{''.join(f"<tr><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{str(a.get('date','—'))}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{a.get('time','—')}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{a.get('reason','—')}</td><td style='padding:6px 10px;border-bottom:1px solid #f1f5f9;'>{a.get('status','—')}</td></tr>" for a in (appointments or [])) or '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:8px;">No records</td></tr>'}
+</table>
+<footer>This report is for informational purposes only. Always consult a qualified healthcare professional.</footer>
+</body></html>"""
+    buf = BytesIO(html.encode('utf-8'))
+    buf.seek(0)
+    return buf
+
+
+def _html_payment_receipt(payment_info, patient_info):
+    """Return a printable HTML receipt as BytesIO when reportlab is unavailable."""
+    pi = patient_info or {}
+    pay = payment_info or {}
+    now = datetime.utcnow().strftime('%d %b %Y, %H:%M UTC')
+    html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Payment Receipt - {pay.get('payment_id','')}</title>
+<style>body{{font-family:Arial,sans-serif;color:#334155;margin:0;padding:20px;max-width:600px;margin:0 auto;}}
+h1{{background:#1e3a8a;color:#fff;padding:16px;margin:0;text-align:center;}}
+.sub{{background:#2563eb;color:#fff;text-align:center;padding:6px;font-size:13px;}}
+table{{width:100%;border-collapse:collapse;margin:16px 0;}}
+td{{padding:8px 12px;border:1px solid #e2e8f0;}}
+.label{{font-weight:700;color:#1e3a8a;background:#eff6ff;width:30%;}}
+.total{{background:#059669;color:#fff;font-weight:700;font-size:16px;}}
+.thanks{{background:#eff6ff;text-align:center;padding:16px;border-radius:8px;color:#1e3a8a;font-weight:700;margin-top:16px;}}
+footer{{margin-top:24px;font-size:11px;color:#94a3b8;text-align:center;}}
+@media print{{body{{padding:0;}}}}
+</style></head><body>
+<h1>🏥 Diabetes Prediction System</h1>
+<div class="sub">PAYMENT RECEIPT &nbsp;|&nbsp; Generated: {now}</div>
+<table>
+  <tr><td class="label">Receipt No.</td><td>{pay.get('payment_id','—')}</td><td class="label">Date</td><td>{str(pay.get('date','—'))[:10]}</td></tr>
+  <tr><td class="label">Patient</td><td>{pi.get('name', pi.get('username','—'))}</td><td class="label">Method</td><td>{pay.get('payment_method','—')}</td></tr>
+  <tr><td class="label">Invoice ID</td><td>{pay.get('invoice_id','—')}</td><td class="label">Status</td><td>{str(pay.get('status','—')).upper()}</td></tr>
+</table>
+<table>
+  <tr><th style="background:#1e3a8a;color:#fff;padding:8px;">Description</th><th style="background:#1e3a8a;color:#fff;padding:8px;text-align:right;">Amount (ETB)</th></tr>
+  <tr><td style="padding:8px;">{pay.get('notes','Healthcare Services')}</td><td style="padding:8px;text-align:right;">ETB {float(pay.get('amount',0)):.2f}</td></tr>
+  <tr><td style="padding:8px;">Tax</td><td style="padding:8px;text-align:right;">ETB {float(pay.get('tax',0)):.2f}</td></tr>
+  <tr><td style="padding:8px;">Discount</td><td style="padding:8px;text-align:right;">ETB {float(pay.get('discount',0)):.2f}</td></tr>
+  <tr class="total"><td style="padding:8px;">TOTAL</td><td style="padding:8px;text-align:right;">ETB {float(pay.get('total_amount',0)):.2f}</td></tr>
+</table>
+<div class="thanks">Thank you for your payment!</div>
+<footer>This is a computer-generated receipt. Diabetes Prediction System &copy; 2026</footer>
+</body></html>"""
+    buf = BytesIO(html.encode('utf-8'))
     buf.seek(0)
     return buf

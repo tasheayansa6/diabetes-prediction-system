@@ -99,7 +99,8 @@ async function loadPredictions() {
         if (res.status === 401) { logout(); return; }
         const data = await res.json();
 
-        if (!data.success || !data.predictions.length) {
+        const predictions = data.predictions || [];
+        if (!data.success || !predictions.length) {
             document.getElementById('predictionsList').innerHTML = `<div class="empty-state">
                 <i class="bi bi-clipboard-x"></i>
                 <h4>No predictions yet</h4>
@@ -108,7 +109,7 @@ async function loadPredictions() {
             return;
         }
 
-        allPredictions = data.predictions;
+        allPredictions = predictions;
 
         // Summary counts
         const counts = { low: 0, mod: 0, high: 0 };
@@ -126,7 +127,13 @@ async function loadPredictions() {
 
         renderCards(allPredictions);
     } catch (e) {
-        document.getElementById('predictionsList').innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-circle"></i><h4>Failed to load predictions</h4><p>' + e.message + '</p></div>';
+        const msg = e.message || 'Network error';
+        const isAuth = msg.toLowerCase().includes('401') || msg.toLowerCase().includes('unauthorized');
+        document.getElementById('predictionsList').innerHTML = `<div class="empty-state">
+            <i class="bi bi-exclamation-circle" style="color:#e65100;"></i>
+            <h4>${isAuth ? 'Session Expired' : 'Failed to Load Predictions'}</h4>
+            <p>${isAuth ? 'Please <a href="/login" style="color:#1565c0;">log in again</a>.' : 'Check your connection and <a href="javascript:loadPredictions()" style="color:#1565c0;">try again</a>.'}</p>
+        </div>`;
     }
 }
 

@@ -97,6 +97,15 @@ async function loadPatients() {
         const res  = await fetch('/api/doctor/patients?' + params, {
             headers: { 'Authorization': 'Bearer ' + token }
         });
+        
+        // Handle 401 — token expired
+        if (res.status === 401) {
+            if (typeof _clearAllStorage === 'function') _clearAllStorage();
+            else { localStorage.removeItem('token'); localStorage.removeItem('user'); }
+            window.location.href = '/login?reason=session_expired';
+            return;
+        }
+        
         const data = await res.json();
         if (!data.success) throw new Error(data.message || 'Failed to load patients');
 

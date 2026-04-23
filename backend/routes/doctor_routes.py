@@ -234,29 +234,36 @@ def get_patients(current_doctor):
     Get all patients (optionally filter by search)
     """
     try:
-        search = request.args.get('search', '')
-        limit = request.args.get('limit', 20, type=int)
+        search = request.args.get('search', '').strip()
+        limit  = request.args.get('limit', 20, type=int)
         offset = request.args.get('offset', 0, type=int)
-        
-        # Use robust SQL instead of Patient ORM query to avoid polymorphic
-        # crashes from legacy inconsistent rows.
+
+        # Use ILIKE for PostgreSQL case-insensitive search, LIKE for SQLite
+        db_url = str(db.engine.url)
+        is_postgres = db_url.startswith('postgresql')
+        like_op = 'ILIKE' if is_postgres else 'LIKE'
+
         params = {'limit': limit, 'offset': offset}
         where_sql = "WHERE u.role = 'patient'"
+
         if search:
             where_sql += (
-                " AND (u.username LIKE :search OR u.email LIKE :search OR p.patient_id LIKE :search)"
+                f" AND (u.username {like_op} :search"
+                f" OR u.email {like_op} :search"
+                f" OR p.patient_id {like_op} :search)"
             )
             params['search'] = f'%{search}%'
 
-        total = db.session.execute(
+        count_row = db.session.execute(
             text(f"""
-                SELECT COUNT(*) AS c
+                SELECT COUNT(*)
                 FROM users u
                 LEFT JOIN patients p ON p.id = u.id
                 {where_sql}
             """),
             params
-        ).fetchone().c
+        ).fetchone()
+        total = count_row[0] if count_row else 0
 
         rows = db.session.execute(
             text(f"""
@@ -277,32 +284,35 @@ def get_patients(current_doctor):
 
         patients_list = []
         for r in rows:
-            created_at = r.created_at.isoformat() if hasattr(r.created_at, 'isoformat') else str(r.created_at)
+            try:
+                created_at = r[3].isoformat() if hasattr(r[3], 'isoformat') else str(r[3]) if r[3] else None
+            except Exception:
+                created_at = None
             patients_list.append({
-                "id": r.id,
-                "patient_id": r.patient_id or f"PAT{int(r.id):06d}",
-                "username": r.username or f"Patient #{r.id}",
-                "email": r.email,
-                "role": "patient",
-                "created_at": created_at
+                'id':         r[0],
+                'patient_id': r[4] or f'PAT{int(r[0]):06d}',
+                'username':   r[1] or f'Patient #{r[0]}',
+                'email':      r[2] or '',
+                'role':       'patient',
+                'created_at': created_at
             })
-        
+
         return jsonify({
-            "success": True,
-            "patients": patients_list,
-            "pagination": {
-                "total": total,
-                "limit": limit,
-                "offset": offset,
-                "has_more": (offset + limit) < total
+            'success': True,
+            'patients': patients_list,
+            'pagination': {
+                'total':    total,
+                'limit':    limit,
+                'offset':   offset,
+                'has_more': (offset + limit) < total
             }
         }), 200
-        
+
     except Exception as e:
+        current_app.logger.error(f'get_patients error: {type(e).__name__}: {e}')
         return jsonify({
-            "success": False,
-            "message": "Error fetching patients",
-            "error": _safe_error(e)
+            'success': False,
+            'message': f'Error fetching patients: {type(e).__name__}: {str(e)}'
         }), 500
 
 

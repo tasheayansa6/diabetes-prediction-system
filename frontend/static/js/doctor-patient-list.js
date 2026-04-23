@@ -95,8 +95,8 @@ function renderPatients(patients) {
                     <button class="btn btn-sm btn-outline quick-approve-btn" data-patient-id="${p.id}" title="Approve ML Prediction">
                         <i class="bi bi-check2-circle"></i> Approve ML
                     </button>
-                    <button class="btn btn-sm btn-outline" style="color:#0891b2;border-color:#bae6fd;"
-                        onclick="openMessageModal(${p.id},'${esc(p.username).replace(/'/g,"\\'")}')">
+                    <button class="btn btn-sm btn-outline msg-btn" style="color:#0891b2;border-color:#bae6fd;"
+                        data-patient-id="${p.id}" data-patient-name="${esc(p.username)}">
                         <i class="bi bi-chat-dots"></i> Message
                     </button>
                 </div>
@@ -104,10 +104,15 @@ function renderPatients(patients) {
         </tr>
     `).join('');
 
-    // Bind approve buttons
+    // Bind approve + message buttons
     tbody.querySelectorAll('.quick-approve-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             quickReview(this.dataset.patientId, 'approved');
+        });
+    });
+    tbody.querySelectorAll('.msg-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            openMessageModal(parseInt(this.dataset.patientId, 10), this.dataset.patientName);
         });
     });
 

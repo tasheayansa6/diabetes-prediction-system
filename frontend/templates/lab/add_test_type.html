@@ -35,9 +35,22 @@
     </aside>
     <main class="main">
       <h2 class="page-title"><i class="bi bi-plus-circle"></i> Add New Test Model</h2>
-      <div class="flex items-center gap-2 mb-4 px-4 py-2 rounded" style="background:#eff6ff;border:1px solid #bfdbfe;">
-        <i class="bi bi-info-circle-fill" style="color:#2563eb;"></i>
-        <span style="color:#1e40af;font-size:0.875rem;"><strong>Diabetes Diagnostic Models Only</strong> — Tests that feed into the ML prediction model (Glucose, HbA1c, Insulin, OGTT)</span>
+      <div class="mb-4 px-4 py-3 rounded" style="background:#eff6ff;border:1px solid #bfdbfe;">
+        <div class="flex items-center gap-2 mb-2">
+          <i class="bi bi-info-circle-fill" style="color:#2563eb;"></i>
+          <strong style="color:#1e40af;font-size:0.875rem;">Diabetes Diagnostic Models Only</strong>
+        </div>
+        <select id="quickFillSelect" class="form-input" style="border-color:#bfdbfe;" onchange="quickFill(this.value)">
+          <option value="">— Tests that feed into the ML prediction model —</option>
+          <option value="Blood Glucose (Fasting)|BG001|70-99 mg/dL|Fast for 8 hours before test">Glucose — Blood Glucose (Fasting)</option>
+          <option value="HbA1c|HBA1C|&lt; 5.7%|No fasting required">HbA1c — Glycated Haemoglobin</option>
+          <option value="Insulin Level|INS001|2-25 uU/mL|Fast for 8 hours before test">Insulin — Insulin Level</option>
+          <option value="Oral Glucose Tolerance (OGTT)|OGTT|&lt; 140 mg/dL at 2hr|Fast 8hrs, drink glucose solution">OGTT — Oral Glucose Tolerance</option>
+          <option value="Random Blood Glucose|RBG001|&lt; 200 mg/dL|No fasting required">Glucose — Random Blood Glucose</option>
+          <option value="Postprandial Glucose|PPG001|&lt; 140 mg/dL at 2hr|Test 2 hours after meal">Glucose — Postprandial</option>
+          <option value="C-Peptide|CPEP001|0.5-2.0 ng/mL|Fast for 8 hours before test">C-Peptide</option>
+          <option value="Fructosamine|FRUCT001|200-285 umol/L|No fasting required">Fructosamine</option>
+        </select>
       </div>
       <div id="formAlert" class="mb-4"></div>
       <div class="card max-w-2xl">

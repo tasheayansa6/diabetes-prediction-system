@@ -1,5 +1,16 @@
 // Lab Add Test Type - calls POST /api/labs/test-types
 
+function quickFill(val) {
+    if (!val) return;
+    const [name, code, range, prep] = val.split('|');
+    const form = document.getElementById('testTypeForm');
+    form.test_name.value = name;
+    form.test_code.value = code;
+    form.normal_range.value = range;
+    form.description.value = prep;
+    form.category.value = 'Diabetes';
+}
+
 function authHeaders() {
     return {
         'Content-Type': 'application/json',

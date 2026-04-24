@@ -91,10 +91,21 @@ function renderRequestsList(tests) {
     if (_activeFilter === 'urgent') {
         filtered = tests.filter(t => t.priority === 'urgent');
     } else if (_activeFilter !== 'all') {
-        filtered = tests.filter(t =>
-            (t.test_name || '').toLowerCase().includes(_activeFilter) ||
-            (t.test_category || '').toLowerCase().includes(_activeFilter)
-        );
+        // Map filter keys to search terms
+        const filterMap = {
+            'glucose': ['glucose', 'blood sugar', 'random blood'],
+            'hba1c': ['hba1c', 'glycated', 'hemoglobin a1c'],
+            'insulin': ['insulin', 'c-peptide'],
+            'ogtt': ['ogtt', 'oral glucose', 'tolerance'],
+            'fasting': ['fasting', 'fbs'],
+            'urgent': [],
+        };
+        const terms = filterMap[_activeFilter] || [_activeFilter];
+        filtered = tests.filter(t => {
+            const name = (t.test_name || '').toLowerCase();
+            const cat  = (t.test_category || '').toLowerCase();
+            return terms.some(term => name.includes(term) || cat.includes(term));
+        });
     }
 
     // Update count badge

@@ -154,6 +154,9 @@ async function loadTestTypes() {
 
 function renderCheckboxes(filter) {
     const grid = document.getElementById('testGrid');
+    // Show diabetes-only notice at top
+    const notice = document.getElementById('diabetesNotice');
+    if (notice) notice.style.display = '';
     if (!allTests.length) {
         grid.innerHTML = '<div style="grid-column:1/-1;color:#94a3b8;padding:1rem;text-align:center;">No test types found.</div>';
         return;
@@ -174,6 +177,11 @@ function renderCheckboxes(filter) {
     // Group by category
     const groups = {};
     filtered.forEach(t => { (groups[t.category] = groups[t.category]||[]).push(t); });
+
+    // Show diabetes-only notice
+    if (!q && Object.keys(groups).length === 1 && groups['Diabetes']) {
+        // Only diabetes tests - add info header
+    }
 
     const catIcons = {
         'Diabetes': 'bi-droplet-fill',

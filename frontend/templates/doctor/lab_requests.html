@@ -135,7 +135,7 @@
           <p class="page-subtitle">Order and manage laboratory tests for patients</p>
         </div>
         <button class="btn btn-primary" onclick="openModal()">
-          <i class="bi bi-plus-circle"></i> New Lab Request
+          <i class="bi bi-plus-circle"></i> Order Diabetes Lab Test
         </button>
       </div>
 
@@ -186,7 +186,7 @@
   <div class="modal-box" style="max-width:800px;width:96%;max-height:92vh;display:flex;flex-direction:column;">
 
     <div class="modal-header" style="background:linear-gradient(90deg,#1565c0,#1976d2);flex-shrink:0;">
-      <h5 style="color:#fff;margin:0;"><i class="bi bi-flask me-2"></i>New Lab Request</h5>
+      <h5 style="color:#fff;margin:0;"><i class="bi bi-flask me-2"></i>Order Diabetes Lab Test</h5>
       <button onclick="closeModal()" class="modal-close" style="color:#fff;font-size:1.4rem;">&times;</button>
     </div>
 
@@ -215,7 +215,7 @@
         <!-- Test selection label -->
         <div style="margin-bottom:.5rem;">
           <label class="form-label" style="margin-bottom:.25rem;">
-            Select Tests <span style="color:#ef4444;">*</span>
+            Select Diabetes Test Model <span style="color:#ef4444;">*</span>
             <span style="font-size:.72rem;color:#64748b;font-weight:400;margin-left:.5rem;">
               Check one or more — details auto-fill on the right
             </span>
@@ -231,6 +231,7 @@
               <i class="bi bi-search"></i>
               <input type="text" class="test-search" id="testSearch" placeholder="Search tests..." oninput="filterTests(this.value)">
             </div>
+            <div id="diabetesNotice" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:.6rem .9rem;margin-bottom:.75rem;font-size:.78rem;color:#1d4ed8;display:flex;align-items:center;gap:.5rem;"><i class="bi bi-droplet-fill"></i>&nbsp;<strong>Diabetes Diagnostic Models Only</strong> &mdash; Tests that feed into the ML prediction model (Glucose, HbA1c, Insulin, OGTT)</div>
             <div id="testGrid" class="test-grid">
               <div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:1.5rem;">
                 <i class="bi bi-arrow-repeat"></i> Loading tests...

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Test Type - Diabetes Prediction System</title>
+    <title>Add Test Model - Diabetes Prediction System</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
     <script src="/static/vendor/js/tailwind.min.js"></script>
     <link href="/static/vendor/css/bootstrap-icons.css" rel="stylesheet">
@@ -34,18 +34,19 @@
       </nav>
     </aside>
     <main class="main">
-      <h2 class="page-title"><i class="bi bi-plus-circle"></i> Add New Test Type</h2>
+      <h2 class="page-title"><i class="bi bi-plus-circle"></i> Add New Test Model</h2>
       <div id="formAlert" class="mb-4"></div>
       <div class="card max-w-2xl">
-        <div class="card-header"><h5><i class="bi bi-plus-circle"></i> Test Type Details</h5></div>
+        <div class="card-header"><h5><i class="bi bi-plus-circle"></i> Test Model Details</h5></div>
         <form id="testTypeForm" class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label class="form-label">Test Name <span class="text-red-500">*</span></label><input type="text" class="form-input" name="test_name" placeholder="e.g. Blood Glucose" required></div>
-            <div><label class="form-label">Test Code <span class="text-red-500">*</span></label><input type="text" class="form-input" name="test_code" placeholder="e.g. BG001" required></div>
+            <div><label class="form-label">Test Model Name <span class="text-red-500">*</span></label><input type="text" class="form-input" name="test_name" placeholder="e.g. Blood Glucose (Fasting)" required></div>
+            <div><label class="form-label">Test Model Code <span class="text-red-500">*</span></label><input type="text" class="form-input" name="test_code" placeholder="e.g. BG001" required></div>
             <div>
               <label class="form-label">Category <span class="text-red-500">*</span></label>
               <select class="form-input" name="category" required>
                 <option value="">Select category...</option>
+                <option value="Diabetes" selected>Diabetes</option>
                 <option value="Blood Test">Blood Test</option>
                 <option value="Urine Test">Urine Test</option>
                 <option value="Imaging">Imaging</option>
@@ -66,7 +67,7 @@
           <div><label class="form-label">Preparation Instructions</label><textarea class="form-input" name="description" rows="3" placeholder="e.g. Fasting required for 8 hours before test..."></textarea></div>
           <div class="flex justify-end gap-2">
             <a href="/templates/lab/lab_test_service.html" class="btn btn-secondary"><i class="bi bi-x-circle"></i> Cancel</a>
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Add Test Type</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Add Test Model</button>
           </div>
         </form>
       </div>

@@ -54,7 +54,7 @@ async function handleTestTypeSubmit(e) {
         showAlert(err.message, 'danger');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-check-circle"></i> Add Test Type';
+        btn.innerHTML = '<i class="bi bi-check-circle"></i> Add Test Model';
     }
 }
 

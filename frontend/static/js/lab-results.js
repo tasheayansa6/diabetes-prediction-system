@@ -4,12 +4,14 @@ function authHeaders() {
     return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') };
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+function handleLogout() { if (typeof logout === 'function') logout(); else { localStorage.clear(); window.location.href = '/login'; } }
 function showAlert(msg, type) {
     const el = document.getElementById('formAlert');
+    if (!el) return;
     el.innerHTML = `<div class="alert alert-${type||'success'}">${msg}</div>`;
     el.scrollIntoView({ behavior: 'smooth' });
 }
-function clearAlert() { document.getElementById('formAlert').innerHTML = ''; }
+function clearAlert() { const el = document.getElementById('formAlert'); if (el) el.innerHTML = ''; }
 
 // ── Test hints ────────────────────────────────────────────────────────────────
 const TEST_HINTS = {
@@ -373,8 +375,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!user) return;
 
     const name = user.name || user.username;
-    document.getElementById('topUserName').textContent = name;
-    document.getElementById('userName').textContent    = name;
+    const topEl  = document.getElementById('topUserName');
+    const sideEl = document.getElementById('userName');
+    if (topEl)  topEl.textContent  = name;
+    if (sideEl) sideEl.textContent = name;
 
     loadPendingRequests();
 });

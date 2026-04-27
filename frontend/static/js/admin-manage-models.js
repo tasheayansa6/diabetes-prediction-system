@@ -37,23 +37,32 @@ function renderAll(models) {
     document.getElementById('metricSamples').textContent = Number(active.trainingSamples).toLocaleString();
     document.getElementById('metricFeatures').textContent = active.features;
 
-    // Version table
-    document.getElementById('modelTableBody').innerHTML = models.map(m => `
-        <tr>
-            <td><strong>${m.version}</strong></td>
+    // Version table — active model highlighted, archived greyed with lock
+    document.getElementById('modelTableBody').innerHTML = models.map(m => {
+        const isActive = m.status === 'active';
+        const rowStyle = isActive ? '' : 'opacity:0.5;';
+        const statusBadge = isActive
+            ? `<span style="background:#059669;color:#fff;border-radius:99px;padding:.2em .75em;font-size:.72rem;font-weight:700;"><i class="bi bi-check-circle-fill"></i> Active</span>`
+            : `<span style="background:#94a3b8;color:#fff;border-radius:99px;padding:.2em .75em;font-size:.72rem;font-weight:700;"><i class="bi bi-lock-fill"></i> Archived</span>`;
+        const predictNote = isActive
+            ? `<span style="font-size:.68rem;color:#059669;font-weight:600;"><i class="bi bi-robot"></i> Predictions use this model</span>`
+            : `<span style="font-size:.68rem;color:#94a3b8;"><i class="bi bi-lock"></i> Cannot predict</span>`;
+        return `
+        <tr style="${rowStyle}">
+            <td><strong>${m.version}</strong><br>${predictNote}</td>
             <td>${m.date}</td>
             <td>${m.algorithm}</td>
-            <td><strong class="text-success">${m.accuracy}%</strong></td>
-            <td><span class="badge ${m.status === 'active' ? 'bg-success' : 'bg-secondary'}">${m.status === 'active' ? 'Active' : 'Archived'}</span></td>
+            <td><strong style="color:${isActive?'#059669':'#94a3b8'}">${m.accuracy}%</strong></td>
+            <td>${statusBadge}</td>
             <td>
-                <button class="btn btn-sm btn-info me-1" onclick="viewModel(${m.id})"><i class="bi bi-eye"></i> View</button>
-                <button class="btn btn-sm btn-primary me-1" onclick="editModel(${m.id})"><i class="bi bi-pencil"></i> Edit</button>
-                ${m.status !== 'active' ? `
-                <button class="btn btn-sm btn-warning me-1" onclick="activateModel(${m.id})"><i class="bi bi-arrow-clockwise"></i> Activate</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteModel(${m.id})"><i class="bi bi-trash"></i></button>` : ''}
+                <button class="btn btn-sm btn-info" onclick="viewModel(${m.id})" style="margin-right:4px;"><i class="bi bi-eye"></i></button>
+                ${isActive ? '' : `
+                <button class="btn btn-sm btn-primary" onclick="editModel(${m.id})" style="margin-right:4px;"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-warning" onclick="activateModel(${m.id})" style="margin-right:4px;"><i class="bi bi-arrow-clockwise"></i> Activate</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteModel(${m.id})"><i class="bi bi-trash"></i></button>`}
             </td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
 }
 
 // ===== View =====

@@ -67,6 +67,14 @@ function renderStats(dashboard, predictions, prescriptions, appointments) {
             ? latest.probability_percent.toFixed(1) + '% probability'
             : '';
 
+        // Urgent pulsing animation on hero risk box
+        const heroRight = document.querySelector('.hero-right');
+        if (heroRight) {
+            heroRight.classList.remove('risk-urgent', 'risk-urgent-vh');
+            if (latest.risk_level === 'VERY HIGH RISK') heroRight.classList.add('risk-urgent-vh');
+            else if (latest.risk_level === 'HIGH RISK')  heroRight.classList.add('risk-urgent');
+        }
+
         // Risk alert banner — only for HIGH RISK and VERY HIGH RISK
         // Hide if patient already has a scheduled appointment (they took action)
         const banner = document.getElementById('riskAlertBanner');
@@ -227,14 +235,20 @@ function renderPayments(payments) {
         body.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#90a4ae;font-size:.85rem;"><i class="bi bi-credit-card" style="font-size:1.2rem;display:block;margin-bottom:.4rem;"></i> No payments yet. <a href="/templates/payment/payment_page.html" style="color:#1565c0;">Make your first payment →</a></div>';
         return;
     }
-    const statusColor = { completed:'#2e7d32', pending:'#e65100', failed:'#c62828', refunded:'#6a1b9a' };
+    const statusColor = { completed:'#2e7d32', pending:'#d97706', failed:'#c62828', refunded:'#6a1b9a' };
     const statusBg    = { completed:'#e8f5e9', pending:'#fff3e0', failed:'#ffebee', refunded:'#f3e5f5' };
+    const statusLabel = { completed:'COMPLETED', pending:'AWAITING CONFIRMATION', failed:'FAILED', refunded:'REFUNDED' };
     const methodIcon  = { cash:'bi-cash-coin', card:'bi-credit-card', chapa:'bi-phone', bank_transfer:'bi-bank', insurance:'bi-shield-check', mobile:'bi-phone' };
     body.innerHTML = payments.slice(0, 5).map(p => {
         const date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : 'N/A';
         const color = statusColor[p.status] || '#546e7a';
         const bg    = statusBg[p.status]    || '#f5f7fa';
         const icon  = methodIcon[p.payment_method] || 'bi-receipt';
+        const label = statusLabel[p.status] || (p.status||'').toUpperCase();
+        const isPending = p.status === 'pending';
+        const badgeHtml = isPending
+            ? `<span class="payment-pending-badge"><i class="bi bi-hourglass-split"></i> ${label}</span>`
+            : `<span style="background:${bg};color:${color};border-radius:99px;padding:.15em .65em;font-size:.68rem;font-weight:700;">${label}</span>`;
         return `<div style="display:flex;align-items:center;gap:1rem;padding:.85rem 1.25rem;border-bottom:1px solid #f5f7fa;">
             <div style="width:38px;height:38px;border-radius:12px;background:#fff3e0;color:#e65100;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">
                 <i class="bi ${esc(icon)}"></i>
@@ -245,7 +259,7 @@ function renderPayments(payments) {
             </div>
             <div style="text-align:right;flex-shrink:0;">
                 <div style="font-weight:800;font-size:.95rem;color:#1a237e;">ETB ${parseFloat(p.total_amount || p.amount || 0).toFixed(2)}</div>
-                <span style="background:${bg};color:${color};border-radius:99px;padding:.15em .65em;font-size:.68rem;font-weight:700;">${esc((p.status||'').toUpperCase())}</span>
+                ${badgeHtml}
             </div>
         </div>`;
     }).join('');

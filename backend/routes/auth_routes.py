@@ -280,7 +280,7 @@ def register():
                         type='info',
                         category='general',
                         is_read=False,
-                        link='/templates/nurse/record_vitals.html',
+                        link=f'/templates/nurse/record_vitals.html?patient_id={new_user.id}',
                         created_at=datetime.utcnow()
                     ))
                 db.session.commit()

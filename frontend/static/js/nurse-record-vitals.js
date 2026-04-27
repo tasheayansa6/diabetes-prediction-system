@@ -55,7 +55,33 @@ async function onPatientChange() {
         document.getElementById(id)?.classList.remove('border-red-500');
     });
 
-    if (!patientId) return;
+    if (!patientId) {
+        document.getElementById('patientInfo').style.display = 'none';
+        return;
+    }
+
+    // Show patient info card with unique ID
+    const all = window._allPatients || [];
+    const patient = all.find(p => String(p.id) === String(patientId));
+    if (patient) {
+        const infoDiv = document.getElementById('patientInfo');
+        const nameEl  = document.getElementById('selectedPatientName');
+        const idEl    = document.getElementById('selectedPatientId');
+        if (nameEl) nameEl.textContent = patient.username;
+        if (idEl)   idEl.innerHTML =
+            `<span style="background:#dbeafe;color:#1e40af;border-radius:6px;padding:.1rem .5rem;font-weight:700;font-family:monospace;font-size:.85rem;">
+                ${patient.patient_id || 'ID:' + patient.id}
+            </span>
+            &nbsp; Registered: ${patient.created_at ? new Date(patient.created_at).toLocaleDateString() : 'N/A'}`;
+        if (infoDiv) {
+            infoDiv.style.display = '';
+            infoDiv.style.background = '#eff6ff';
+            infoDiv.style.borderRadius = '10px';
+            infoDiv.style.padding = '.75rem 1rem';
+            infoDiv.style.border = '1.5px solid #bfdbfe';
+            infoDiv.style.marginTop = '.75rem';
+        }
+    }
 
     try {
         const res  = await fetch(`/api/nurse/patients/${patientId}/vitals?limit=1`, {

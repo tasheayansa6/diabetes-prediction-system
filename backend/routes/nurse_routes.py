@@ -665,13 +665,17 @@ def register_patient(current_nurse):
         # Add to queue automatically
         add_to_queue(new_patient.id, 'registration', current_nurse)
 
-        # Notify all doctors about the new patient registration
+        # Notify all doctors and nurses about the new patient registration
         try:
             from backend.models.notification import Notification
-            doctors = User.query.filter_by(role='doctor', is_active=True).all()
-            for doc in doctors:
+            recipients = User.query.filter(
+                User.role.in_(['doctor', 'nurse']),
+                User.is_active == True
+            ).all()
+            for u in recipients:
+                is_nurse = u.role == 'nurse'
                 db.session.add(Notification(
-                    user_id=doc.id,
+                    user_id=u.id,
                     title='New Patient Registered',
                     message=(
                         f"Nurse {current_nurse['username']} registered a new patient: "
@@ -681,7 +685,11 @@ def register_patient(current_nurse):
                     type='vitals',
                     category='general',
                     is_read=False,
-                    link=f'/templates/doctor/patient_list.html?highlight={new_patient.id}',
+                    link=(
+                        f'/templates/nurse/record_vitals.html'
+                        if is_nurse else
+                        f'/templates/doctor/patient_list.html?highlight={new_patient.id}'
+                    ),
                     created_at=datetime.utcnow()
                 ))
             db.session.commit()

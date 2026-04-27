@@ -104,59 +104,70 @@ function renderBatchList(tests) {
         const hasUrgent = g.tests.some(t => t.priority === 'urgent');
 
         const testRows = g.tests.map((t, ti) => {
-            const hints   = getHints(t.test_name);
-            const unit    = t.unit || (hints && hints.unit) || '';
-            const range   = t.normal_range || (hints && hints.range) || '';
-            const ph      = (hints && hints.ph) || 'Enter result...';
-            const doctor  = t.doctor?.name || '—';
-            const ordered = t.created_at ? new Date(t.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+            const hints    = getHints(t.test_name);
+            const unit     = t.unit || (hints && hints.unit) || '';
+            const range    = t.normal_range || (hints && hints.range) || '';
+            const ph       = (hints && hints.ph) || 'Enter result...';
+            const doctor   = t.doctor?.name || '—';
+            const ordered  = t.created_at ? new Date(t.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
             const isUrgent = t.priority === 'urgent';
 
             return `
-            <div class="test-row" style="border:1.5px solid ${isUrgent?'#fca5a5':'#e2e8f0'};border-radius:10px;padding:.9rem 1rem;margin-bottom:.6rem;background:${isUrgent?'#fff5f5':'#fafafa'};">
-              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.6rem;">
-                <div>
-                  <span style="font-weight:700;font-size:.92rem;color:#1e293b;">
-                    <i class="bi bi-flask-fill" style="color:#2563eb;"></i> ${esc(t.test_name)}
-                  </span>
-                  ${isUrgent ? '<span style="background:#fee2e2;color:#991b1b;border-radius:99px;padding:.15rem .6rem;font-size:.68rem;font-weight:700;margin-left:.5rem;">🔴 URGENT</span>' : ''}
+            <div class="test-row" id="row_${gi}_${ti}"
+                 style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1.5px solid ${isUrgent?'#fca5a5':'#e2e8f0'};
+                        border-radius:10px;margin-bottom:.6rem;overflow:hidden;background:#fff;">
+
+              <!-- LEFT: test info -->
+              <div style="padding:.85rem 1rem;border-right:1.5px solid ${isUrgent?'#fca5a5':'#e2e8f0'};background:${isUrgent?'#fff5f5':'#f8fafc'};">
+                <div style="font-weight:700;font-size:.9rem;color:#1e293b;margin-bottom:.3rem;">
+                  <i class="bi bi-flask-fill" style="color:#2563eb;"></i> ${esc(t.test_name)}
+                  ${isUrgent ? '<span style="background:#fee2e2;color:#991b1b;border-radius:99px;padding:.1rem .5rem;font-size:.65rem;font-weight:700;margin-left:.4rem;">🔴 URGENT</span>' : ''}
                 </div>
-                <div style="font-size:.75rem;color:#64748b;">
-                  Dr. ${esc(doctor)} &nbsp;·&nbsp; Ordered: ${ordered}
-                  ${range ? `&nbsp;·&nbsp; <span style="color:#1d4ed8;font-weight:600;">Ref: ${esc(range)}</span>` : ''}
+                <div style="font-size:.73rem;color:#64748b;line-height:1.6;">
+                  <div><i class="bi bi-person-badge" style="color:#2563eb;"></i> Dr. ${esc(doctor)}</div>
+                  <div><i class="bi bi-calendar3" style="color:#94a3b8;"></i> Ordered: ${ordered}</div>
+                  ${range ? `<div style="color:#1d4ed8;font-weight:600;"><i class="bi bi-info-circle"></i> Ref: ${esc(range)}</div>` : ''}
+                  ${unit  ? `<div style="color:#059669;font-weight:600;"><i class="bi bi-rulers"></i> Unit: ${esc(unit)}</div>` : ''}
                 </div>
               </div>
-              <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:.6rem;align-items:end;">
-                <div>
-                  <label style="font-size:.72rem;font-weight:700;color:#475569;display:block;margin-bottom:.25rem;">
-                    Measured Value <span style="color:#ef4444;">*</span>
-                  </label>
-                  <div style="position:relative;">
+
+              <!-- RIGHT: value input + checkbox + remarks -->
+              <div style="padding:.85rem 1rem;display:flex;flex-direction:column;justify-content:center;gap:.5rem;">
+                <label style="font-size:.7rem;font-weight:700;color:#475569;margin-bottom:.1rem;">Measured Value <span style="color:#ef4444;">*</span></label>
+                <div style="display:flex;align-items:center;gap:.5rem;">
+                  <!-- ✅ Checkbox confirm button -->
+                  <button type="button"
+                          id="chk_${gi}_${ti}"
+                          onclick="toggleCheck(${gi},${ti})"
+                          title="Mark as verified"
+                          style="width:36px;height:36px;border-radius:8px;border:2px solid #e2e8f0;background:#f8fafc;
+                                 display:flex;align-items:center;justify-content:center;cursor:pointer;
+                                 flex-shrink:0;transition:all .15s;font-size:1.1rem;">
+                    <i class="bi bi-check-lg" style="color:#94a3b8;"></i>
+                  </button>
+                  <!-- Value input -->
+                  <div style="position:relative;flex:1;">
                     <input type="text"
                            id="result_${gi}_${ti}"
                            data-testid="${esc(t.test_id)}"
                            data-testname="${esc(t.test_name)}"
                            class="form-input result-val"
                            placeholder="${ph}"
-                           style="font-size:1.1rem;font-weight:700;text-align:center;background:#f0fdf4;border-color:#86efac;padding-right:${unit?'3.5rem':'1rem'};"
-                           required>
-                    ${unit ? `<span style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);font-size:.8rem;font-weight:700;color:#64748b;pointer-events:none;">${esc(unit)}</span>` : ''}
+                           oninput="onResultInput(${gi},${ti})"
+                           style="font-size:1.05rem;font-weight:700;text-align:center;background:#f0fdf4;
+                                  border-color:#86efac;padding-right:${unit?'3.2rem':'1rem'};">
+                    ${unit ? `<span style="position:absolute;right:.65rem;top:50%;transform:translateY(-50%);
+                              font-size:.75rem;font-weight:700;color:#64748b;pointer-events:none;">${esc(unit)}</span>` : ''}
                   </div>
                 </div>
-                <div style="text-align:center;padding-bottom:.25rem;">
-                  <i class="bi bi-arrow-right" style="color:#94a3b8;font-size:1.1rem;"></i>
-                </div>
-                <div>
-                  <label style="font-size:.72rem;font-weight:700;color:#475569;display:block;margin-bottom:.25rem;">Clinical Observations</label>
-                  <input type="text"
-                         id="remarks_${gi}_${ti}"
-                         class="form-input"
-                         placeholder="e.g. Fasting sample, no haemolysis"
-                         style="font-size:.82rem;">
-                </div>
+                <input type="text"
+                       id="remarks_${gi}_${ti}"
+                       class="form-input"
+                       placeholder="Observations (optional)"
+                       style="font-size:.78rem;">
+                <input type="hidden" id="unit_${gi}_${ti}"  value="${esc(unit)}">
+                <input type="hidden" id="range_${gi}_${ti}" value="${esc(range)}">
               </div>
-              <input type="hidden" id="unit_${gi}_${ti}" value="${esc(unit)}">
-              <input type="hidden" id="range_${gi}_${ti}" value="${esc(range)}">
             </div>`;
         }).join('');
 
@@ -212,6 +223,38 @@ function renderBatchList(tests) {
             submitBatch(parseInt(this.dataset.gi), parseInt(this.dataset.count));
         });
     });
+}
+
+// ── Checkbox toggle ─────────────────────────────────────────────────────────
+function toggleCheck(gi, ti) {
+    const btn   = document.getElementById(`chk_${gi}_${ti}`);
+    const row   = document.getElementById(`row_${gi}_${ti}`);
+    const input = document.getElementById(`result_${gi}_${ti}`);
+    const val   = (input?.value || '').trim();
+    if (!val) { input?.focus(); return; }
+    const checked = btn.dataset.checked === '1';
+    if (!checked) {
+        btn.dataset.checked   = '1';
+        btn.style.background  = '#059669';
+        btn.style.borderColor = '#059669';
+        btn.innerHTML         = '<i class="bi bi-check-lg" style="color:#fff;"></i>';
+        if (row)   row.style.borderColor   = '#6ee7b7';
+        if (input) { input.style.background = '#f0fdf4'; input.style.borderColor = '#22c55e'; }
+    } else {
+        btn.dataset.checked   = '0';
+        btn.style.background  = '#f8fafc';
+        btn.style.borderColor = '#e2e8f0';
+        btn.innerHTML         = '<i class="bi bi-check-lg" style="color:#94a3b8;"></i>';
+        if (row)   row.style.borderColor   = '#e2e8f0';
+        if (input) { input.style.background = '#f0fdf4'; input.style.borderColor = '#86efac'; }
+    }
+}
+
+function onResultInput(gi, ti) {
+    const val = (document.getElementById(`result_${gi}_${ti}`)?.value || '').trim();
+    const btn = document.getElementById(`chk_${gi}_${ti}`);
+    if (val && btn?.dataset.checked !== '1') toggleCheck(gi, ti);
+    if (!val && btn?.dataset.checked === '1') toggleCheck(gi, ti);
 }
 
 // ── Submit all results for one patient batch ──────────────────────────────────

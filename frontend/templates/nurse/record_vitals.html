@@ -123,14 +123,27 @@
                 </div>
 
                 <div style="display:flex;flex-direction:column;gap:.75rem;">
+                  <!-- Gender selector — controls pregnancies field -->
                   <div>
-                    <label class="form-label">
+                    <label class="form-label">Gender <span class="text-red-500">*</span></label>
+                    <div style="display:flex;gap:.75rem;">
+                      <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;padding:.5rem .9rem;border:2px solid #e2e8f0;border-radius:8px;font-weight:600;font-size:.85rem;transition:all .15s;" id="genderMaleLabel">
+                        <input type="radio" name="gender" id="genderMale" value="male" onchange="onGenderChange()" style="accent-color:#2563eb;"> Male
+                      </label>
+                      <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;padding:.5rem .9rem;border:2px solid #e2e8f0;border-radius:8px;font-weight:600;font-size:.85rem;transition:all .15s;" id="genderFemaleLabel">
+                        <input type="radio" name="gender" id="genderFemale" value="female" onchange="onGenderChange()" style="accent-color:#db2777;"> Female
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="form-label" id="pregnanciesLabel">
                       Pregnancies <span class="badge badge-green text-xs">Used in ML</span>
-                      <span style="color:#94a3b8;font-weight:400;font-size:.72rem;">(enter 0 if male)</span>
+                      <span style="color:#94a3b8;font-weight:400;font-size:.72rem;" id="pregnanciesHint">(enter 0 if male)</span>
                       <span class="text-red-500">*</span>
                     </label>
                     <input type="number" min="0" max="17" class="form-input" id="pregnancies" placeholder="0 – 17" required>
-                    <div style="font-size:.72rem;color:#90a4ae;margin-top:.2rem;">Number of times pregnant. Enter 0 for male patients.</div>
+                    <div style="font-size:.72rem;color:#90a4ae;margin-top:.2rem;" id="pregnanciesNote">Number of times pregnant. Enter 0 for male patients.</div>
                   </div>
 
                   <div>

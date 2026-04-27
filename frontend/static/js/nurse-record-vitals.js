@@ -98,6 +98,16 @@ async function autoFillFromProfile(patientId) {
         // Scroll info card into view
         if (infoDiv) infoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
+        // ── Auto-select gender from profile ─────────────────────────────────────────
+        const gender = p.gender || (data.has_previous_vitals && v.pregnancies === 0 ? 'male' : null);
+        if (gender === 'male') {
+            const maleRadio = document.getElementById('genderMale');
+            if (maleRadio) { maleRadio.checked = true; onGenderChange(); }
+        } else if (gender === 'female') {
+            const femaleRadio = document.getElementById('genderFemale');
+            if (femaleRadio) { femaleRadio.checked = true; onGenderChange(); }
+        }
+
         // ── Auto-fill vitals fields ─────────────────────────────────────────
         const set = (id, val) => {
             const el = document.getElementById(id);
@@ -150,6 +160,42 @@ async function autoFillFromProfile(patientId) {
 
     } catch (e) {
         console.warn('autoFillFromProfile error:', e);
+    }
+}
+
+// Gender change handler — lock pregnancies to 0 for male
+function onGenderChange() {
+    const isMale = document.getElementById('genderMale')?.checked;
+    const pregEl = document.getElementById('pregnancies');
+    const hintEl = document.getElementById('pregnanciesHint');
+    const noteEl = document.getElementById('pregnanciesNote');
+    const maleLabel   = document.getElementById('genderMaleLabel');
+    const femaleLabel = document.getElementById('genderFemaleLabel');
+
+    if (isMale) {
+        pregEl.value    = '0';
+        pregEl.readOnly = true;
+        pregEl.disabled = true;
+        pregEl.style.background = '#f1f5f9';
+        pregEl.style.color      = '#94a3b8';
+        pregEl.style.cursor     = 'not-allowed';
+        pregEl.classList.add('field-autofilled');
+        if (hintEl) hintEl.textContent = '(locked to 0 — male patient)';
+        if (noteEl) { noteEl.textContent = 'Male patient — pregnancies locked to 0.'; noteEl.style.color = '#2563eb'; }
+        if (maleLabel)   maleLabel.style.cssText   += ';border-color:#2563eb;background:#eff6ff;color:#1e40af;';
+        if (femaleLabel) femaleLabel.style.cssText  += ';border-color:#e2e8f0;background:#fff;color:#475569;';
+    } else {
+        pregEl.readOnly = false;
+        pregEl.disabled = false;
+        pregEl.style.background = '';
+        pregEl.style.color      = '';
+        pregEl.style.cursor     = '';
+        pregEl.classList.remove('field-autofilled');
+        if (pregEl.value === '0') pregEl.value = '';
+        if (hintEl) hintEl.textContent = '(enter number of pregnancies)';
+        if (noteEl) { noteEl.textContent = 'Number of times pregnant.'; noteEl.style.color = '#90a4ae'; }
+        if (femaleLabel) femaleLabel.style.cssText += ';border-color:#db2777;background:#fdf2f8;color:#9d174d;';
+        if (maleLabel)   maleLabel.style.cssText   += ';border-color:#e2e8f0;background:#fff;color:#475569;';
     }
 }
 
@@ -254,6 +300,10 @@ async function handleVitalsSubmit(event) {
     }
 
     const payload = { patient_id: patientId, notes: document.getElementById('notes').value };
+
+    // Save gender to patient record
+    const gender = document.querySelector('input[name="gender"]:checked')?.value || null;
+    if (gender) payload.gender = gender;
 
     ['blood_pressure_systolic','blood_pressure_diastolic','heart_rate','respiratory_rate','pain_level']
         .forEach(f => { const v = getOptionalInt(f);   if (v !== undefined) payload[f] = v; });

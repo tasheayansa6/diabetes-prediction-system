@@ -6,6 +6,7 @@ class Patient(User):
     
     id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     patient_id = db.Column(db.String(50), unique=True)
+    gender = db.Column(db.String(10), nullable=True)  # 'male' | 'female' | 'other'
     blood_group = db.Column(db.String(5))
     emergency_contact = db.Column(db.String(50))
     emergency_contact_name = db.Column(db.String(120))

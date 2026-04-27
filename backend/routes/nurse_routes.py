@@ -351,7 +351,15 @@ def record_vitals(current_nurse):
         db.session.add(vital)
         db.session.commit()
 
-        # Only notify doctors when ML-relevant vitals are recorded (BP diastolic required)
+        # Save gender to patient record if provided
+        if data.get('gender') in ('male', 'female', 'other'):
+            try:
+                pat = Patient.query.get(data['patient_id'])
+                if pat and hasattr(pat, 'gender'):
+                    pat.gender = data['gender']
+                    db.session.commit()
+            except Exception:
+                pass
         if data.get('blood_pressure_diastolic'):
             try:
                 from backend.models.notification import Notification
@@ -923,7 +931,7 @@ def get_patient_profile(current_nurse, patient_id):
         row = db.session.execute(text("""
             SELECT u.id, u.username, u.email, u.created_at,
                    p.patient_id, p.blood_group,
-                   p.medical_history, p.allergies
+                   p.medical_history, p.allergies, p.gender
             FROM users u
             LEFT JOIN patients p ON p.id = u.id
             WHERE u.id = :id AND u.role = 'patient'
@@ -970,6 +978,7 @@ def get_patient_profile(current_nurse, patient_id):
                 'blood_group':     row[5],
                 'medical_history': row[6],
                 'allergies':       row[7],
+                'gender':          row[8] if len(row) > 8 else None,
             },
             'vitals': vitals,
             'has_previous_vitals': latest_vital is not None

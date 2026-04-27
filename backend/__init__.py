@@ -119,6 +119,7 @@ def create_app(config_name="development"):
                             "ALTER TABLE patient_queue ALTER COLUMN queue_id TYPE VARCHAR(50)",
                             "ALTER TABLE subscriptions ALTER COLUMN subscription_id TYPE VARCHAR(50)",
                             "ALTER TABLE patients ALTER COLUMN patient_id TYPE VARCHAR(50)",
+                            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS gender VARCHAR(10)",
                             "ALTER TABLE doctors ALTER COLUMN doctor_id TYPE VARCHAR(50)",
                             "ALTER TABLE nurses ALTER COLUMN nurse_id TYPE VARCHAR(50)",
                             "ALTER TABLE lab_technicians ALTER COLUMN technician_id TYPE VARCHAR(50)",
@@ -168,6 +169,7 @@ def create_app(config_name="development"):
                             ('consent_given_at',           'DATETIME'),
                             ('data_deletion_requested',    'INTEGER NOT NULL DEFAULT 0'),
                             ('data_deletion_requested_at', 'DATETIME'),
+                            ('gender',                     "VARCHAR(10)"),
                         ]:
                             if col not in patient_cols:
                                 conn.execute(_text(f'ALTER TABLE patients ADD COLUMN {col} {defn}'))

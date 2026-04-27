@@ -22,9 +22,10 @@ const NOTIF_URLS = {
     'vitals':          '/templates/doctor/patient_list.html',
     'lab_result':      '/templates/patient/lab_results.html',
     'lab_order':       '/templates/lab/enter_lab_results.html',
-    'prescription':    '/templates/patient/prescriptions.html',
+    'prescription':    '/templates/pharmacist/prescription_review.html',
     'appointment':     '/templates/patient/appointment.html',
     'payment':         '/templates/payment/payment_history.html',
+    'info':            '/templates/patient/dashboard.html',
 };
 
 let _notifInterval = null;

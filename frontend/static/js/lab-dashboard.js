@@ -67,25 +67,37 @@ function renderPendingList(tests) {
         return;
     }
     el.innerHTML = tests.slice(0, 8).map(t => {
-        const patientName = t.patient ? t.patient.name : (t.patient_name || 'Unknown');
+        const patientName = t.patient?.name || t.patient_name || 'Unknown';
+        const patientId   = t.patient?.patient_id || '';
         const priority    = t.priority || 'normal';
-        const badgeColor  = priority === 'urgent' ? '#dc2626' : priority === 'emergency' ? '#7c3aed' : '#d97706';
-        const date        = t.created_at ? new Date(t.created_at).toLocaleDateString() : '';
-        const waitTime    = t.wait_time ? ` · ${t.wait_time}` : '';
+        const badgeColor  = priority === 'urgent' ? '#dc2626' : '#d97706';
+        const date        = t.created_at ? new Date(t.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
         const testId      = t.test_id || t.id;
         return `
-        <div class="list-item justify-between" style="align-items:center;">
+        <div class="list-item" style="align-items:center;justify-content:space-between;">
             <div style="flex:1;min-width:0;">
-                <div class="font-medium text-sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                    ${patientName} — ${t.test_name}
+                <div style="font-weight:700;font-size:.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    <i class="bi bi-flask-fill" style="color:#2563eb;"></i> ${t.test_name}
                 </div>
-                <div class="text-xs text-muted">${date}${waitTime}
-                    <span style="background:${badgeColor}20;color:${badgeColor};padding:1px 6px;border-radius:99px;font-weight:600;margin-left:4px;">${priority}</span>
+                <div style="font-size:.75rem;color:#64748b;margin-top:.15rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+                    <i class="bi bi-person-fill"></i> ${patientName}
+                    ${patientId ? `<span style="background:#1e3a8a;color:#fff;border-radius:6px;padding:.1rem .45rem;font-family:monospace;font-size:.68rem;font-weight:700;">${patientId}</span>` : ''}
+                    <span style="color:#94a3b8;">${date}</span>
+                    <span style="background:${badgeColor}20;color:${badgeColor};padding:.1rem .5rem;border-radius:99px;font-weight:700;font-size:.68rem;">${priority.toUpperCase()}</span>
                 </div>
             </div>
-            <a href="/templates/lab/enter_lab_results.html?test_id=${testId}" class="btn btn-sm btn-primary" style="margin-left:8px;white-space:nowrap;">Process</a>
+            <a href="/templates/lab/enter_lab_results.html?test_id=${testId}"
+               class="btn btn-sm btn-primary" style="margin-left:.75rem;white-space:nowrap;flex-shrink:0;">
+               <i class="bi bi-pencil-square"></i> Enter
+            </a>
         </div>`;
-    }).join('');
+    }).join('') +
+    (tests.length > 8 ? `
+        <div class="list-item" style="justify-content:center;padding:.6rem;">
+            <a href="/templates/lab/enter_lab_results.html" class="btn btn-sm btn-outline" style="width:100%;justify-content:center;">
+                <i class="bi bi-list-check"></i> View All ${tests.length} Pending
+            </a>
+        </div>` : '');
 }
 
 function renderCompletedList(tests) {

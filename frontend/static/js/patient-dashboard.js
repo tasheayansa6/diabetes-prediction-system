@@ -220,6 +220,37 @@ function renderAppointmentDailyBlock(summary) {
     block.style.display = '';
 }
 
+function renderPayments(payments) {
+    const body = document.getElementById('paymentSummaryBody');
+    if (!body) return;
+    if (!payments.length) {
+        body.innerHTML = '<div style="padding:1.5rem;text-align:center;color:#90a4ae;font-size:.85rem;"><i class="bi bi-credit-card" style="font-size:1.2rem;display:block;margin-bottom:.4rem;"></i> No payments yet. <a href="/templates/payment/payment_page.html" style="color:#1565c0;">Make your first payment →</a></div>';
+        return;
+    }
+    const statusColor = { completed:'#2e7d32', pending:'#e65100', failed:'#c62828', refunded:'#6a1b9a' };
+    const statusBg    = { completed:'#e8f5e9', pending:'#fff3e0', failed:'#ffebee', refunded:'#f3e5f5' };
+    const methodIcon  = { cash:'bi-cash-coin', card:'bi-credit-card', chapa:'bi-phone', bank_transfer:'bi-bank', insurance:'bi-shield-check', mobile:'bi-phone' };
+    body.innerHTML = payments.slice(0, 5).map(p => {
+        const date = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : 'N/A';
+        const color = statusColor[p.status] || '#546e7a';
+        const bg    = statusBg[p.status]    || '#f5f7fa';
+        const icon  = methodIcon[p.payment_method] || 'bi-receipt';
+        return `<div style="display:flex;align-items:center;gap:1rem;padding:.85rem 1.25rem;border-bottom:1px solid #f5f7fa;">
+            <div style="width:38px;height:38px;border-radius:12px;background:#fff3e0;color:#e65100;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">
+                <i class="bi ${esc(icon)}"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:.85rem;color:#1a237e;">${esc(p.payment_type || 'Payment')} &bull; <span style="font-family:monospace;font-size:.78rem;color:#64748b;">${esc(p.payment_id)}</span></div>
+                <div style="font-size:.75rem;color:#90a4ae;">${esc(date)} &bull; ${esc((p.payment_method || '').replace('_',' '))}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+                <div style="font-weight:800;font-size:.95rem;color:#1a237e;">ETB ${parseFloat(p.total_amount || p.amount || 0).toFixed(2)}</div>
+                <span style="background:${bg};color:${color};border-radius:99px;padding:.15em .65em;font-size:.68rem;font-weight:700;">${esc((p.status||'').toUpperCase())}</span>
+            </div>
+        </div>`;
+    }).join('');
+}
+
 async function initDashboard() {
     const user = checkAuth('patient');
     if (!user) return;
@@ -230,12 +261,13 @@ async function initDashboard() {
     if (sb) sb.textContent = user.name || user.username;
     document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const [dashRes, predRes, rxRes, apptRes, dailyApptRes] = await Promise.all([
+    const [dashRes, predRes, rxRes, apptRes, dailyApptRes, payRes] = await Promise.all([
         apiFetch('/patient/dashboard'),
         apiFetch('/patient/predictions?limit=50'),
         apiFetch('/patient/prescriptions?limit=50'),
         apiFetch('/patient/appointments?limit=50'),
-        apiFetch('/patient/appointments/daily-summary')
+        apiFetch('/patient/appointments/daily-summary'),
+        apiFetch('/payments/history?limit=5')
     ]);
 
     if (!dashRes.success) return;
@@ -243,6 +275,9 @@ async function initDashboard() {
     const predictions   = predRes.success  ? predRes.predictions   : [];
     const prescriptions = rxRes.success    ? rxRes.prescriptions   : [];
     const appointments  = apptRes.success  ? apptRes.appointments  : [];
+    const payments      = payRes.success   ? payRes.payments       : [];
+
+    renderPayments(payments);
 
     const activeRx = prescriptions.filter(r =>
         ['active','pending','pending_pharmacist','verified','dispensed'].includes(r.status)

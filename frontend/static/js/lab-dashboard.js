@@ -134,10 +134,11 @@ async function loadDashboard() {
         const { statistics: stats, recent_activity, technician_info } = data.dashboard;
 
         // Stat cards
-        document.getElementById('statPending').textContent   = stats.pending_tests   ?? 0;
-        document.getElementById('statCompleted').textContent = stats.completed_today ?? 0;
-        document.getElementById('statTotal').textContent     = stats.total_processed ?? 0;
-        document.getElementById('statUrgent').textContent    = stats.urgent_pending  ?? 0;
+        const _s = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v ?? 0; };
+        _s('statPending',   stats.pending_tests);
+        _s('statCompleted', stats.completed_today);
+        _s('statTotal',     stats.total_processed);
+        _s('statUrgent',    stats.urgent_pending);
 
         // Pending list — from dedicated endpoint (all pending, not just last 10)
         const pendingTests = pendingData.success ? pendingData.pending_tests : [];
@@ -156,13 +157,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!user) return;
 
     const name = user.name || user.username;
-    document.getElementById('topUserName').textContent = name;
-    document.getElementById('userName').textContent = name;
+    const _t = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    _t('topUserName', name);
+    _t('userName',    name);
 
     const today = new Date();
-    document.getElementById('currentDate').textContent = today.toLocaleDateString('en-US', {
+    _t('currentDate', today.toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-    });
+    }));
 
     loadDashboard();
 });

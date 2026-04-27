@@ -166,8 +166,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!user) return;
 
     const name = user.name || user.username;
-    document.getElementById('topUserName').textContent = name;
-    document.getElementById('userName').textContent    = name;
+    const _t = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    _t('topUserName', name);
+    _t('userName',    name);
 
     document.getElementById('testTypeForm').addEventListener('submit', handleTestTypeSubmit);
 

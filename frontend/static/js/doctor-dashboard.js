@@ -126,7 +126,7 @@ async function loadDashboard() {
         if (el) el.textContent = name;
     });
 
-    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+    const el = document.getElementById('currentDate'); if (el) el.textContent = new Date().toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 

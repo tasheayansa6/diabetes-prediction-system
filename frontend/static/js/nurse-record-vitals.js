@@ -367,7 +367,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const user = checkAuth('nurse');
     if (!user) return;
 
-    document.getElementById('navUserName').textContent = user.name || user.username;
+    const navEl = document.getElementById('navUserName'); if (navEl) navEl.textContent = user.name || user.username;
     const sb = document.getElementById('sidebarName');
     if (sb) sb.textContent = user.name || user.username;
 

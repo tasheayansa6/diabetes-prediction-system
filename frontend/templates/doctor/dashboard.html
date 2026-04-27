@@ -78,7 +78,7 @@
                         <a href="/templates/doctor/patient_list.html" class="action-btn blue"><i class="bi bi-people"></i> View Patients</a>
                         <a href="/templates/doctor/diagnosis.html" class="action-btn green"><i class="bi bi-clipboard-pulse"></i> New Diagnosis</a>
                         <a href="/templates/doctor/prescribe_medication.html" class="action-btn cyan"><i class="bi bi-capsule"></i> Prescribe</a>
-                        <a href="/templates/doctor/lab_requests.html" class="action-btn yellow"><i class="bi bi-clipboard2-pulse"></i> Lab Request</a>
+                        <button onclick="openQuickLabModal()" class="action-btn yellow" style="border:none;cursor:pointer;"><i class="bi bi-flask"></i> Order Lab Test</button>
                     </div>
                 </div>
             </div>
@@ -162,6 +162,55 @@
             </div>
         </main>
     </div>
+
+<!-- Quick Diabetes Lab Order Modal -->
+<div id="quickLabModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:18px;width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden;">
+    <div style="background:linear-gradient(90deg,#d97706,#f59e0b);color:#fff;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <h5 style="margin:0;font-weight:700;"><i class="bi bi-flask"></i> Order Diabetes Lab Test</h5>
+      <button onclick="closeQuickLabModal()" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <div style="padding:1.25rem;overflow-y:auto;flex:1;">
+      <div id="quickLabAlert" style="display:none;" class="alert alert-danger mb-3"></div>
+      <div style="margin-bottom:1rem;">
+        <label class="form-label">Patient <span style="color:#ef4444;">*</span></label>
+        <select class="form-input" id="qlPatient"><option value="">Loading patients...</option></select>
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label class="form-label">Diabetes Test <span style="color:#ef4444;">*</span></label>
+        <select class="form-input" id="qlTest">
+          <option value="">Select test...</option>
+          <option value="Blood Glucose (Fasting)|BG">Blood Glucose (Fasting)</option>
+          <option value="Random Blood Glucose|RBG">Random Blood Glucose</option>
+          <option value="HbA1c (Glycated Haemoglobin)|HBA1C">HbA1c (Glycated Haemoglobin)</option>
+          <option value="Oral Glucose Tolerance (OGTT)|OGTT">Oral Glucose Tolerance (OGTT)</option>
+          <option value="Postprandial Glucose (2hr)|PPG">Postprandial Glucose (2hr)</option>
+          <option value="Insulin Level (Fasting)|INS">Insulin Level (Fasting)</option>
+          <option value="C-Peptide|CPEP">C-Peptide</option>
+          <option value="Fructosamine|FRUCT">Fructosamine</option>
+          <option value="HOMA-IR (Insulin Resistance)|HOMAIR">HOMA-IR (Insulin Resistance)</option>
+          <option value="GAD Antibodies (Anti-GAD65)|GADAB">GAD Antibodies (Anti-GAD65)</option>
+          <option value="Urine Microalbumin|UALB">Urine Microalbumin</option>
+          <option value="Urine Ketones|UKET">Urine Ketones</option>
+          <option value="Lipid Profile (Full)|LIPID">Lipid Profile (Full)</option>
+          <option value="TSH (Thyroid Stimulating Hormone)|TSH">TSH (Thyroid Stimulating Hormone)</option>
+          <option value="Vitamin D (25-OH)|VITD">Vitamin D (25-OH)</option>
+        </select>
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label class="form-label">Priority</label>
+        <select class="form-input" id="qlPriority">
+          <option value="normal">Normal</option>
+          <option value="urgent">🔴 Urgent</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding:1rem 1.5rem;border-top:1px solid #f1f5f9;display:flex;gap:.75rem;justify-content:flex-end;flex-shrink:0;">
+      <button class="btn btn-secondary" onclick="closeQuickLabModal()">Cancel</button>
+      <button class="btn btn-primary" id="qlSubmitBtn" onclick="submitQuickLab()" style="background:#d97706;border-color:#d97706;"><i class="bi bi-flask"></i> Order Test</button>
+    </div>
+  </div>
+</div>
 
     <footer class="footer">
   <div class="footer-inner">

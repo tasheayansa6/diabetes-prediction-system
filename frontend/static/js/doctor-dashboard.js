@@ -217,6 +217,74 @@ document.addEventListener('DOMContentLoaded', () => {
     initCharts();
 });
 
+// ── Quick Lab Order Modal ─────────────────────────────────────────────────────
+async function openQuickLabModal() {
+    document.getElementById('quickLabModal').style.display = 'flex';
+    document.getElementById('quickLabAlert').style.display = 'none';
+    document.getElementById('qlTest').value = '';
+    document.getElementById('qlPriority').value = 'normal';
+    // Load patients into select
+    const sel = document.getElementById('qlPatient');
+    sel.innerHTML = '<option value="">Loading...</option>';
+    try {
+        const data = await apiFetch('/api/doctor/patients?limit=100');
+        const patients = data.patients || [];
+        sel.innerHTML = '<option value="">Select patient...</option>' +
+            patients.map(p => `<option value="${p.id}">${esc(p.username)} (${esc(p.patient_id || 'ID:' + p.id)})</option>`).join('');
+    } catch (_) {
+        sel.innerHTML = '<option value="">Failed to load patients</option>';
+    }
+}
+
+function closeQuickLabModal() {
+    document.getElementById('quickLabModal').style.display = 'none';
+}
+
+async function submitQuickLab() {
+    const patientId = document.getElementById('qlPatient').value;
+    const testVal   = document.getElementById('qlTest').value;
+    const priority  = document.getElementById('qlPriority').value;
+    const alertEl   = document.getElementById('quickLabAlert');
+    const btn       = document.getElementById('qlSubmitBtn');
+
+    if (!patientId) { alertEl.textContent = 'Please select a patient.'; alertEl.style.display = ''; return; }
+    if (!testVal)   { alertEl.textContent = 'Please select a test.';    alertEl.style.display = ''; return; }
+    alertEl.style.display = 'none';
+
+    const [testName] = testVal.split('|');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Ordering...';
+
+    try {
+        const res  = await fetch('/api/doctor/lab-requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+            body: JSON.stringify({ patient_id: parseInt(patientId), test_name: testName, test_category: 'Diabetes', priority })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        closeQuickLabModal();
+        // Refresh lab count
+        const labData = await apiFetch('/api/doctor/lab-requests/statistics');
+        if (labData.success) {
+            const el = document.getElementById('labRequestsCount');
+            if (el) el.textContent = labData.statistics?.by_status?.pending ?? 0;
+        }
+        // Show success toast
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:#059669;color:#fff;padding:.75rem 1.25rem;border-radius:10px;font-size:.875rem;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);';
+        toast.innerHTML = `<i class="bi bi-check-circle-fill"></i> Lab test ordered: ${esc(testName)}`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3500);
+    } catch (err) {
+        alertEl.textContent = 'Error: ' + err.message;
+        alertEl.style.display = '';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-flask"></i> Order Test';
+    }
+}
+
 // ── Doctor Availability ───────────────────────────────────────────────────────
 async function loadAvailability() {
     try {

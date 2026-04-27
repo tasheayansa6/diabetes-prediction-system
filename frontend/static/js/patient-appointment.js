@@ -227,6 +227,26 @@ async function submitAppointment() {
         });
         if (data.success) {
             showToast('Appointment booked successfully!', 'success');
+            // Show detailed confirmation message
+            const d = state.selectedDoctor;
+            const dateStr = state.selectedDate
+                ? new Date(state.selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' })
+                : state.selectedDate;
+            const confirmBanner = document.createElement('div');
+            confirmBanner.style.cssText = 'background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1.5px solid #6ee7b7;border-radius:14px;padding:1.1rem 1.25rem;margin-bottom:1.25rem;display:flex;align-items:flex-start;gap:.85rem;';
+            confirmBanner.innerHTML =
+                '<i class="bi bi-check-circle-fill" style="color:#059669;font-size:1.4rem;flex-shrink:0;margin-top:.1rem;"></i>' +
+                '<div>' +
+                '<div style="font-weight:700;color:#065f46;font-size:.95rem;">Appointment Confirmed!</div>' +
+                `<div style="font-size:.82rem;color:#047857;margin-top:.3rem;">` +
+                `<i class="bi bi-person-badge"></i> Dr. ${esc(d ? d.name : 'Doctor')} &nbsp;|&nbsp; ` +
+                `<i class="bi bi-calendar3"></i> ${esc(dateStr)} &nbsp;|&nbsp; ` +
+                `<i class="bi bi-clock"></i> ${esc(state.selectedTime || 'TBD')}` +
+                `</div>` +
+                '<div style="font-size:.78rem;color:#059669;margin-top:.25rem;"><i class="bi bi-bell-fill"></i> A confirmation notification has been sent to you.</div>' +
+                '</div>';
+            document.querySelector('.main').prepend(confirmBanner);
+            setTimeout(() => confirmBanner.remove(), 8000);
             resetForm();
             await loadUpcoming();
             setTimeout(() => showTab('upcoming'), 900);

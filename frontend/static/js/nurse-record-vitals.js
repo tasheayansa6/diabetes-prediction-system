@@ -380,7 +380,27 @@ document.addEventListener('DOMContentLoaded', function () {
             const select = document.getElementById('patient_id');
             if (select) {
                 select.value = urlPatientId;
-                if (select.value == urlPatientId) onPatientChange();
+                // If the option exists, auto-trigger fill and lock the select
+                if (select.value == urlPatientId) {
+                    select.disabled = true;
+                    onPatientChange();
+                } else {
+                    // Patient not in list yet — fetch individually and add option
+                    fetch(`/api/nurse/patient-profile/${urlPatientId}`, {
+                        headers: { 'Authorization': 'Bearer ' + getToken() }
+                    }).then(r => r.json()).then(data => {
+                        if (data.success) {
+                            const p = data.patient;
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = `${p.username} (${p.patient_id || 'ID:' + p.id})`;
+                            select.appendChild(opt);
+                            select.value = p.id;
+                            select.disabled = true;
+                            onPatientChange();
+                        }
+                    }).catch(() => {});
+                }
             }
         }
     });

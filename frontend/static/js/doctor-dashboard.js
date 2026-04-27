@@ -88,11 +88,15 @@ async function loadPatientsList() {
                 </div>
                 <div style="display:flex;gap:4px;flex-shrink:0;">
                     <a href="/templates/doctor/diagnosis.html?patient_id=${p.id}"
-                       class="btn btn-sm btn-primary" style="padding:.2rem .5rem;font-size:.72rem;">
+                       class="btn btn-sm btn-primary" style="padding:.2rem .5rem;font-size:.72rem;" title="Diagnose">
                         <i class="bi bi-clipboard-pulse"></i>
                     </a>
+                    <a href="/templates/nurse/record_vitals.html?patient_id=${p.id}"
+                       class="btn btn-sm btn-outline" style="padding:.2rem .5rem;font-size:.72rem;color:#059669;border-color:#6ee7b7;" title="Record Vitals">
+                        <i class="bi bi-heart-pulse"></i>
+                    </a>
                     <a href="/templates/doctor/lab_requests.html?patient_id=${p.id}"
-                       class="btn btn-sm btn-outline" style="padding:.2rem .5rem;font-size:.72rem;">
+                       class="btn btn-sm btn-outline" style="padding:.2rem .5rem;font-size:.72rem;" title="Lab Test">
                         <i class="bi bi-flask"></i>
                     </a>
                 </div>

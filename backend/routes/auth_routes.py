@@ -800,6 +800,40 @@ def refresh_token():
 
 # ============ SHARED NOTIFICATIONS (all roles) ============
 
+# ── WebSocket room management ──────────────────────────────────────────────────
+try:
+    from flask_socketio import join_room, leave_room
+    from backend.extensions import socketio
+
+    @socketio.on('join')
+    def on_join(data):
+        """Client sends {token} to join their private notification room."""
+        try:
+            token = (data or {}).get('token', '')
+            if token.startswith('Bearer '):
+                token = token[7:]
+            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+            user_id = payload.get('user_id')
+            if user_id:
+                join_room(f'user_{user_id}')
+        except Exception:
+            pass
+
+    @socketio.on('leave')
+    def on_leave(data):
+        try:
+            token = (data or {}).get('token', '')
+            if token.startswith('Bearer '):
+                token = token[7:]
+            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+            user_id = payload.get('user_id')
+            if user_id:
+                leave_room(f'user_{user_id}')
+        except Exception:
+            pass
+except ImportError:
+    pass  # Flask-SocketIO not installed
+
 def _get_user_id_from_token():
     token = request.headers.get('Authorization', '')
     if token.startswith('Bearer '):

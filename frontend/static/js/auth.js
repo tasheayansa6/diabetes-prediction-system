@@ -10,6 +10,40 @@ const ROLE_DASHBOARDS = {
     admin:          '/templates/admin/dashboard.html'
 };
 
+// ── Role-based page protection ───────────────────────────────────────────────
+// Maps URL path prefixes to required roles. Runs on every page load.
+(function _guardPage() {
+    if (typeof window === 'undefined') return;
+    const path = window.location.pathname;
+    if (!path.startsWith('/templates/')) return;
+
+    const ROLE_GUARDS = [
+        { prefix: '/templates/admin/',      roles: ['admin'] },
+        { prefix: '/templates/doctor/',     roles: ['doctor'] },
+        { prefix: '/templates/nurse/',      roles: ['nurse'] },
+        { prefix: '/templates/lab/',        roles: ['lab_technician'] },
+        { prefix: '/templates/pharmacist/', roles: ['pharmacist'] },
+        { prefix: '/templates/patient/',    roles: ['patient'] },
+        { prefix: '/templates/payment/',    roles: ['patient', 'admin'] },
+    ];
+
+    const guard = ROLE_GUARDS.find(g => path.startsWith(g.prefix));
+    if (!guard) return;
+
+    const token = localStorage.getItem('token');
+    const user  = JSON.parse(localStorage.getItem('user') || '{}');
+
+    if (!token || !user.role) {
+        window.location.replace('/login');
+        return;
+    }
+    if (!guard.roles.includes(user.role)) {
+        // Redirect to their own dashboard instead of showing a blank page
+        const dash = ROLE_DASHBOARDS[user.role] || '/login';
+        window.location.replace(dash);
+    }
+}());
+
 // ── Full localStorage wipe ────────────────────────────────────────────────────
 // Called on logout AND on login (to clear any previous user's data).
 function _clearAllStorage() {

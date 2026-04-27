@@ -152,15 +152,30 @@ def send_lab_results_ready(recipient_email, recipient_name, test_name, test_id):
     return _send("Your Lab Results are Ready – Diabetes Prediction System", recipient_email, html)
 
 
-def push_notification(user_id, title, message, type='info', category='general'):
-    """Save an in-app notification to the database."""
+def push_notification(user_id, title, message, type='info', category='general', link=''):
+    """Save an in-app notification to the database AND emit via WebSocket."""
     try:
         from backend.models.notification import Notification
-        from backend.extensions import db
-        notif = Notification(user_id=user_id, title=title, message=message,
-                             type=type, category=category)
+        from backend.extensions import db, socketio
+        notif = Notification(
+            user_id=user_id, title=title, message=message,
+            type=type, category=category, is_read=False, link=link
+        )
         db.session.add(notif)
         db.session.commit()
+        # Emit real-time event to the user's private room
+        try:
+            socketio.emit('notification', {
+                'id': notif.id,
+                'title': title,
+                'message': message,
+                'type': type,
+                'link': link,
+                'is_read': False,
+                'created_at': notif.created_at.isoformat() if notif.created_at else None
+            }, room=f'user_{user_id}')
+        except Exception:
+            pass  # WebSocket emit is best-effort
     except Exception as e:
         current_app.logger.error(f"push_notification failed: {e}")
 

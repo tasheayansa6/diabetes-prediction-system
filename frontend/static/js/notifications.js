@@ -1,8 +1,40 @@
 /**
- * Notification System
+ * Notification System — polling + WebSocket real-time
  */
 
 function getToken() { return localStorage.getItem('token'); }
+
+// ── WebSocket real-time connection ───────────────────────────────────────────────
+let _socket = null;
+
+function _connectSocket() {
+    if (_socket) return;
+    // Load socket.io client dynamically if not already loaded
+    if (typeof io === 'undefined') {
+        const s = document.createElement('script');
+        s.src = '/static/vendor/js/socket.io.min.js';
+        s.onload = _connectSocket;
+        document.head.appendChild(s);
+        return;
+    }
+    try {
+        _socket = io({ transports: ['websocket', 'polling'] });
+        _socket.on('connect', function() {
+            _socket.emit('join', { token: getToken() });
+        });
+        _socket.on('notification', function(data) {
+            // Immediately reload notifications on real-time push
+            loadNotifications();
+            // Flash the bell
+            const bell = document.getElementById('notifBell');
+            if (bell) {
+                bell.style.transform = 'scale(1.3)';
+                setTimeout(() => { bell.style.transform = ''; }, 300);
+            }
+        });
+        _socket.on('disconnect', function() { _socket = null; });
+    } catch(e) { console.warn('WebSocket connect failed:', e); }
+}
 
 const ICON_MAP = {
     'high_risk_alert': { icon: 'bi-exclamation-triangle-fill', color: '#dc2626' },
@@ -80,7 +112,8 @@ async function initNotifications() {
     });
 
     await loadNotifications();
-    _notifInterval = setInterval(loadNotifications, 60000);
+    _notifInterval = setInterval(loadNotifications, 30000); // 30s fallback polling
+    _connectSocket(); // real-time WebSocket
 }
 
 async function loadNotifications() {

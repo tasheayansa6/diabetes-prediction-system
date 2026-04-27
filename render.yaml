@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements_production.txt
-    startCommand: python seed_postgres.py; gunicorn run:app --workers 4 --threads 2 --timeout 120 --bind 0.0.0.0:$PORT --worker-class gthread --max-requests 1000 --max-requests-jitter 100
+    startCommand: python seed_postgres.py; gunicorn run:app --workers 2 --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker --timeout 120 --bind 0.0.0.0:$PORT --max-requests 1000 --max-requests-jitter 100
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
@@ -29,6 +29,18 @@ services:
         value: https://diabetes-prediction-system-n7ik.onrender.com/templates/payment/payment_success.html
       - key: MAIL_SUPPRESS_SEND
         value: "False"
+      - key: MAIL_SERVER
+        value: "smtp.gmail.com"
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USE_TLS
+        value: "True"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
       - key: CHAPA_SECRET_KEY
         sync: false
       - key: CHAPA_PUBLIC_KEY

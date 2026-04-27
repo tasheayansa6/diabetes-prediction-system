@@ -3,6 +3,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_bcrypt import Bcrypt
 from flask_mail import Mail
+from flask_socketio import SocketIO
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 import sqlite3
@@ -12,6 +13,7 @@ migrate = Migrate()
 login_manager = LoginManager()
 bcrypt = Bcrypt()
 mail = Mail()
+socketio = SocketIO(cors_allowed_origins='*', async_mode='gevent')
 
 @event.listens_for(Engine, 'connect')
 def set_sqlite_wal(dbapi_conn, connection_record):

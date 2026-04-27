@@ -1,6 +1,7 @@
 import os
 from flask import send_from_directory, send_file
 from backend import create_app
+from backend.extensions import socketio
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if not os.path.exists(os.path.join(PROJECT_ROOT, 'backend')):
@@ -73,12 +74,12 @@ if __name__ == '__main__':
     print(f"Debug Mode: {app.config.get('DEBUG', False)}")
     print(f"Database: {app.config.get('SQLALCHEMY_DATABASE_URI', 'Not configured')}")
     print("=" * 60)
-    print("\n Server starting...")
+    print("\n Server starting with WebSocket support...")
     print(" Access the API at: http://localhost:5000")
     print("Health check: http://localhost:5000/health")
     print("Press CTRL+C to quit\n")
-    
-    app.run(
+    socketio.run(
+        app,
         debug=app.config.get('DEBUG', False),
         host='0.0.0.0',
         port=int(os.getenv('PORT', 5000)),

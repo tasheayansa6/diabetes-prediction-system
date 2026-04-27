@@ -439,6 +439,20 @@ def dispense_medication(current_pharmacist, prescription_id):
             except Exception:
                 pass
 
+        # Send email to patient
+        try:
+            from backend.services.notification_service import send_prescription_ready
+            patient_user = User.query.get(prescription.patient_id)
+            if patient_user:
+                send_prescription_ready(
+                    patient_user.email,
+                    patient_user.username,
+                    prescription.medication,
+                    prescription.prescription_id
+                )
+        except Exception:
+            pass
+
         return jsonify({
             "success": True,
             "message": "Medication dispensed successfully",

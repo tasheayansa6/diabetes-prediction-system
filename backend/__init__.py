@@ -8,7 +8,7 @@ env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 from backend.config import config
-from backend.extensions import db, migrate, login_manager, bcrypt, mail
+from backend.extensions import db, migrate, login_manager, bcrypt, mail, socketio
 from backend.utils.logger import configure_logging
 from backend.middleware.error_handler import register_error_handlers
 from backend.middleware.request_logger import setup_request_logging
@@ -93,6 +93,7 @@ def create_app(config_name="development"):
     login_manager.init_app(app)
     bcrypt.init_app(app)
     mail.init_app(app)
+    socketio.init_app(app)
 
     # Create all tables (works for both SQLite and PostgreSQL)
     try:

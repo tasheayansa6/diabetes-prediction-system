@@ -464,6 +464,34 @@ def process_payment(current_user):
 
         _send_confirmation(patient_id, payment.total_amount, payment.payment_id)
 
+        # Notify admin when cash/insurance payment is submitted (needs manual approval)
+        if method in ('cash', 'insurance', 'bank_transfer') and payment.payment_status == 'pending':
+            try:
+                from backend.models.notification import Notification
+                from backend.models.user import User as _User
+                patient_obj = _User.query.get(patient_id)
+                patient_name = patient_obj.username if patient_obj else f'Patient #{patient_id}'
+                admins = _User.query.filter_by(role='admin', is_active=True).all()
+                for adm in admins:
+                    db.session.add(Notification(
+                        user_id=adm.id,
+                        title=f'Payment Pending Approval — {method.replace("_"," ").title()}',
+                        message=(
+                            f'{patient_name} submitted a {method.replace("_"," ")} payment of '
+                            f'ETB {float(payment.total_amount):.2f} '
+                            f'(ID: {payment.payment_id}) for {payment.payment_type}. '
+                            f'Please review and approve.'
+                        ),
+                        type='payment',
+                        category='general',
+                        is_read=False,
+                        link='/templates/admin/manage_payments.html',
+                        created_at=datetime.utcnow()
+                    ))
+                db.session.commit()
+            except Exception:
+                pass
+
         return jsonify({
             'success': True,
             'message': 'Payment processed successfully',

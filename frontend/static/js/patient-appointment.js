@@ -199,7 +199,19 @@ async function submitAppointment() {
 
     const btn = document.getElementById('confirmBtn');
     btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Booking...';
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Checking...';
+
+    // Double-check slot is still available before submitting
+    try {
+        const slotCheck = await apiFetch(`/patient/doctors/${state.selectedDoctor.id}/booked-slots?date=${state.selectedDate}`);
+        if (slotCheck.success && (slotCheck.booked_slots || []).includes(state.selectedTime)) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-calendar-check"></i> Confirm Appointment';
+            showToast('That time slot was just booked by someone else. Please choose another.', 'danger');
+            await loadTimeSlots(); // refresh slots
+            return;
+        }
+    } catch (_) {}
 
     try {
         const data = await apiFetch('/patient/appointments', {

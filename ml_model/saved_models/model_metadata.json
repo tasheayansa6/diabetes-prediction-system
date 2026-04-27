@@ -1,7 +1,7 @@
 {
   "algorithm": "Gradient Boosting",
   "version": "v2.0.0",
-  "trained_at": "2026-04-09T20:03:13.584988",
+  "trained_at": "2026-04-27T09:34:48.409380",
   "accuracy": 88.79,
   "precision": 89.47,
   "recall": 80.95,

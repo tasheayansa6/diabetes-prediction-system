@@ -33,7 +33,7 @@
   },
   {
     "id": 3,
-    "version": "v2.1.0",
+    "version": "v2.2.0",
     "algorithm": "Gradient Boosting",
     "filename": "gradient_boosting.pkl",
     "accuracy": 88.79,
@@ -41,10 +41,12 @@
     "recall": 80.95,
     "f1Score": 85.0,
     "rocAuc": 97.26,
+    "cvAccuracy": 86.07,
     "trainingSamples": 1068,
+    "testSamples": 214,
     "features": 8,
-    "date": "2026-04-10",
+    "date": "2026-04-27",
     "status": "active",
-    "notes": "Best model. Retrained on Pima (768) + Frankfurt (300) = 1068 samples. Accuracy 88.79%, ROC-AUC 97.26%."
+    "notes": "Retrained v2.2.0. Pima (768) + Frankfurt (300) = 1068 samples. Accuracy 88.79%, Precision 89.47%, Recall 80.95%, F1 85.0%, ROC-AUC 97.26%, CV-5 86.07%."
   }
 ]

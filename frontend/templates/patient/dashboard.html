@@ -170,6 +170,31 @@
         .appt-mini-main { font-size:.78rem; color:#334155; }
         .appt-mini-status { margin-left:.4rem; color:#64748b; font-size:.72rem; text-transform:capitalize; }
         .appt-mini-empty { font-size:.78rem; color:#94a3b8; }
+
+        /* ── Urgent pulsing animations ── */
+        @keyframes urgentPulse   { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.6);background:rgba(220,38,38,.15);}50%{box-shadow:0 0 0 10px rgba(220,38,38,0);background:rgba(220,38,38,.28);} }
+        @keyframes urgentPulseVH { 0%,100%{box-shadow:0 0 0 0 rgba(127,29,29,.7);background:rgba(139,0,0,.18);}50%{box-shadow:0 0 0 12px rgba(127,29,29,0);background:rgba(139,0,0,.32);} }
+        @keyframes bookPulse     { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.7);transform:translateY(0);}50%{box-shadow:0 0 0 10px rgba(220,38,38,0);transform:translateY(-3px);} }
+        @keyframes bookPulseVH   { 0%,100%{box-shadow:0 0 0 0 rgba(127,29,29,.8);transform:translateY(0);}50%{box-shadow:0 0 0 14px rgba(127,29,29,0);transform:translateY(-4px);} }
+        @keyframes pendingPulse  { 0%,100%{opacity:1;}50%{opacity:.5;} }
+
+        .hero-right.risk-urgent    { animation:urgentPulse   1.4s ease-in-out infinite; border-color:#ef4444 !important; }
+        .hero-right.risk-urgent-vh { animation:urgentPulseVH 1.1s ease-in-out infinite; border-color:#7f1d1d !important; }
+        .risk-badge.risk-high      { background:#dc2626 !important; color:#fff !important; animation:urgentPulse   1.4s ease-in-out infinite; }
+        .risk-badge.risk-veryhigh  { background:#7f1d1d !important; color:#fff !important; animation:urgentPulseVH 1.1s ease-in-out infinite; }
+        .pred-dot.high     { background:#dc2626; box-shadow:0 0 0 3px rgba(220,38,38,.3); animation:urgentPulse   1.4s ease-in-out infinite; }
+        .pred-dot.veryhigh { background:#7f1d1d; box-shadow:0 0 0 3px rgba(127,29,29,.3); animation:urgentPulseVH 1.1s ease-in-out infinite; }
+
+        .action-card.urgent-high   { border-color:#dc2626 !important; animation:bookPulse   1.4s ease-in-out infinite; }
+        .action-card.urgent-high .ac-icon  { background:#fee2e2 !important; color:#dc2626 !important; }
+        .action-card.urgent-high .ac-label { color:#dc2626 !important; }
+        .action-card.urgent-high .ac-sub   { color:#ef4444 !important; }
+        .action-card.urgent-vh    { border-color:#7f1d1d !important; animation:bookPulseVH 1.1s ease-in-out infinite; }
+        .action-card.urgent-vh .ac-icon    { background:#fecaca !important; color:#7f1d1d !important; }
+        .action-card.urgent-vh .ac-label   { color:#7f1d1d !important; }
+        .action-card.urgent-vh .ac-sub     { color:#991b1b !important; }
+
+        .payment-pending-badge { animation:pendingPulse 1.2s ease-in-out infinite; background:#d97706; color:#fff; border-radius:99px; padding:.15em .65em; font-size:.68rem; font-weight:700; display:inline-flex; align-items:center; gap:.3rem; }
     </style>
 </head>
 <body>
@@ -257,7 +282,7 @@
                         <div class="ac-label">New Prediction</div>
                         <div class="ac-sub">Run ML analysis</div>
                     </a>
-                    <a href="/templates/patient/appointment.html" class="action-card green">
+                    <a href="/templates/patient/appointment.html" class="action-card green" id="bookApptCard">
                         <div class="ac-icon"><i class="bi bi-calendar-plus-fill"></i></div>
                         <div class="ac-label">Book Appointment</div>
                         <div class="ac-sub">Schedule a visit</div>
@@ -393,7 +418,7 @@
 
 <script src="/static/js/auth.js"></script>
 <script src="/static/js/notifications.js"></script>
-<script src="/static/js/patient-dashboard.js?v=3"></script>
+<script src="/static/js/patient-dashboard.js?v=4"></script>
 <script>
     if(typeof initNotifications==='function') initNotifications('patient');
 </script>

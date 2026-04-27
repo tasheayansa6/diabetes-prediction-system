@@ -67,12 +67,26 @@ function renderStats(dashboard, predictions, prescriptions, appointments) {
             ? latest.probability_percent.toFixed(1) + '% probability'
             : '';
 
-        // Urgent pulsing animation on hero risk box
+        // Urgent pulsing on hero risk box
         const heroRight = document.querySelector('.hero-right');
         if (heroRight) {
             heroRight.classList.remove('risk-urgent', 'risk-urgent-vh');
             if (latest.risk_level === 'VERY HIGH RISK') heroRight.classList.add('risk-urgent-vh');
-            else if (latest.risk_level === 'HIGH RISK')  heroRight.classList.add('risk-urgent');
+            else if (latest.risk_level === 'HIGH RISK') heroRight.classList.add('risk-urgent');
+        }
+        // Urgent pulsing on Book Appointment card
+        const bookCard = document.getElementById('bookApptCard');
+        if (bookCard) {
+            bookCard.classList.remove('urgent-high', 'urgent-vh');
+            if (latest.risk_level === 'VERY HIGH RISK') {
+                bookCard.classList.add('urgent-vh');
+                const sub = bookCard.querySelector('.ac-sub');
+                if (sub) sub.textContent = 'See doctor immediately!';
+            } else if (latest.risk_level === 'HIGH RISK') {
+                bookCard.classList.add('urgent-high');
+                const sub = bookCard.querySelector('.ac-sub');
+                if (sub) sub.textContent = 'Book now — high risk!';
+            }
         }
 
         // Risk alert banner — only for HIGH RISK and VERY HIGH RISK

@@ -159,9 +159,11 @@
         </div>
       </div>
 
-      <!-- Health Metrics + Recommendation -->
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-        <div class="md:col-span-2">
+      <!-- Health Metrics + Recommendation + Right Panel -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1rem;" class="result-grid">
+
+        <!-- LEFT: Health Metrics -->
+        <div>
           <div class="card">
             <div class="card-header" style="background:linear-gradient(90deg,#0891b2,#38bdf8);"><h5><i class="bi bi-heart-pulse me-2"></i>Health Metrics</h5></div>
             <div class="divide-y divide-gray-100">
@@ -172,23 +174,47 @@
               <div class="flex justify-between px-4 py-3 text-sm"><span>Age</span><strong id="age">-- years</strong></div>
             </div>
           </div>
-        </div>
-        <div class="md:col-span-3">
-          <div class="card h-full">
+          <div class="card mt-3">
             <div class="card-header"><h5><i class="bi bi-lightbulb me-2"></i>Recommendation</h5></div>
             <div class="p-4"><p id="recommendation" class="text-sm text-gray-700">Loading recommendation...</p></div>
           </div>
         </div>
-      </div>
 
-      <div class="card mb-4">
-        <div class="card-header"><h5><i class="bi bi-person-check me-2"></i>Doctor Review Status</h5></div>
-        <div class="p-4">
-          <div id="reviewStatusBadge" class="risk-pill pill-moderate">Pending Review</div>
-          <p id="reviewSummary" class="text-sm text-gray-700 mt-3">Awaiting doctor review.</p>
-          <p id="reviewMeta" class="text-xs text-gray-500 mt-2"></p>
+        <!-- RIGHT: Doctor Approval + Prescriptions + Dosage -->
+        <div style="display:flex;flex-direction:column;gap:.85rem;">
+
+          <!-- Doctor Review -->
+          <div class="card">
+            <div class="card-header" style="background:linear-gradient(90deg,#1e3a8a,#2563eb);"><h5 style="color:#fff;"><i class="bi bi-person-check me-2"></i>Doctor Approval</h5></div>
+            <div class="p-4">
+              <div id="reviewStatusBadge" class="risk-pill pill-moderate" style="margin-bottom:.75rem;">Pending Review</div>
+              <p id="reviewSummary" class="text-sm text-gray-700" style="margin-bottom:.4rem;">Awaiting doctor review.</p>
+              <p id="reviewMeta" class="text-xs text-gray-500"></p>
+            </div>
+          </div>
+
+          <!-- Active Prescriptions & Dosage -->
+          <div class="card">
+            <div class="card-header" style="background:linear-gradient(90deg,#059669,#10b981);"><h5 style="color:#fff;"><i class="bi bi-capsule me-2"></i>Active Prescriptions &amp; Dosage</h5></div>
+            <div id="prescriptionPanel">
+              <div style="padding:1rem;text-align:center;color:#94a3b8;font-size:.85rem;">
+                <i class="bi bi-arrow-repeat" style="display:block;font-size:1.2rem;margin-bottom:.3rem;"></i> Loading...
+              </div>
+            </div>
+          </div>
+
+          <!-- Medication Taken Today -->
+          <div class="card">
+            <div class="card-header" style="background:linear-gradient(90deg,#7c3aed,#a78bfa);"><h5 style="color:#fff;"><i class="bi bi-check2-circle me-2"></i>Medication Taken Today</h5></div>
+            <div id="medicationTakenPanel">
+              <div style="padding:1rem;text-align:center;color:#94a3b8;font-size:.85rem;">Loading...</div>
+            </div>
+          </div>
+
         </div>
       </div>
+
+      <style>@media(max-width:768px){.result-grid{grid-template-columns:1fr!important;}}</style>
 
       <!-- Download Section -->
       <div class="alert alert-success mb-4">

@@ -306,6 +306,9 @@ async function loadResult() {
 
         localStorage.setItem('currentPredictionId', predId);
 
+        // ── Right panel: prescriptions + dosage taken ─────────────────────────
+        loadRightPanel();
+
     } catch (err) {
         console.error('loadResult error:', err);
         var main = document.querySelector('.main');
@@ -317,6 +320,118 @@ async function loadResult() {
             + '<i class="bi bi-clock-history"></i> View My Predictions</a>'
             + '<a href="/templates/patient/health_data_form.html" class="btn btn-sm btn-primary mt-2 ms-2">'
             + '<i class="bi bi-plus-circle"></i> New Prediction</a></div>';
+    }
+}
+
+// ── Right panel: prescriptions + dosage taken ─────────────────────────────
+async function loadRightPanel() {
+    await Promise.all([loadPrescriptions(), loadMedicationTaken()]);
+}
+
+async function loadPrescriptions() {
+    const panel = document.getElementById('prescriptionPanel');
+    if (!panel) return;
+    try {
+        const res  = await fetch(API + '/patient/prescriptions?limit=20', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await res.json();
+        const rxs  = (data.prescriptions || []).filter(r =>
+            ['active','pending','verified','dispensed'].includes(r.status)
+        );
+        if (!rxs.length) {
+            panel.innerHTML = '<div style="padding:1rem;text-align:center;color:#94a3b8;font-size:.82rem;"><i class="bi bi-capsule" style="display:block;font-size:1.3rem;margin-bottom:.3rem;"></i>No active prescriptions</div>';
+            return;
+        }
+        const statusColor = { active:'#059669', pending:'#d97706', verified:'#2563eb', dispensed:'#7c3aed' };
+        panel.innerHTML = rxs.map(r => {
+            const sc = statusColor[r.status] || '#64748b';
+            return `<div style="padding:.85rem 1rem;border-bottom:1px solid #f1f5f9;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div style="flex:1;">
+                        <div style="font-weight:700;font-size:.875rem;color:#0f172a;">${esc(r.medication)}</div>
+                        <div style="font-size:.75rem;color:#64748b;margin-top:.2rem;">
+                            <i class="bi bi-droplet-half"></i> ${esc(r.dosage || '—')}
+                            &nbsp;|&nbsp;
+                            <i class="bi bi-clock"></i> ${esc(r.frequency || '—')}
+                            &nbsp;|&nbsp;
+                            <i class="bi bi-calendar3"></i> ${esc(r.duration || '—')}
+                        </div>
+                        ${r.instructions ? `<div style="font-size:.72rem;color:#94a3b8;margin-top:.2rem;"><i class="bi bi-info-circle"></i> ${esc(r.instructions)}</div>` : ''}
+                        <div style="font-size:.7rem;color:#94a3b8;margin-top:.15rem;">By Dr. ${esc(r.doctor_name || '—')}</div>
+                    </div>
+                    <span style="background:${sc}20;color:${sc};border-radius:99px;padding:.15em .6em;font-size:.68rem;font-weight:700;flex-shrink:0;margin-left:.5rem;">${esc(r.status.toUpperCase())}</span>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (_) {
+        panel.innerHTML = '<div style="padding:1rem;color:#dc2626;font-size:.82rem;"><i class="bi bi-exclamation-circle"></i> Failed to load prescriptions</div>';
+    }
+}
+
+async function loadMedicationTaken() {
+    const panel = document.getElementById('medicationTakenPanel');
+    if (!panel) return;
+    try {
+        const res  = await fetch(API + '/patient/prescriptions?limit=20', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await res.json();
+        const rxs  = (data.prescriptions || []).filter(r =>
+            ['active','pending','verified','dispensed'].includes(r.status)
+        );
+        if (!rxs.length) {
+            panel.innerHTML = '<div style="padding:1rem;text-align:center;color:#94a3b8;font-size:.82rem;">No active medications</div>';
+            return;
+        }
+        // Fetch adherence for each prescription
+        const adherenceList = await Promise.all(rxs.map(async r => {
+            try {
+                const ar   = await fetch(API + '/patient/prescriptions/' + r.id + '/adherence', {
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                });
+                const ad   = await ar.json();
+                return { rx: r, today: ad.today_taken || false, days: ad.days_taken || 0 };
+            } catch (_) {
+                return { rx: r, today: false, days: 0 };
+            }
+        }));
+
+        panel.innerHTML = adherenceList.map(({ rx, today, days }) => `
+            <div style="padding:.85rem 1rem;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:.75rem;">
+                <div style="flex:1;">
+                    <div style="font-weight:600;font-size:.85rem;color:#0f172a;">${esc(rx.medication)}</div>
+                    <div style="font-size:.72rem;color:#64748b;">${esc(rx.dosage || '')} &nbsp;|&nbsp; ${days} day${days !== 1 ? 's' : ''} taken</div>
+                </div>
+                ${today
+                    ? '<span style="background:#dcfce7;color:#166534;border-radius:99px;padding:.2em .75em;font-size:.72rem;font-weight:700;"><i class="bi bi-check-circle-fill"></i> Taken Today</span>'
+                    : `<button onclick="markTaken(${rx.id}, this)" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:.3rem .75rem;font-size:.75rem;font-weight:600;cursor:pointer;"><i class="bi bi-check2"></i> Mark Taken</button>`
+                }
+            </div>`).join('');
+    } catch (_) {
+        panel.innerHTML = '<div style="padding:1rem;color:#dc2626;font-size:.82rem;"><i class="bi bi-exclamation-circle"></i> Failed to load</div>';
+    }
+}
+
+async function markTaken(prescriptionId, btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+    try {
+        const res  = await fetch(API + '/patient/prescriptions/' + prescriptionId + '/taken', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await res.json();
+        if (data.success) {
+            // Replace button with taken badge
+            btn.outerHTML = '<span style="background:#dcfce7;color:#166534;border-radius:99px;padding:.2em .75em;font-size:.72rem;font-weight:700;"><i class="bi bi-check-circle-fill"></i> Taken Today</span>';
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2"></i> Mark Taken';
+        }
+    } catch (_) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check2"></i> Mark Taken';
     }
 }
 

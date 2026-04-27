@@ -88,6 +88,10 @@ async function loadLatestPrediction(patientId, token) {
         if (detailData.success && detailData.prediction) {
             latestPrediction = detailData.prediction;
             enablePredictionAssist();
+            // Auto-fill symptoms and diagnosis immediately from prediction
+            applySuggestion('symptoms',  buildSymptomsSuggestion);
+            applySuggestion('diagnosis', buildDiagnosisSuggestion);
+            applySuggestion('treatment', buildTreatmentSuggestion);
         }
     } catch (_) {}
 }

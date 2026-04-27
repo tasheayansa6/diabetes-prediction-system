@@ -35,23 +35,6 @@
     </aside>
     <main class="main">
       <h2 class="page-title"><i class="bi bi-plus-circle"></i> Add New Test Model</h2>
-      <div class="mb-4 px-4 py-3 rounded" style="background:#eff6ff;border:1px solid #bfdbfe;">
-        <div class="flex items-center gap-2 mb-2">
-          <i class="bi bi-info-circle-fill" style="color:#2563eb;"></i>
-          <strong style="color:#1e40af;font-size:0.875rem;">Diabetes Diagnostic Models Only</strong>
-        </div>
-        <select id="quickFillSelect" class="form-input" style="border-color:#bfdbfe;" onchange="quickFill(this.value)">
-          <option value="">— Tests that feed into the ML prediction model —</option>
-          <option value="Blood Glucose (Fasting)|BG001|70-99 mg/dL|Fast for 8 hours before test">Glucose — Blood Glucose (Fasting)</option>
-          <option value="HbA1c|HBA1C|&lt; 5.7%|No fasting required">HbA1c — Glycated Haemoglobin</option>
-          <option value="Insulin Level|INS001|2-25 uU/mL|Fast for 8 hours before test">Insulin — Insulin Level</option>
-          <option value="Oral Glucose Tolerance (OGTT)|OGTT|&lt; 140 mg/dL at 2hr|Fast 8hrs, drink glucose solution">OGTT — Oral Glucose Tolerance</option>
-          <option value="Random Blood Glucose|RBG001|&lt; 200 mg/dL|No fasting required">Glucose — Random Blood Glucose</option>
-          <option value="Postprandial Glucose|PPG001|&lt; 140 mg/dL at 2hr|Test 2 hours after meal">Glucose — Postprandial</option>
-          <option value="C-Peptide|CPEP001|0.5-2.0 ng/mL|Fast for 8 hours before test">C-Peptide</option>
-          <option value="Fructosamine|FRUCT001|200-285 umol/L|No fasting required">Fructosamine</option>
-        </select>
-      </div>
       <div id="formAlert" class="mb-4"></div>
       <div class="card max-w-2xl">
         <div class="card-header"><h5><i class="bi bi-plus-circle"></i> Test Model Details</h5></div>
@@ -60,17 +43,45 @@
             <div><label class="form-label">Test Model Name <span class="text-red-500">*</span></label>
               <select class="form-input" name="test_name" required>
                 <option value="">Select test model...</option>
-                <option value="Blood Glucose (Fasting)">Blood Glucose (Fasting)</option>
-                <option value="HbA1c">HbA1c</option>
-                <option value="Oral Glucose Tolerance (OGTT)">Oral Glucose Tolerance (OGTT)</option>
-                <option value="Insulin Level">Insulin Level</option>
-                <option value="Random Blood Glucose">Random Blood Glucose</option>
-                <option value="Postprandial Glucose">Postprandial Glucose</option>
-                <option value="C-Peptide">C-Peptide</option>
-                <option value="Fructosamine">Fructosamine</option>
+                <option>Blood Glucose (Fasting)</option>
+                <option>Random Blood Glucose</option>
+                <option>Postprandial Glucose (2hr)</option>
+                <option>Oral Glucose Tolerance (OGTT)</option>
+                <option>HbA1c (Glycated Haemoglobin)</option>
+                <option>Fructosamine</option>
+                <option>Glycated Albumin</option>
+                <option>Insulin Level (Fasting)</option>
+                <option>C-Peptide</option>
+                <option>Proinsulin</option>
+                <option>HOMA-IR (Insulin Resistance)</option>
+                <option>GAD Antibodies (Anti-GAD65)</option>
+                <option>Islet Cell Antibodies (ICA)</option>
+                <option>IA-2 Antibodies</option>
+                <option>Zinc Transporter 8 Ab (ZnT8)</option>
+                <option>Urine Microalbumin</option>
+                <option>Urine Albumin-Creatinine Ratio</option>
+                <option>Serum Creatinine</option>
+                <option>eGFR (Kidney Function)</option>
+                <option>Urine Glucose (Dipstick)</option>
+                <option>Urine Ketones</option>
+                <option>Lipid Profile (Full)</option>
+                <option>Triglycerides</option>
+                <option>HDL Cholesterol</option>
+                <option>TSH (Thyroid Stimulating Hormone)</option>
+                <option>Free T4</option>
+                <option>Liver Function Tests (LFT)</option>
+                <option>Amylase</option>
+                <option>Lipase</option>
+                <option>Vitamin D (25-OH)</option>
+                <option>Magnesium</option>
+                <option>Zinc</option>
               </select>
+              <div style="font-size:.75rem;color:#059669;margin-top:.3rem;"><i class="bi bi-magic"></i> Selecting a test auto-fills code, range, prep &amp; price</div>
             </div>
-            <div><label class="form-label">Test Model Code <span class="text-red-500">*</span></label><input type="text" class="form-input" name="test_code" placeholder="e.g. BG001" required></div>
+            <div><label class="form-label">Test Code <span class="text-red-500">*</span></label>
+              <input type="text" class="form-input" name="test_code" placeholder="Auto-generated on selection" required>
+              <div style="font-size:.75rem;color:#64748b;margin-top:.3rem;"><i class="bi bi-arrow-repeat"></i> Auto-incremented (e.g. BG001, BG002…)</div>
+            </div>
             <div>
               <label class="form-label">Category <span class="text-red-500">*</span></label>
               <select class="form-input" name="category" required>

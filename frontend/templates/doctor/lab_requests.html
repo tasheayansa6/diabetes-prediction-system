@@ -134,9 +134,14 @@
           <h2 class="page-title mb-0"><i class="bi bi-clipboard2-pulse"></i> Lab Requests</h2>
           <p class="page-subtitle">Order and manage laboratory tests for patients</p>
         </div>
-        <button class="btn btn-primary" onclick="openModal()">
-          <i class="bi bi-plus-circle"></i> Order Diabetes Lab Test
-        </button>
+        <div style="display:flex;gap:.6rem;">
+          <button class="btn btn-outline" onclick="openModal()">
+            <i class="bi bi-flask"></i> New Lab Request
+          </button>
+          <button class="btn btn-primary" onclick="openModal()">
+            <i class="bi bi-plus-circle"></i> Order Diabetes Lab Test
+          </button>
+        </div>
       </div>
 
       <!-- Stats -->
@@ -148,7 +153,10 @@
       </div>
 
       <!-- Filter -->
-      <div class="flex gap-3 mb-4">
+      <div class="flex gap-3 mb-4" style="flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary" onclick="openModal()" style="white-space:nowrap;">
+          <i class="bi bi-plus-circle"></i> Order Another Test
+        </button>
         <select id="filterStatus" class="form-input" style="max-width:160px">
           <option value="">All Status</option>
           <option value="pending">Pending</option>

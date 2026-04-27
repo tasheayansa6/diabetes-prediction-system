@@ -79,12 +79,17 @@ async function loadRequests() {
                         ? `<span style="color:#059669;"><i class="bi bi-check-circle"></i> ${esc(String(r.results).substring(0,40))}</span>`
                         : '<span class="text-muted">Pending</span>'}</td>
                     <td>
-                        ${r.status === 'pending' ? `
-                        <div style="display:flex;gap:4px;">
-                            <button class="btn btn-sm btn-danger" onclick="cancelRequest(${r.id})">
-                                <i class="bi bi-x-circle"></i> Cancel
+                        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                            <button class="btn btn-sm btn-outline reorder-btn"
+                                data-patient="${r.patient_id}" data-test="${esc(r.test_name)}"
+                                data-type="${esc(r.test_type||'')}" data-cat="${esc(r.test_category||'')}"
+                                style="color:#1565c0;border-color:#bfdbfe;">
+                                <i class="bi bi-arrow-repeat"></i> Reorder
                             </button>
-                        </div>` : '<span class="text-muted">—</span>'}
+                            ${r.status === 'pending'
+                                ? `<button class="btn btn-sm btn-danger cancel-btn" data-id="${r.id}"><i class="bi bi-x-circle"></i> Cancel</button>`
+                                : ''}
+                        </div>
                     </td>
                 </tr>`;
             }).join('');
@@ -107,6 +112,24 @@ async function cancelRequest(id) {
         if (!d.success) throw new Error(d.message);
         loadRequests(); loadStats();
     } catch (err) { alert('Error: ' + err.message); }
+}
+
+// ── Reorder: open modal pre-selecting the same test & patient ─────────────────
+function reorderTest(patientId, testName, testType, testCat) {
+    openModal();
+    // Pre-select patient
+    const sel = document.getElementById('modal_patient_id');
+    if (sel && patientId) sel.value = patientId;
+    // Pre-check matching test by name
+    if (testName) {
+        const match = allTests.find(t => t.test_name === testName || t.test_code === testType);
+        if (match && !selectedIds.includes(match.id)) {
+            selectedIds.push(match.id);
+            renderCheckboxes(document.getElementById('testSearch')?.value || '');
+            updateDetail();
+            updateSummary();
+        }
+    }
 }
 
 // ── Load patients ─────────────────────────────────────────────────────────────
@@ -361,6 +384,21 @@ document.addEventListener('DOMContentLoaded', function () {
     const sb = document.getElementById('sidebarDoctorName');
     if (sb) sb.textContent = user.name || user.username;
     document.getElementById('labRequestForm').addEventListener('submit', handleSubmit);
+    // Event delegation for table action buttons
+    document.getElementById('labRequestsTableBody').addEventListener('click', function(e) {
+        const reorder = e.target.closest('.reorder-btn');
+        const cancel  = e.target.closest('.cancel-btn');
+        if (reorder) {
+            reorderTest(
+                reorder.dataset.patient,
+                reorder.dataset.test,
+                reorder.dataset.type,
+                reorder.dataset.cat
+            );
+        } else if (cancel) {
+            cancelRequest(parseInt(cancel.dataset.id, 10));
+        }
+    });
     loadPatients();
     loadTestTypes();
     loadRequests();

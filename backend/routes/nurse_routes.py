@@ -662,8 +662,35 @@ def register_patient(current_nurse):
         db.session.add(new_patient)
         db.session.commit()
         
-        # Add to queue automatically (removed await)
+        # Add to queue automatically
         add_to_queue(new_patient.id, 'registration', current_nurse)
+
+        # Notify all doctors about the new patient registration
+        try:
+            from backend.models.notification import Notification
+            doctors = User.query.filter_by(role='doctor', is_active=True).all()
+            for doc in doctors:
+                db.session.add(Notification(
+                    user_id=doc.id,
+                    title='New Patient Registered',
+                    message=(
+                        f"Nurse {current_nurse['username']} registered a new patient: "
+                        f"{new_patient.username} (ID: {new_patient.patient_id}). "
+                        f"Patient has been added to the queue."
+                    ),
+                    type='vitals',
+                    category='general',
+                    is_read=False,
+                    link=f'/templates/doctor/patient_list.html?highlight={new_patient.id}',
+                    created_at=datetime.utcnow()
+                ))
+            db.session.commit()
+        except Exception as notif_err:
+            current_app.logger.error(f'Registration notification error: {notif_err}')
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
         
         return jsonify({
             "success": True,

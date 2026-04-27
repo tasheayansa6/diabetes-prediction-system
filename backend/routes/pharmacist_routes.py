@@ -302,6 +302,21 @@ def verify_prescription(current_pharmacist, prescription_id):
         
         data = request.get_json() or {}
         
+        # Ensure pharmacist row exists (FK constraint)
+        try:
+            ph_exists = db.session.execute(
+                text('SELECT id FROM pharmacists WHERE id = :id'),
+                {'id': current_pharmacist['id']}
+            ).fetchone()
+            if not ph_exists:
+                db.session.execute(
+                    text('INSERT INTO pharmacists (id, pharmacist_id) VALUES (:id, :pid)'),
+                    {'id': current_pharmacist['id'], 'pid': f"PH{current_pharmacist['id']:04d}"}
+                )
+                db.session.flush()
+        except Exception:
+            pass
+
         # Update prescription
         prescription.status = 'verified'
         prescription.verified_by = current_pharmacist['id']
@@ -381,6 +396,22 @@ def dispense_medication(current_pharmacist, prescription_id):
         
         data = request.get_json() or {}
         
+        # Ensure pharmacist row exists in pharmacists table (FK constraint)
+        try:
+            ph_exists = db.session.execute(
+                text('SELECT id FROM pharmacists WHERE id = :id'),
+                {'id': current_pharmacist['id']}
+            ).fetchone()
+            if not ph_exists:
+                ph_id = f"PH{current_pharmacist['id']:04d}"
+                db.session.execute(
+                    text('INSERT INTO pharmacists (id, pharmacist_id) VALUES (:id, :pid)'),
+                    {'id': current_pharmacist['id'], 'pid': ph_id}
+                )
+                db.session.flush()
+        except Exception:
+            pass
+
         # Update prescription
         prescription.status = 'dispensed'
         prescription.dispensed_by = current_pharmacist['id']
@@ -467,10 +498,10 @@ def dispense_medication(current_pharmacist, prescription_id):
         
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f'dispense_medication error: {type(e).__name__}: {e}')
         return jsonify({
             "success": False,
-            "message": "Error dispensing medication",
-            "error": _safe_error(e)
+            "message": f"Error dispensing medication: {type(e).__name__}: {str(e)}"
         }), 500
 
 

@@ -175,14 +175,16 @@ function onGenderChange() {
     if (isMale) {
         pregEl.value    = '0';
         pregEl.readOnly = true;
-        pregEl.disabled = false;  // keep enabled so value submits
-        pregEl.style.background = '#f1f5f9';
-        pregEl.style.color      = '#94a3b8';
-        pregEl.style.cursor     = 'not-allowed';
+        pregEl.disabled = false;
+        pregEl.style.background   = '#f1f5f9';
+        pregEl.style.color        = '#94a3b8';
+        pregEl.style.cursor       = 'not-allowed';
         pregEl.style.pointerEvents = 'none';
+        pregEl.style.userSelect   = 'none';
+        pregEl.setAttribute('tabindex', '-1');
         pregEl.classList.add('field-autofilled');
-        if (hintEl) hintEl.textContent = '(locked to 0 — male patient)';
-        if (noteEl) { noteEl.textContent = 'Male patient — pregnancies locked to 0.'; noteEl.style.color = '#2563eb'; }
+        if (hintEl) hintEl.innerHTML = '<span style="color:#2563eb;font-weight:700;"><i class="bi bi-lock-fill"></i> Locked — male patient</span>';
+        if (noteEl) { noteEl.innerHTML = '<i class="bi bi-lock-fill" style="color:#2563eb;"></i> Male patient — pregnancies permanently set to <strong>0</strong>.'; noteEl.style.color = '#2563eb'; }
         if (maleLabel)   { maleLabel.style.borderColor = '#2563eb'; maleLabel.style.background = '#eff6ff'; maleLabel.style.color = '#1e40af'; }
         if (femaleLabel) { femaleLabel.style.borderColor = '#e2e8f0'; femaleLabel.style.background = '#fff'; femaleLabel.style.color = '#475569'; }
     } else {

@@ -142,7 +142,8 @@
                       <span style="color:#94a3b8;font-weight:400;font-size:.72rem;" id="pregnanciesHint">(enter 0 if male)</span>
                       <span class="text-red-500">*</span>
                     </label>
-                    <input type="number" min="0" max="17" class="form-input" id="pregnancies" placeholder="0 – 17" required>
+                    <input type="number" min="0" max="17" class="form-input" id="pregnancies" placeholder="0 – 17" required
+                      onkeydown="if(document.getElementById('genderMale')?.checked) return false;">
                     <div style="font-size:.72rem;color:#90a4ae;margin-top:.2rem;" id="pregnanciesNote">Number of times pregnant. Enter 0 for male patients.</div>
                   </div>
 

@@ -212,6 +212,33 @@ async function _autoRefreshToken() {
         const payload = _decodeToken(token);
         if (!payload || !payload.exp) return;
         const secsLeft = payload.exp - Math.floor(Date.now() / 1000);
+
+        // Show warning banner if less than 3 days remain
+        if (secsLeft > 0 && secsLeft < 259200) {
+            const daysLeft = Math.ceil(secsLeft / 86400);
+            const hoursLeft = Math.ceil(secsLeft / 3600);
+            const label = daysLeft <= 1 ? `${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''}` : `${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+            // Inject banner once
+            if (!document.getElementById('_sessionWarnBanner')) {
+                const banner = document.createElement('div');
+                banner.id = '_sessionWarnBanner';
+                banner.style.cssText = [
+                    'position:fixed', 'bottom:1rem', 'left:50%', 'transform:translateX(-50%)',
+                    'background:#92400e', 'color:#fff', 'padding:.65rem 1.25rem',
+                    'border-radius:10px', 'font-size:.82rem', 'font-weight:600',
+                    'z-index:99999', 'display:flex', 'align-items:center', 'gap:.75rem',
+                    'box-shadow:0 4px 20px rgba(0,0,0,.25)', 'max-width:420px'
+                ].join(';');
+                banner.innerHTML =
+                    `<i class="bi bi-clock-history" style="font-size:1rem;flex-shrink:0;"></i>` +
+                    `<span>Your session expires in <strong>${label}</strong>. ` +
+                    `<a href="#" onclick="_extendSession(event)" style="color:#fde68a;text-decoration:underline;">Stay logged in</a></span>` +
+                    `<button onclick="document.getElementById('_sessionWarnBanner').remove()" ` +
+                    `style="background:none;border:none;color:#fff;font-size:1.1rem;cursor:pointer;padding:0;line-height:1;margin-left:.25rem;">&times;</button>`;
+                document.body.appendChild(banner);
+            }
+        }
+
         // Refresh if less than 7 days (604800s) remaining
         if (secsLeft > 604800) return;
         const res = await fetch('/api/auth/refresh', {
@@ -226,8 +253,16 @@ async function _autoRefreshToken() {
                 const stored = JSON.parse(localStorage.getItem('user') || '{}');
                 localStorage.setItem('user', JSON.stringify({ ...stored, ...data.user }));
             }
+            // Remove warning banner after successful refresh
+            const b = document.getElementById('_sessionWarnBanner');
+            if (b) b.remove();
         }
     } catch (_) { /* non-fatal */ }
+}
+
+async function _extendSession(e) {
+    e.preventDefault();
+    await _autoRefreshToken();
 }
 
 // Run refresh check on every page load

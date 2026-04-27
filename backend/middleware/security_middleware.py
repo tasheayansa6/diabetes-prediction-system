@@ -34,6 +34,11 @@ def setup_security_headers(app):
             or not app.config.get('DEBUG', True)
         )
 
+        # ── HTTPS redirect (fix #1) ───────────────────────────────────────────
+        if is_prod and request.headers.get('X-Forwarded-Proto', 'https') == 'http':
+            from flask import redirect
+            return redirect(request.url.replace('http://', 'https://'), code=301)
+
         # ── Clickjacking protection ───────────────────────────────────────────
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
 
@@ -43,20 +48,21 @@ def setup_security_headers(app):
         # ── XSS protection (legacy browsers) ─────────────────────────────────
         response.headers['X-XSS-Protection'] = '1; mode=block'
 
-        # ── HSTS — force HTTPS for 1 year (fixes issues 36-61) ───────────────
+        # ── HSTS — force HTTPS for 1 year ─────────────────────────────────────
         if is_prod:
             response.headers['Strict-Transport-Security'] = \
                 'max-age=31536000; includeSubDomains; preload'
 
-        # ── Content Security Policy (fixes issues 5,10,13,15,20,26,27,30,31) ─
-        # Allow same-origin + local vendor assets only. No external CDN.
+        # ── Content Security Policy (fix #3) ─────────────────────────────────
+        # Allow same-origin + WebSocket for SocketIO + Chapa payment gateway
         csp = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' data: https://fonts.gstatic.com; "
             "img-src 'self' data:; "
-            "connect-src 'self' https://api.chapa.co; "
+            "connect-src 'self' https://api.chapa.co wss://diabetes-prediction-system-n7ik.onrender.com ws://localhost:5000; "
+            "frame-src https://checkout.chapa.co; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'"

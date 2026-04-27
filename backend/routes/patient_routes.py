@@ -442,7 +442,7 @@ def get_health_records(current_user):
 
 @patient_bp.route('/predict', methods=['POST'])
 @token_required
-@rate_limit(max_requests=10, window_seconds=3600)
+@rate_limit(max_requests=5, window_seconds=3600)
 def predict(current_user):
     """
     Make a diabetes prediction using current health data.

@@ -16,9 +16,9 @@ services:
       - key: SESSION_COOKIE_SAMESITE
         value: Lax
       - key: DATABASE_URL
-        value: postgresql://diabetes_user:9IW4jzJynMq1ppQfeFvAtKf0hIknNTZG@dpg-d7kbhg8sfn5c73btr2k0-a/diabetes_792q?sslmode=require
+        sync: false
       - key: SECRET_KEY
-        value: "dps-2026-secure-key-diabetes-prediction-system-render-fixed"
+        sync: false
       - key: ADMIN_BOOTSTRAP_EMAIL
         value: admin@system.com
       - key: ADMIN_BOOTSTRAP_USERNAME

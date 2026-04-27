@@ -1563,30 +1563,63 @@ def get_test_types_for_doctor(current_doctor):
         from backend.models.test_type import TestType
         # Only diabetes-relevant tests needed for ML prediction flow
         DIABETES_TESTS = [
-            ('Blood Glucose (Fasting)', 'BG001',   'Diabetes',    25.0, '70-99 mg/dL',          'Fast for 8 hours before test'),
-            ('HbA1c',                  'HBA1C',    'Diabetes',    45.0, '< 5.7%',               'No fasting required'),
-            ('Oral Glucose Tolerance', 'OGTT',     'Diabetes',    60.0, '< 140 mg/dL at 2hr',   'Fast 8hrs, drink glucose solution'),
-            ('Insulin Level',          'INS001',   'Diabetes',    55.0, '2-25 uU/mL',           'Fast for 8 hours before test'),
-            ('Random Blood Glucose',   'RBG001',   'Diabetes',    20.0, '< 200 mg/dL',          'No fasting required'),
-            ('Postprandial Glucose',   'PPG001',   'Diabetes',    25.0, '< 140 mg/dL at 2hr',   'Test 2 hours after meal'),
-            ('C-Peptide',              'CPEP001',  'Diabetes',    65.0, '0.5-2.0 ng/mL',        'Fast for 8 hours before test'),
-            ('Fructosamine',           'FRUCT001', 'Diabetes',    50.0, '200-285 umol/L',        'No fasting required'),
+            # ── Core glucose tests ──
+            ('Blood Glucose (Fasting)',        'BG001',    'Diabetes',       25.0,  '70-99 mg/dL',           'Fast for 8 hours before test'),
+            ('Random Blood Glucose',           'RBG001',   'Diabetes',       20.0,  '< 200 mg/dL',           'No fasting required'),
+            ('Postprandial Glucose (2hr)',      'PPG001',   'Diabetes',       25.0,  '< 140 mg/dL at 2hr',    'Test exactly 2 hours after a meal'),
+            ('Oral Glucose Tolerance (OGTT)',   'OGTT',     'Diabetes',       60.0,  '< 140 mg/dL at 2hr',    'Fast 8hrs; drink 75g glucose solution'),
+            # ── Long-term glycaemic control ──
+            ('HbA1c (Glycated Haemoglobin)',    'HBA1C',    'Diabetes',       45.0,  '< 5.7%',                'No fasting required; reflects 3-month average'),
+            ('Fructosamine',                   'FRUCT001', 'Diabetes',       50.0,  '200-285 umol/L',         'No fasting required; reflects 2-3 week average'),
+            ('Glycated Albumin',               'GLYCALB',  'Diabetes',       70.0,  '11-16%',                 'No fasting required'),
+            # ── Insulin & beta-cell function ──
+            ('Insulin Level (Fasting)',         'INS001',   'Diabetes',       55.0,  '2-25 uU/mL',            'Fast for 8 hours before test'),
+            ('C-Peptide',                      'CPEP001',  'Diabetes',       65.0,  '0.5-2.0 ng/mL',         'Fast for 8 hours before test'),
+            ('Proinsulin',                     'PROINSU',  'Diabetes',       80.0,  '< 18 pmol/L',           'Fast for 8 hours before test'),
+            ('HOMA-IR (Insulin Resistance)',    'HOMAIR',   'Diabetes',       75.0,  '< 2.0 (normal)',         'Requires fasting glucose + fasting insulin'),
+            # ── Autoimmune / Type 1 markers ──
+            ('GAD Antibodies (Anti-GAD65)',     'GADAB',    'Diabetes',      120.0,  '< 5 IU/mL (negative)',  'No fasting required; Type 1 marker'),
+            ('Islet Cell Antibodies (ICA)',     'ICA001',   'Diabetes',      130.0,  'Negative',              'No fasting required; Type 1 marker'),
+            ('IA-2 Antibodies',                'IA2AB',    'Diabetes',      125.0,  'Negative',              'No fasting required; Type 1 marker'),
+            ('Zinc Transporter 8 Ab (ZnT8)',   'ZNT8AB',   'Diabetes',      135.0,  'Negative',              'No fasting required; Type 1 marker'),
+            # ── Kidney & complication screening ──
+            ('Urine Microalbumin',             'UALB001',  'Diabetes',       30.0,  '< 30 mg/g creatinine',  'First morning urine sample preferred'),
+            ('Urine Albumin-Creatinine Ratio', 'UACR001',  'Diabetes',       35.0,  '< 30 mg/g',             'Spot urine sample; no fasting needed'),
+            ('Serum Creatinine',               'SCREAT',   'Diabetes',       20.0,  '0.6-1.2 mg/dL',         'No fasting required'),
+            ('eGFR (Kidney Function)',         'EGFR001',  'Diabetes',       25.0,  '> 60 mL/min/1.73m²',    'Calculated from serum creatinine + age'),
+            ('Urine Glucose (Dipstick)',        'UGLUC',    'Diabetes',       10.0,  'Negative',              'Random urine sample'),
+            ('Urine Ketones',                  'UKET001',  'Diabetes',       10.0,  'Negative',              'Random urine; critical in DKA screening'),
+            # ── Lipid & cardiovascular risk ──
+            ('Lipid Profile (Full)',            'LIPID01',  'Diabetes',       40.0,  'LDL < 100 mg/dL',       'Fast for 9-12 hours before test'),
+            ('Triglycerides',                  'TRIG001',  'Diabetes',       25.0,  '< 150 mg/dL',           'Fast for 9-12 hours before test'),
+            ('HDL Cholesterol',                'HDL001',   'Diabetes',       20.0,  '> 40 mg/dL (M), > 50 (F)', 'Fast for 9-12 hours before test'),
+            # ── Thyroid (commonly co-morbid) ──
+            ('TSH (Thyroid Stimulating Hormone)', 'TSH001', 'Diabetes',      35.0,  '0.4-4.0 mIU/L',         'No fasting required'),
+            ('Free T4',                        'FT4001',   'Diabetes',       40.0,  '0.8-1.8 ng/dL',         'No fasting required'),
+            # ── Liver & pancreas ──
+            ('Liver Function Tests (LFT)',      'LFT001',   'Diabetes',       45.0,  'ALT < 40 U/L',          'No fasting required'),
+            ('Amylase',                        'AMYL001',  'Diabetes',       30.0,  '30-110 U/L',            'No fasting required'),
+            ('Lipase',                         'LIPAS01',  'Diabetes',       35.0,  '0-160 U/L',             'No fasting required'),
+            # ── Vitamins & minerals ──
+            ('Vitamin D (25-OH)',               'VITD001',  'Diabetes',       50.0,  '30-100 ng/mL',          'No fasting required'),
+            ('Magnesium',                      'MAG001',   'Diabetes',       20.0,  '1.7-2.2 mg/dL',         'No fasting required'),
+            ('Zinc',                           'ZINC001',  'Diabetes',       25.0,  '70-120 ug/dL',          'No fasting required'),
         ]
         types = TestType.query.filter(
             TestType.category == 'Diabetes'
         ).order_by(TestType.test_name).all()
-        if not types:
-            for name, code, cat, cost, normal, prep in DIABETES_TESTS:
-                if not TestType.query.filter_by(test_code=code).first():
-                    db.session.add(TestType(
-                        test_name=name, test_code=code, category=cat,
-                        cost=cost, normal_range=normal,
-                        preparation_instructions=prep
-                    ))
-            db.session.commit()
-            types = TestType.query.filter(
-                TestType.category == 'Diabetes'
-            ).order_by(TestType.test_name).all()
+        # Always upsert — adds any new tests that don't exist yet
+        for name, code, cat, cost, normal, prep in DIABETES_TESTS:
+            if not TestType.query.filter_by(test_code=code).first():
+                db.session.add(TestType(
+                    test_name=name, test_code=code, category=cat,
+                    cost=cost, normal_range=normal,
+                    preparation_instructions=prep
+                ))
+        db.session.commit()
+        types = TestType.query.filter(
+            TestType.category == 'Diabetes'
+        ).order_by(TestType.test_name).all()
         return jsonify({'success': True, 'test_types': [t.to_dict() for t in types]}), 200
     except Exception as e:
         db.session.rollback()

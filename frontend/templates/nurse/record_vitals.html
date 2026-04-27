@@ -55,15 +55,25 @@
               </select>
             </div>
           </div>
-          <!-- Selected patient info -->
-          <div id="patientInfo" style="display:none;" class="mt-3 p-3 rounded" style="background:#eff6ff;">
-            <div class="flex items-center gap-3">
-              <i class="bi bi-person-circle text-blue-500" style="font-size:1.5rem;"></i>
-              <div>
-                <div class="font-semibold" id="selectedPatientName">—</div>
-                <div class="text-xs text-muted" id="selectedPatientId">—</div>
+
+          <!-- Selected patient info card — shown after selection -->
+          <div id="patientInfo" style="display:none;margin-top:1rem;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2px solid #93c5fd;border-radius:14px;padding:1rem 1.25rem;">
+            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+              <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#1e3a8a,#2563eb);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-person-fill" style="color:#fff;font-size:1.4rem;"></i>
               </div>
-              <span class="badge badge-blue ms-auto" id="prevVitalsTag" style="display:none;">Previous vitals loaded</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:800;font-size:1.05rem;color:#0f172a;" id="selectedPatientName">—</div>
+                <div style="margin-top:.3rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+                  <span style="background:#1e3a8a;color:#fff;border-radius:8px;padding:.2rem .75rem;font-weight:700;font-family:monospace;font-size:.9rem;letter-spacing:.04em;" id="selectedPatientUniqueId">—</span>
+                  <span style="font-size:.78rem;color:#64748b;" id="selectedPatientEmail"></span>
+                </div>
+                <div style="margin-top:.3rem;font-size:.75rem;color:#64748b;" id="selectedPatientMeta"></div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;">
+                <span class="badge badge-blue" id="prevVitalsTag" style="display:none;"><i class="bi bi-clock-history"></i> Previous vitals loaded</span>
+                <span class="badge badge-green" id="newPatientTag" style="display:none;"><i class="bi bi-person-plus-fill"></i> New Patient</span>
+              </div>
             </div>
           </div>
         </div>

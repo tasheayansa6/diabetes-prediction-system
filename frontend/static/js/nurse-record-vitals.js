@@ -76,21 +76,27 @@ async function autoFillFromProfile(patientId) {
         const v = data.vitals || {};
 
         // ── Show patient info card ──────────────────────────────────────────
-        const infoDiv = document.getElementById('patientInfo');
-        const nameEl  = document.getElementById('selectedPatientName');
-        const idEl    = document.getElementById('selectedPatientId');
-        if (nameEl) nameEl.textContent = p.username;
-        if (idEl) idEl.innerHTML =
-            `<span style="background:#dbeafe;color:#1e40af;border-radius:6px;padding:.15rem .6rem;
-                font-weight:700;font-family:monospace;font-size:.85rem;">${p.patient_id}</span>
-            &nbsp; <span style="color:#64748b;">${p.email}</span>
-            &nbsp;|&nbsp; Registered: ${p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}
-            ${p.blood_group ? '&nbsp;|&nbsp; Blood: <strong>' + p.blood_group + '</strong>' : ''}`;
-        if (infoDiv) {
-            infoDiv.style.cssText = 'display:block;background:#eff6ff;border-radius:10px;padding:.85rem 1rem;border:1.5px solid #bfdbfe;margin-top:.75rem;';
-        }
-        const prevTag = document.getElementById('prevVitalsTag');
+        const infoDiv   = document.getElementById('patientInfo');
+        const nameEl    = document.getElementById('selectedPatientName');
+        const uidEl     = document.getElementById('selectedPatientUniqueId');
+        const emailEl   = document.getElementById('selectedPatientEmail');
+        const metaEl    = document.getElementById('selectedPatientMeta');
+        const prevTag   = document.getElementById('prevVitalsTag');
+        const newTag    = document.getElementById('newPatientTag');
+
+        if (nameEl)  nameEl.textContent  = p.username;
+        if (uidEl)   uidEl.textContent   = p.patient_id;
+        if (emailEl) emailEl.textContent = p.email;
+        if (metaEl)  metaEl.innerHTML =
+            `Registered: <strong>${p.created_at ? new Date(p.created_at).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) : 'N/A'}</strong>` +
+            (p.blood_group ? ` &nbsp;|&nbsp; Blood Group: <strong>${p.blood_group}</strong>` : '') +
+            (p.allergies   ? ` &nbsp;|&nbsp; <span style="color:#dc2626;">Allergies: ${p.allergies}</span>` : '');
+
         if (prevTag) prevTag.style.display = data.has_previous_vitals ? '' : 'none';
+        if (newTag)  newTag.style.display  = data.has_previous_vitals ? 'none' : '';
+        if (infoDiv) infoDiv.style.display = '';
+        // Scroll info card into view
+        if (infoDiv) infoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
         // ── Auto-fill vitals fields ─────────────────────────────────────────
         const set = (id, val) => {
@@ -120,20 +126,6 @@ async function autoFillFromProfile(patientId) {
             if (v.blood_pressure_diastolic) updateBPStatus();
             showToast('Previous vitals auto-filled. Review and update if needed.', 'warning');
         } else {
-            // New patient — show green banner, fields empty for nurse to fill
-            let banner = document.getElementById('newPatientBanner');
-            if (!banner) {
-                banner = document.createElement('div');
-                banner.id = 'newPatientBanner';
-                document.getElementById('vitalsForm').prepend(banner);
-            }
-            banner.style.cssText = 'background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem;';
-            banner.innerHTML =
-                '<i class="bi bi-person-plus-fill" style="color:#059669;font-size:1.2rem;flex-shrink:0;"></i>' +
-                `<div><strong style="color:#166534;">New Patient: ${p.username}</strong>` +
-                `<div style="font-size:.78rem;color:#15803d;margin-top:.15rem;">` +
-                `ID: <strong>${p.patient_id}</strong> &nbsp;|&nbsp; ` +
-                `Please record all vitals below and click Save.</div></div>`;
             showToast(`New patient ${p.username} (${p.patient_id}) — please fill vitals.`, 'success');
         }
 

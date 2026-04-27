@@ -13,7 +13,7 @@ migrate = Migrate()
 login_manager = LoginManager()
 bcrypt = Bcrypt()
 mail = Mail()
-socketio = SocketIO(cors_allowed_origins='*', async_mode='gevent')
+socketio = SocketIO(cors_allowed_origins='*', async_mode='eventlet')
 
 @event.listens_for(Engine, 'connect')
 def set_sqlite_wal(dbapi_conn, connection_record):

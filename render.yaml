@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements_production.txt
-    startCommand: python seed_postgres.py; gunicorn run:app --workers 2 --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker --timeout 120 --bind 0.0.0.0:$PORT --max-requests 1000 --max-requests-jitter 100
+    startCommand: python seed_postgres.py; gunicorn run:app --workers 2 --worker-class eventlet --timeout 120 --bind 0.0.0.0:$PORT --max-requests 1000 --max-requests-jitter 100
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION

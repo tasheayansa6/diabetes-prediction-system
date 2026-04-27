@@ -910,6 +910,75 @@ def get_patient_vitals(current_nurse, patient_id):
         }), 500
 
 
+# ============ GET PATIENT PROFILE FOR VITALS AUTO-FILL ============
+
+@nurse_bp.route('/patient-profile/<int:patient_id>', methods=['GET'])
+@token_required
+def get_patient_profile(current_nurse, patient_id):
+    """
+    GET /api/nurse/patient-profile/<id>
+    Returns patient registration data for auto-filling the vitals form.
+    """
+    try:
+        row = db.session.execute(text("""
+            SELECT u.id, u.username, u.email, u.created_at,
+                   p.patient_id, p.blood_group,
+                   p.medical_history, p.allergies
+            FROM users u
+            LEFT JOIN patients p ON p.id = u.id
+            WHERE u.id = :id AND u.role = 'patient'
+        """), {'id': patient_id}).fetchone()
+
+        if not row:
+            return jsonify({'success': False, 'message': 'Patient not found'}), 404
+
+        # Get latest vitals if any
+        latest_vital = VitalSign.query.filter_by(
+            patient_id=patient_id
+        ).order_by(VitalSign.recorded_at.desc()).first()
+
+        vitals = {}
+        if latest_vital:
+            vitals = {
+                'blood_pressure_systolic':  latest_vital.blood_pressure_systolic,
+                'blood_pressure_diastolic': latest_vital.blood_pressure_diastolic,
+                'heart_rate':               latest_vital.heart_rate,
+                'temperature':              latest_vital.temperature,
+                'respiratory_rate':         latest_vital.respiratory_rate,
+                'oxygen_saturation':        latest_vital.oxygen_saturation,
+                'height':                   latest_vital.height,
+                'weight':                   latest_vital.weight,
+                'skin_thickness':           latest_vital.skin_thickness,
+                'pregnancies':              latest_vital.pregnancies,
+                'diabetes_pedigree':        latest_vital.diabetes_pedigree,
+                'age':                      latest_vital.age,
+            }
+
+        try:
+            created_at = row[3].isoformat() if hasattr(row[3], 'isoformat') else str(row[3]) if row[3] else None
+        except Exception:
+            created_at = None
+
+        return jsonify({
+            'success': True,
+            'patient': {
+                'id':         row[0],
+                'username':   row[1],
+                'email':      row[2],
+                'created_at': created_at,
+                'patient_id': row[4] or f'PAT{int(row[0]):06d}',
+                'blood_group':     row[5],
+                'medical_history': row[6],
+                'allergies':       row[7],
+            },
+            'vitals': vitals,
+            'has_previous_vitals': latest_vital is not None
+        }), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 # ============ GET ALL PATIENTS ============
 
 @nurse_bp.route('/patients', methods=['GET'])

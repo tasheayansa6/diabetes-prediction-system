@@ -41,14 +41,14 @@ function _renderPatientOptions(patients) {
         ).join('');
 }
 
-// When patient is selected, load their latest vitals to pre-fill form
-let _existingVitalId = null;  // track if we should PUT (update) or POST (new)
+// When patient is selected, auto-fill ALL fields from profile + previous vitals
+let _existingVitalId = null;
 
 async function onPatientChange() {
     const patientId = document.getElementById('patient_id').value;
     _existingVitalId = null;
 
-    // Clear previous state
+    // Clear banners and highlights
     const banner = document.getElementById('missingFieldsBanner');
     if (banner) banner.remove();
     ['pregnancies','diabetes_pedigree','age'].forEach(id => {
@@ -60,37 +60,49 @@ async function onPatientChange() {
         return;
     }
 
-    // Show patient info card with unique ID
-    const all = window._allPatients || [];
-    const patient = all.find(p => String(p.id) === String(patientId));
-    if (patient) {
-        const infoDiv = document.getElementById('patientInfo');
-        const nameEl  = document.getElementById('selectedPatientName');
-        const idEl    = document.getElementById('selectedPatientId');
-        if (nameEl) nameEl.textContent = patient.username;
-        if (idEl)   idEl.innerHTML =
-            `<span style="background:#dbeafe;color:#1e40af;border-radius:6px;padding:.1rem .5rem;font-weight:700;font-family:monospace;font-size:.85rem;">
-                ${patient.patient_id || 'ID:' + patient.id}
-            </span>
-            &nbsp; Registered: ${patient.created_at ? new Date(patient.created_at).toLocaleDateString() : 'N/A'}`;
-        if (infoDiv) {
-            infoDiv.style.display = '';
-            infoDiv.style.background = '#eff6ff';
-            infoDiv.style.borderRadius = '10px';
-            infoDiv.style.padding = '.75rem 1rem';
-            infoDiv.style.border = '1.5px solid #bfdbfe';
-            infoDiv.style.marginTop = '.75rem';
-        }
-    }
+    await autoFillFromProfile(patientId);
+}
 
+// Auto-fill ALL form fields from patient profile + previous vitals
+async function autoFillFromProfile(patientId) {
     try {
-        const res  = await fetch(`/api/nurse/patients/${patientId}/vitals?limit=1`, {
+        const res  = await fetch(`/api/nurse/patient-profile/${patientId}`, {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         const data = await res.json();
-        if (data.success && data.vitals && data.vitals.length) {
-            const v = data.vitals[0];
-            const set = (id, val) => { if (val != null) document.getElementById(id).value = val; };
+        if (!data.success) return;
+
+        const p = data.patient;
+        const v = data.vitals || {};
+
+        // ── Show patient info card ──────────────────────────────────────────
+        const infoDiv = document.getElementById('patientInfo');
+        const nameEl  = document.getElementById('selectedPatientName');
+        const idEl    = document.getElementById('selectedPatientId');
+        if (nameEl) nameEl.textContent = p.username;
+        if (idEl) idEl.innerHTML =
+            `<span style="background:#dbeafe;color:#1e40af;border-radius:6px;padding:.15rem .6rem;
+                font-weight:700;font-family:monospace;font-size:.85rem;">${p.patient_id}</span>
+            &nbsp; <span style="color:#64748b;">${p.email}</span>
+            &nbsp;|&nbsp; Registered: ${p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}
+            ${p.blood_group ? '&nbsp;|&nbsp; Blood: <strong>' + p.blood_group + '</strong>' : ''}`;
+        if (infoDiv) {
+            infoDiv.style.cssText = 'display:block;background:#eff6ff;border-radius:10px;padding:.85rem 1rem;border:1.5px solid #bfdbfe;margin-top:.75rem;';
+        }
+        const prevTag = document.getElementById('prevVitalsTag');
+        if (prevTag) prevTag.style.display = data.has_previous_vitals ? '' : 'none';
+
+        // ── Auto-fill vitals fields ─────────────────────────────────────────
+        const set = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && val != null && val !== '') {
+                el.value = val;
+                el.classList.add('field-autofilled');
+            }
+        };
+
+        if (data.has_previous_vitals) {
+            // Fill from previous vitals record
             set('blood_pressure_systolic',  v.blood_pressure_systolic);
             set('blood_pressure_diastolic', v.blood_pressure_diastolic);
             set('heart_rate',               v.heart_rate);
@@ -103,44 +115,50 @@ async function onPatientChange() {
             set('pregnancies',              v.pregnancies);
             set('diabetes_pedigree',        v.diabetes_pedigree);
             set('age',                      v.age);
-
-            // Check if ML fields are missing — warn nurse to fill them
-            // Use strict null check: undefined means field not in API response (old server)
-            // null means field exists in DB but was not filled
-            const missing = [];
-            if (v.pregnancies       === null) missing.push('Pregnancies');
-            if (v.diabetes_pedigree === null) missing.push('Diabetes Pedigree');
-            if (v.age               === null) missing.push('Age');
-
-            if (missing.length) {
-                _existingVitalId = v.id;  // will UPDATE this record
-
-                // Show persistent banner on the form
-                let banner = document.getElementById('missingFieldsBanner');
-                if (!banner) {
-                    banner = document.createElement('div');
-                    banner.id = 'missingFieldsBanner';
-                    document.getElementById('vitalsForm').prepend(banner);
-                }
-                banner.className = 'alert alert-danger mb-4';
-                banner.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <strong>Missing ML fields from previous visit:</strong> ${missing.join(', ')}.
-                    Please fill them below and save — this will <strong>update</strong> the existing record.`;
-
-                // Highlight the missing input fields
-                if (v.pregnancies       == null) document.getElementById('pregnancies').classList.add('border-red-500');
-                if (v.diabetes_pedigree == null) document.getElementById('diabetes_pedigree').classList.add('border-red-500');
-                if (v.age              == null) document.getElementById('age').classList.add('border-red-500');
-
-                showToast(`Missing ML fields: ${missing.join(', ')} — please fill them now.`, 'danger');
-            } else {
-                // Clear any previous banner
-                const banner = document.getElementById('missingFieldsBanner');
-                if (banner) banner.remove();
-                showToast('Previous vitals pre-filled. Update as needed.', 'warning');
+            // Recalculate BMI if height+weight filled
+            if (v.height && v.weight) calcBMI();
+            if (v.blood_pressure_diastolic) updateBPStatus();
+            showToast('Previous vitals auto-filled. Review and update if needed.', 'warning');
+        } else {
+            // New patient — show green banner, fields empty for nurse to fill
+            let banner = document.getElementById('newPatientBanner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'newPatientBanner';
+                document.getElementById('vitalsForm').prepend(banner);
             }
+            banner.style.cssText = 'background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem;';
+            banner.innerHTML =
+                '<i class="bi bi-person-plus-fill" style="color:#059669;font-size:1.2rem;flex-shrink:0;"></i>' +
+                `<div><strong style="color:#166534;">New Patient: ${p.username}</strong>` +
+                `<div style="font-size:.78rem;color:#15803d;margin-top:.15rem;">` +
+                `ID: <strong>${p.patient_id}</strong> &nbsp;|&nbsp; ` +
+                `Please record all vitals below and click Save.</div></div>`;
+            showToast(`New patient ${p.username} (${p.patient_id}) — please fill vitals.`, 'success');
         }
-    } catch { /* no previous vitals — that is fine */ }
+
+        // Check missing ML fields and highlight
+        const missing = [];
+        if (!document.getElementById('pregnancies').value)       missing.push('Pregnancies');
+        if (!document.getElementById('diabetes_pedigree').value) missing.push('Diabetes Pedigree');
+        if (!document.getElementById('age').value)               missing.push('Age');
+        if (!document.getElementById('blood_pressure_diastolic').value) missing.push('Diastolic BP');
+
+        if (missing.length) {
+            missing.forEach(name => {
+                const idMap = {
+                    'Pregnancies': 'pregnancies',
+                    'Diabetes Pedigree': 'diabetes_pedigree',
+                    'Age': 'age',
+                    'Diastolic BP': 'blood_pressure_diastolic'
+                };
+                document.getElementById(idMap[name])?.classList.add('border-red-500');
+            });
+        }
+
+    } catch (e) {
+        console.warn('autoFillFromProfile error:', e);
+    }
 }
 
 function setCurrentDateTime() {

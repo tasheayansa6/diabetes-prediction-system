@@ -150,27 +150,69 @@ function getCurrentUser() {
 }
 
 // ── updateUserDisplay ─────────────────────────────────────────────────────────
+// Shows name + unique ID in the topbar on EVERY page for ALL roles.
 function updateUserDisplay(user) {
     const displayName = user.name || user.username || 'User';
     const uid = user.unique_id || null;
 
+    // Set name in any named element
     ['topUserName', 'userName', 'navUserName', 'sidebarName', 'sidebarDoctorName'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = displayName;
     });
 
-    // Show unique ID badge in topbar
-    if (uid) {
-        const topUser = document.querySelector('.topbar-user');
-        if (topUser && !topUser.querySelector('.uid-badge')) {
+    // ── Inject name + unique ID into topbar-right if not already there ────────
+    // Works even if the template doesn't have a topbar-user span
+    const topbarRight = document.querySelector('.topbar-right');
+    if (topbarRight && !topbarRight.querySelector('.topbar-user-info')) {
+        // Build the user info element
+        const userInfo = document.createElement('div');
+        userInfo.className = 'topbar-user topbar-user-info';
+        userInfo.style.cssText = 'display:flex;align-items:center;gap:.4rem;';
+
+        // Name
+        const nameSpan = document.createElement('span');
+        nameSpan.style.cssText = 'color:#e0e7ff;font-size:.875rem;font-weight:600;';
+        nameSpan.id = 'navUserName';
+        nameSpan.textContent = displayName;
+        userInfo.appendChild(nameSpan);
+
+        // Unique ID badge
+        if (uid) {
             const badge = document.createElement('span');
             badge.className = 'uid-badge';
             badge.title = 'Your unique system ID';
-            badge.style.cssText = 'font-size:.65rem;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:1px 8px;color:#bfdbfe;margin-left:4px;font-weight:600;letter-spacing:.02em;white-space:nowrap;';
+            badge.style.cssText = 'font-size:.65rem;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:1px 8px;color:#bfdbfe;font-weight:600;letter-spacing:.02em;white-space:nowrap;';
             badge.textContent = uid;
-            topUser.appendChild(badge);
+            userInfo.appendChild(badge);
         }
-        // Also update sidebar unique ID elements
+
+        // Insert before the first button (logout)
+        const firstBtn = topbarRight.querySelector('button, a.topbar-btn');
+        if (firstBtn) {
+            topbarRight.insertBefore(userInfo, firstBtn);
+        } else {
+            topbarRight.appendChild(userInfo);
+        }
+    } else {
+        // topbar-user already exists — just update the name and add badge if missing
+        const existingUser = document.querySelector('.topbar-user');
+        if (existingUser) {
+            const nameEl = existingUser.querySelector('#navUserName, .topbar-name');
+            if (nameEl) nameEl.textContent = displayName;
+            if (uid && !existingUser.querySelector('.uid-badge')) {
+                const badge = document.createElement('span');
+                badge.className = 'uid-badge';
+                badge.title = 'Your unique system ID';
+                badge.style.cssText = 'font-size:.65rem;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:1px 8px;color:#bfdbfe;margin-left:4px;font-weight:600;letter-spacing:.02em;white-space:nowrap;';
+                badge.textContent = uid;
+                existingUser.appendChild(badge);
+            }
+        }
+    }
+
+    // Sidebar unique ID elements
+    if (uid) {
         ['sidebarUniqueId', 'sidebarPatientId'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = 'ID: ' + uid;

@@ -142,6 +142,22 @@ def validate_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
 
+
+def _get_active_model_name():
+    """Return the active ML model's algorithm name from the registry."""
+    try:
+        import json
+        from pathlib import Path
+        reg_path = Path(__file__).parent.parent.parent / 'ml_model' / 'model_registry.json'
+        if reg_path.exists():
+            registry = json.loads(reg_path.read_text())
+            active = next((m for m in registry if m.get('status') == 'active'), None)
+            if active:
+                return active.get('algorithm', 'Gradient Boosting')
+    except Exception:
+        pass
+    return 'Gradient Boosting'
+
 def token_required(f):
     """Decorator for patient routes using JWT token"""
     @wraps(f)
@@ -790,6 +806,7 @@ def get_prediction(current_user, prediction_id):
                 'prediction': 'Diabetic' if prediction.prediction == 1 else 'Non-Diabetic',
                 'explanation': prediction.explanation or '',
                 'model_version': prediction.model_version or 'v1.0',
+                'model_algorithm': getattr(prediction, 'model_used', None) or _get_active_model_name(),
                 'confidence': confidence,
                 'input_data': input_data,
                 'feature_importance': feat_import,

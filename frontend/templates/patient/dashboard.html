@@ -106,6 +106,8 @@
         .action-card .ac-label { font-size:.82rem; font-weight:700; color:#37474f; }
         .action-card .ac-sub   { font-size:.72rem; color:#90a4ae; }
         .action-card.blue:hover  { border-color:#1565c0; } .action-card.blue .ac-icon  { background:#e3f2fd; color:#1565c0; }
+        .action-card.red:hover   { border-color:#dc2626; } .action-card.red .ac-icon   { background:#fee2e2; color:#dc2626; }
+        .action-card.red .ac-label { color:#dc2626; }
         .action-card.green:hover { border-color:#2e7d32; } .action-card.green .ac-icon { background:#e8f5e9; color:#2e7d32; }
         .action-card.teal:hover  { border-color:#00695c; } .action-card.teal .ac-icon  { background:#e0f2f1; color:#00695c; }
         .action-card.amber:hover { border-color:#e65100; } .action-card.amber .ac-icon { background:#fff3e0; color:#e65100; }
@@ -294,7 +296,7 @@
                         <div class="ac-label">New Prediction</div>
                         <div class="ac-sub">Run ML analysis</div>
                     </a>
-                    <a href="/templates/patient/appointment.html" class="action-card green" id="bookApptCard">
+                    <a href="/templates/patient/appointment.html" class="action-card red" id="bookApptCard">
                         <div class="ac-icon"><i class="bi bi-calendar-plus-fill"></i></div>
                         <div class="ac-label">Book Appointment</div>
                         <div class="ac-sub">Schedule a visit</div>

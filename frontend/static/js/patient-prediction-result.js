@@ -225,9 +225,9 @@ async function loadResult() {
         // ── Doctor review ─────────────────────────────────────────────────────
         renderReview(p.review || null);
 
-        // ── Model badge — active model name only ─────────────────────────────
+        // ── Model badge — shows active model version ──────────────────────────
         const modelEl = document.getElementById('modelUsed');
-        if (modelEl) modelEl.textContent = p.model_algorithm || p.model_version || '—';
+        if (modelEl) modelEl.textContent = p.model_version || 'v1.0';
 
         // ── Action panel ──────────────────────────────────────────────────────
         const actionPanel = document.getElementById('actionPanel');

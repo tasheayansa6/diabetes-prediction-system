@@ -16,12 +16,37 @@ def create_polymorphic_user(data, password_hash, role):
     """
     Build and return an ORM user instance (not yet added to session).
     role: lowercase string.
-    data: dict with username, email, optional full_name, role-specific fields.
+    data: dict with username, email, full_name (required), and role-specific fields.
+    
+    Required fields:
+    - username: Unique username
+    - email: Unique email address
+    - full_name: User's full name (required for all roles)
+    - role: User role (patient, doctor, nurse, etc.)
+    
+    Optional role-specific unique IDs:
+    - patient_id, doctor_id, nurse_id, technician_id, pharmacist_id, admin_id
+    If not provided, auto-generated IDs will be created.
     """
     role = (role or "").lower().strip()
     username = (data.get("username") or "").strip()
     email = (data.get("email") or "").strip().lower()
-    full_name = data.get("full_name") or username
+    
+    # Full name is now REQUIRED for all roles
+    full_name = (data.get("full_name") or "").strip()
+    if not full_name:
+        # Fallback: use username if full_name not provided (for backward compatibility)
+        full_name = username
+    
+    # Generate unique ID prefix based on role
+    ID_PREFIXES = {
+        'patient': 'PAT',
+        'doctor': 'DOC',
+        'nurse': 'NUR',
+        'lab_technician': 'LAB',
+        'pharmacist': 'PHR',
+        'admin': 'ADM'
+    }
 
     if role == "patient":
         return Patient(

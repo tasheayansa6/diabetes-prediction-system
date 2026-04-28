@@ -8,6 +8,11 @@
     <link href="/static/vendor/css/bootstrap-icons.css" rel="stylesheet">
     <link href="/static/css/app.css?v=3" rel="stylesheet">
     <style>
+        /* Fix modal overlay z-index - must be above topbar */
+        .modal-overlay {
+            z-index: 10000 !important;
+        }
+        
         /* ── Test checkbox grid ── */
         .test-grid {
             display: grid;

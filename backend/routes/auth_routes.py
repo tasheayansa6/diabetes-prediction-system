@@ -175,9 +175,9 @@ def register():
             return jsonify({"success": False, "message": "Invalid or missing JSON body"}), 400
 
         # Validate required fields
-        required_fields = ['username', 'email', 'password', 'role']
+        required_fields = ['username', 'email', 'password', 'role', 'full_name']
         for field in required_fields:
-            if field not in data:
+            if field not in data or not data[field]:
                 return jsonify({
                     "success": False,
                     "message": f"Missing required field: {field}"
@@ -187,6 +187,20 @@ def register():
         email = data.get("email", "").strip().lower()
         password = data.get("password")
         role = data.get("role", "patient").lower()
+        full_name = data.get("full_name", "").strip()
+        
+        # Validate full_name
+        if len(full_name) < 2:
+            return jsonify({
+                "success": False,
+                "message": "Full name must be at least 2 characters long"
+            }), 400
+        
+        if len(full_name) > 100:
+            return jsonify({
+                "success": False,
+                "message": "Full name must be less than 100 characters"
+            }), 400
 
         # Real-world hardening: never allow public self-registration for admin
         # unless explicitly enabled by environment for one-time bootstrap.

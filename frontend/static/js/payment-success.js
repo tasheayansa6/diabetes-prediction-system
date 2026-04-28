@@ -220,11 +220,18 @@ async function loadTransaction() {
             continueBtn.style.display = 'inline-flex';
         }
 
-        // Auto-redirect after 3 seconds
-        let secs = 3;
+        // Auto-redirect after 5 minutes (300 seconds)
+        let secs = 300;
         const autoRedirect = setInterval(() => {
             secs--;
-            if (countdownEl) { countdownEl.style.display = ''; countdownEl.textContent = `Redirecting in ${secs}s...`; }
+            if (countdownEl) {
+                countdownEl.style.display = '';
+                const mins = Math.floor(secs / 60);
+                const s    = secs % 60;
+                countdownEl.textContent = mins > 0
+                    ? 'Auto-redirecting in ' + mins + 'm ' + (s < 10 ? '0' : '') + s + 's...'
+                    : 'Auto-redirecting in ' + secs + 's...';
+            }
             if (secs <= 0) { clearInterval(autoRedirect); window.location.href = target; }
         }, 1000);
     }

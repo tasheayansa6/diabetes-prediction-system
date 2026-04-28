@@ -75,7 +75,7 @@ async function handleLogin(event) {
                 } else {
                     redirectToDashboard(data.user.role);
                 }
-            }, 900);
+            }, 2000);
             return;
         }
 

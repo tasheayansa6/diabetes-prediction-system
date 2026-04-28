@@ -67,46 +67,60 @@ function renderStats(dashboard, predictions, prescriptions, appointments) {
             ? latest.probability_percent.toFixed(1) + '% probability'
             : '';
 
-        // Urgent pulsing on hero risk box
+        const isHighRisk = latest.risk_level === 'HIGH RISK' || latest.risk_level === 'VERY HIGH RISK';
+        const isVH       = latest.risk_level === 'VERY HIGH RISK';
+        const hasScheduled = appointments.some(a => ['scheduled', 'confirmed', 'completed'].includes(a.status));
+
+        // ── Hero risk box pulse — stop if appointment already booked ──────────
         const heroRight = document.querySelector('.hero-right');
         if (heroRight) {
             heroRight.classList.remove('risk-urgent', 'risk-urgent-vh');
-            if (latest.risk_level === 'VERY HIGH RISK') heroRight.classList.add('risk-urgent-vh');
-            else if (latest.risk_level === 'HIGH RISK') heroRight.classList.add('risk-urgent');
-        }
-        // Urgent pulsing on Book Appointment card
-        const bookCard = document.getElementById('bookApptCard');
-        if (bookCard) {
-            bookCard.classList.remove('urgent-high', 'urgent-vh');
-            if (latest.risk_level === 'VERY HIGH RISK') {
-                bookCard.classList.add('urgent-vh');
-                const sub = bookCard.querySelector('.ac-sub');
-                if (sub) sub.textContent = 'See doctor immediately!';
-            } else if (latest.risk_level === 'HIGH RISK') {
-                bookCard.classList.add('urgent-high');
-                const sub = bookCard.querySelector('.ac-sub');
-                if (sub) sub.textContent = 'Book now — high risk!';
+            if (isHighRisk && !hasScheduled) {
+                heroRight.classList.add(isVH ? 'risk-urgent-vh' : 'risk-urgent');
             }
         }
 
-        // Risk alert banner — only for HIGH RISK and VERY HIGH RISK
-        // Hide if patient already has a scheduled appointment (they took action)
+        // ── Book Appointment card pulse — stop if appointment already booked ──
+        const bookCard = document.getElementById('bookApptCard');
+        if (bookCard) {
+            bookCard.classList.remove('urgent-high', 'urgent-vh');
+            const sub = bookCard.querySelector('.ac-sub');
+            if (isHighRisk && !hasScheduled) {
+                bookCard.classList.add(isVH ? 'urgent-vh' : 'urgent-high');
+                if (sub) sub.textContent = isVH ? 'See doctor immediately!' : 'Book now — high risk!';
+            } else if (isHighRisk && hasScheduled) {
+                // Appointment booked — show calm confirmation instead
+                if (sub) sub.textContent = '✅ Appointment booked';
+                bookCard.style.borderColor = '#10b981';
+            }
+        }
+
+        // ── Risk alert banner — hide if appointment already booked ────────────
         const banner = document.getElementById('riskAlertBanner');
-        if (banner && (latest.risk_level === 'HIGH RISK' || latest.risk_level === 'VERY HIGH RISK')) {
-            const hasScheduled = appointments.some(a => ['scheduled', 'confirmed', 'completed'].includes(a.status));
-            if (hasScheduled) {
-                banner.style.display = 'none';
-            } else {
-                const isVH = latest.risk_level === 'VERY HIGH RISK';
+        if (banner) {
+            if (isHighRisk && !hasScheduled) {
                 banner.style.display = '';
-                banner.innerHTML = `<div class="risk-alert ${isVH ? 'veryhigh' : 'high'}" style="margin-bottom:1.5rem;">
-                    <i class="bi bi-exclamation-triangle-fill" style="font-size:1.5rem;color:${isVH ? '#7b1fa2' : '#c62828'};flex-shrink:0;"></i>
-                    <div style="flex:1;">
-                        <div style="font-weight:700;color:${isVH ? '#4a148c' : '#b71c1c'};font-size:.95rem;">${isVH ? 'Very High Risk — See a Doctor Immediately' : 'High Risk — Please Book a Doctor Appointment'}</div>
-                        <div style="font-size:.82rem;color:${isVH ? '#6a1b9a' : '#c62828'};margin-top:.2rem;">Your latest prediction shows ${cfg.label}. ${isVH ? 'Immediate medical attention is required.' : 'Early action can prevent diabetes.'}</div>
-                    </div>
-                    <a href="/templates/patient/appointment.html" class="btn btn-sm" style="background:${isVH ? '#7b1fa2' : '#c62828'};color:#fff;border:none;white-space:nowrap;flex-shrink:0;">Book Now</a>
-                </div>`;
+                banner.innerHTML = '<div class="risk-alert ' + (isVH ? 'veryhigh' : 'high') + '" style="margin-bottom:1.5rem;">' +
+                    '<i class="bi bi-exclamation-triangle-fill" style="font-size:1.5rem;color:' + (isVH ? '#7b1fa2' : '#c62828') + ';flex-shrink:0;"></i>' +
+                    '<div style="flex:1;">' +
+                    '<div style="font-weight:700;color:' + (isVH ? '#4a148c' : '#b71c1c') + ';font-size:.95rem;">' + (isVH ? 'Very High Risk — See a Doctor Immediately' : 'High Risk — Please Book a Doctor Appointment') + '</div>' +
+                    '<div style="font-size:.82rem;color:' + (isVH ? '#6a1b9a' : '#c62828') + ';margin-top:.2rem;">Your latest prediction shows ' + cfg.label + '. ' + (isVH ? 'Immediate medical attention is required.' : 'Early action can prevent diabetes.') + '</div>' +
+                    '</div>' +
+                    '<a href="/templates/patient/appointment.html" class="btn btn-sm" style="background:' + (isVH ? '#7b1fa2' : '#c62828') + ';color:#fff;border:none;white-space:nowrap;flex-shrink:0;">Book Now</a>' +
+                    '</div>';
+            } else if (isHighRisk && hasScheduled) {
+                // Show calm green confirmation — appointment taken care of
+                banner.style.display = '';
+                banner.innerHTML = '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.9rem;margin-bottom:1.5rem;">' +
+                    '<i class="bi bi-calendar-check-fill" style="font-size:1.4rem;color:#16a34a;flex-shrink:0;"></i>' +
+                    '<div style="flex:1;">' +
+                    '<div style="font-weight:700;color:#166534;font-size:.95rem;">Appointment Booked — Good Job!</div>' +
+                    '<div style="font-size:.82rem;color:#15803d;margin-top:.2rem;">You have a scheduled appointment with your doctor. Keep it and follow their advice.</div>' +
+                    '</div>' +
+                    '<a href="/templates/patient/appointment.html" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;white-space:nowrap;flex-shrink:0;">View Appointment</a>' +
+                    '</div>';
+            } else {
+                banner.style.display = 'none';
             }
         }
 

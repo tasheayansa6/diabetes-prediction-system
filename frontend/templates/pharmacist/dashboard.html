@@ -7,14 +7,15 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
     <link href="/static/vendor/css/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="/static/css/app.css">
+    <link rel="stylesheet" href="/static/css/app.css?v=3">
+    <style>
+        .topbar{position:fixed!important;top:0!important;left:0!important;right:0!important;height:60px!important;z-index:9999!important;}
+        .app-body{margin-top:60px!important;display:flex!important;}
+        .sidebar{position:fixed!important;top:60px!important;left:0!important;width:220px!important;min-width:220px!important;height:calc(100vh - 60px)!important;z-index:190!important;}
+        .main{margin-left:220px!important;flex:1!important;min-width:0!important;}
+        @media(max-width:768px){.main{margin-left:0!important;}}
+    </style>
 </head>
-<body>
-<div class="app-layout">
-    <nav class="topbar">
-        <a href="/" class="topbar-brand"><i class="bi bi-heart-pulse-fill"></i> Diabetes Prediction System</a>
-        <div class="topbar-right">
-            <span class="topbar-user"><i class="bi bi-person-circle"></i> <span id="navUserName">Pharmacist</span></span>
             <button onclick="handleLogout()" class="topbar-btn"><i class="bi bi-box-arrow-right"></i> Logout</button>
         </div>
     </nav>
@@ -24,6 +25,7 @@
                 <div class="sidebar-avatar"><i class="bi bi-capsule"></i></div>
                 <div class="sidebar-name" id="sidebarName">Pharmacist</div>
                 <div class="sidebar-role">Pharmacy Portal</div>
+                <div class="sidebar-role" id="sidebarUniqueId" style="font-size:.72rem;opacity:.75;"></div>
             </div>
             <nav>
                 <a class="nav-item active" href="/templates/pharmacist/dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a>

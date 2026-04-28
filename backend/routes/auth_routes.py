@@ -487,18 +487,29 @@ def login():
             'exp': datetime.utcnow() + timedelta(seconds=expiry_secs)
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
         
+        _ROLE_ID_FIELD = {
+            'patient':        'patient_id',
+            'doctor':         'doctor_id',
+            'nurse':          'nurse_id',
+            'lab_technician': 'technician_id',
+            'pharmacist':     'pharmacist_id',
+            'admin':          'admin_id',
+        }
+        id_field = _ROLE_ID_FIELD.get(user.role)
+        user_obj = {
+            "id": user.id,
+            "username": user.username,
+            "name": getattr(user, 'full_name', None) or user.username,
+            "email": user.email,
+            "role": user.role,
+            "email_verified": getattr(user, 'email_verified', None),
+            "unique_id": getattr(user, id_field, None) if id_field else None,
+        }
         return jsonify({
             "success": True,
             "message": "Login successful",
             "token": token,
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "name": getattr(user, 'full_name', None) or user.username,
-                "email": user.email,
-                "role": user.role,
-                "email_verified": getattr(user, 'email_verified', None)
-            }
+            "user": user_obj
         }), 200
         
     except Exception as e:
@@ -791,10 +802,27 @@ def refresh_token():
         'exp': datetime.utcnow() + timedelta(seconds=expiry_secs)
     }, current_app.config['SECRET_KEY'], algorithm='HS256')
 
+    _ROLE_ID_FIELD = {
+        'patient':        'patient_id',
+        'doctor':         'doctor_id',
+        'nurse':          'nurse_id',
+        'lab_technician': 'technician_id',
+        'pharmacist':     'pharmacist_id',
+        'admin':          'admin_id',
+    }
+    id_field = _ROLE_ID_FIELD.get(user.role)
+    user_obj = {
+        'id': user.id,
+        'username': user.username,
+        'name': getattr(user, 'full_name', None) or user.username,
+        'email': user.email,
+        'role': user.role,
+        'unique_id': getattr(user, id_field, None) if id_field else None,
+    }
     return jsonify({
         'success': True,
         'token': new_token,
-        'user': {'id': user.id, 'username': user.username, 'email': user.email, 'role': user.role}
+        'user': user_obj
     }), 200
 
 

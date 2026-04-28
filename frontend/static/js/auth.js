@@ -156,6 +156,13 @@ function updateUserDisplay(user) {
         const el = document.getElementById(id);
         if (el) el.textContent = displayName;
     });
+    // Show unique ID under sidebar name for all roles
+    if (user.unique_id) {
+        ['sidebarUniqueId', 'sidebarPatientId'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = 'ID: ' + user.unique_id;
+        });
+    }
 }
 
 // ── initAuth ──────────────────────────────────────────────────────────────────

@@ -11,6 +11,11 @@ function checkAdminAuth() {
         const payload = JSON.parse(atob(t.split('.')[1]));
         if (payload.role !== 'admin') { window.location.href = '/login'; return false; }
         document.getElementById('navUserName').textContent = payload.username || 'Administrator';
+        const stored = JSON.parse(localStorage.getItem('user') || '{}');
+        if (stored.unique_id) {
+            const el = document.getElementById('sidebarUniqueId');
+            if (el) el.textContent = 'ID: ' + stored.unique_id;
+        }
         return true;
     } catch (_) {
         window.location.href = '/login';

@@ -289,6 +289,11 @@ async function initDashboard() {
     if (sb) sb.textContent = user.name || user.username;
     document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
+    if (user.unique_id) {
+        const heroId = document.getElementById('heroPatientId');
+        if (heroId) heroId.innerHTML = `<i class="bi bi-person-badge"></i> ID: ${esc(user.unique_id)}`;
+    }
+
     const [dashRes, predRes, rxRes, apptRes, dailyApptRes, payRes] = await Promise.all([
         apiFetch('/patient/dashboard'),
         apiFetch('/patient/predictions?limit=50'),

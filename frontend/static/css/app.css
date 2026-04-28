@@ -12,32 +12,8 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 
 /* ── Layout ── */
 .app-layout { display: block; min-height: 100vh; }
-.app-body   { display: block; margin-top: 60px; min-height: calc(100vh - 60px); }
 
-/* ── Sidebar ── */
-.sidebar {
-    width: 210px;
-    background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%);
-    padding: 1rem 0.75rem;
-    position: fixed;
-    top: 60px;
-    left: 0;
-    height: calc(100vh - 60px);
-    overflow-y: auto;
-    box-shadow: 2px 0 12px rgba(0,0,0,0.15);
-    z-index: 190;
-}
-
-/* ── Main content ── */
-.main {
-    margin-left: 210px;
-    padding: 1.25rem;
-    padding-bottom: 3rem;
-    background: #f1f5f9;
-    min-height: calc(100vh - 60px);
-    overflow-x: hidden;
-}
-/* ── Footer ── */
+/* ── Topbar — always on top, overflow visible so dropdown shows ── */
 .topbar {
     height: 60px;
     background: linear-gradient(90deg, #1e3a8a 0%, #1d4ed8 100%);
@@ -51,9 +27,48 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
     left: 0;
     right: 0;
     width: 100%;
-    z-index: 9999;
-    overflow-x: auto;
+    z-index: 9999;          /* highest layer — above sidebar, main, dropdowns */
+    overflow: visible;      /* MUST be visible so notification dropdown renders */
     gap: 1rem;
+}
+
+/* ── Body below topbar ── */
+.app-body {
+    display: flex;
+    margin-top: 60px;       /* push below fixed topbar */
+    min-height: calc(100vh - 60px);
+    position: relative;
+    z-index: 1;             /* below topbar */
+}
+
+/* ── Sidebar ── */
+.sidebar {
+    width: 210px;
+    min-width: 210px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%);
+    padding: 1rem 0.75rem;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+    overflow-x: visible;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.15);
+    z-index: 190;           /* above main, below topbar */
+}
+
+/* ── Main content — lowest z-index so topbar/dropdowns always show above ── */
+.main {
+    flex: 1;
+    margin-left: 210px;
+    padding: 1.75rem;
+    padding-bottom: 3rem;
+    background: #f1f5f9;
+    overflow-x: hidden;
+    min-width: 0;
+    position: relative;
+    z-index: 1;             /* never covers topbar or notification dropdown */
 }
 
 .topbar-brand { color: #fff; font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem; text-decoration: none; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -69,11 +84,11 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 }
 .topbar-btn:hover { background: rgba(255,255,255,0.22); color: #fff; }
 
-/* sidebar-profile hidden */
-.sidebar-profile { display: none; }
-.sidebar-avatar  { display: none; }
-.sidebar-name    { display: none; }
-.sidebar-role    { display: none; }
+/* sidebar-profile */
+.sidebar-profile { display: flex; flex-direction: column; align-items: center; padding: 1rem 0.5rem 0.75rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 0.5rem; }
+.sidebar-avatar  { font-size: 2.5rem; color: #93c5fd; margin-bottom: 0.4rem; }
+.sidebar-name    { font-size: 0.9rem; font-weight: 700; color: #fff; }
+.sidebar-role    { font-size: 0.72rem; color: #93c5fd; margin-top: 0.15rem; }
 
 .nav-item {
     display: flex; align-items: center; gap: 0.65rem;
@@ -236,7 +251,7 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
     color: #94a3b8;
     padding: 1.5rem 2rem 1rem;
     font-size: 0.78rem;
-    margin-left: 210px;
+    margin-left: 220px;
 }
 .footer-inner {
     display: flex;
@@ -333,10 +348,10 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 
 /* ── Responsive sidebar ── */
 @media(max-width:768px){
-    .sidebar { display: none; position: fixed; top: 60px; left: 0; z-index: 199; height: calc(100vh - 60px); width: 210px; min-width: 210px; }
+    .sidebar { display: none; position: fixed; top: 60px; left: 0; z-index: 199; height: calc(100vh - 60px); width: 220px; min-width: 220px; }
     .sidebar.open { display: block; }
     .app-body { margin-top: 60px; }
-    .main { margin-left: 0; padding: 1rem; padding-bottom: 2rem; }
+    .main { margin-left: 0 !important; padding: 1rem; padding-bottom: 2rem; }
     .footer { margin-left: 0; }
     /* Hamburger button — shown only on mobile */
     .sidebar-toggle {
@@ -372,8 +387,11 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 .sidebar nav a:hover { background: rgba(255,255,255,0.1); color: #fff; transform: translateX(3px); }
 .sidebar nav a.active { background: linear-gradient(90deg,#3b82f6,#2563eb); color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
 
-/* Sidebar profile — hidden (removed from layout) */
-.sidebar-profile, .sidebar-avatar, .sidebar-name, .sidebar-role { display: none !important; }
+/* Sidebar profile — shown for dashboards that use it */
+.sidebar-profile { display: flex; flex-direction: column; align-items: center; padding: 1rem 0.5rem 0.75rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 0.5rem; }
+.sidebar-avatar  { font-size: 2.5rem; color: #93c5fd; margin-bottom: 0.4rem; }
+.sidebar-name    { font-size: 0.9rem; font-weight: 700; color: #fff; }
+.sidebar-role    { font-size: 0.72rem; color: #93c5fd; margin-top: 0.15rem; }
 
 /* Modal aliases */
 .modal-header { background: linear-gradient(90deg,#1e3a8a,#2563eb); color: #fff; padding: 1.1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
@@ -432,7 +450,7 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 .badge-secondary { background: #f1f5f9; color: #475569; }
 
 /* ── Notification Bell ── */
-.notif-wrapper { position: relative; }
+.notif-wrapper { position: relative; z-index: 10000; }
 .notif-bell {
     background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
     color: #fff; border-radius: 8px; padding: 0.35rem 0.65rem;
@@ -451,7 +469,7 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 .notif-dropdown {
     position: absolute; top: calc(100% + 10px); right: 0;
     width: 340px; background: #fff; border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.18); z-index: 999;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.18); z-index: 99999;
     display: none; flex-direction: column; overflow: hidden;
     border: 1px solid #e2e8f0;
 }

@@ -180,7 +180,7 @@ function renderNotifications(notifications) {
             </div>`;
     }).join('');
 
-    // Bind each delete button directly — most reliable approach
+    // Bind each delete button and row click directly
     notifications.forEach(function(n) {
         const delBtn = document.getElementById('del-' + n.id);
         if (delBtn) {
@@ -191,13 +191,13 @@ function renderNotifications(notifications) {
             });
         }
 
-        // Row click for navigation (only on content area)
-        const content = list.querySelector('#notif-' + n.id + ' .notif-content');
-        if (content) {
+        // Whole row is clickable for navigation
+        const row = document.getElementById('notif-' + n.id);
+        if (row) {
             const url = n.link || NOTIF_URLS[n.type] || '';
-            content.style.cursor = 'pointer';
-            content.addEventListener('click', function(e) {
-                e.stopPropagation();
+            row.style.cursor = 'pointer';
+            row.addEventListener('click', function(e) {
+                if (e.target.closest('.notif-delete-btn')) return;
                 markOneRead(n.id, url);
             });
         }

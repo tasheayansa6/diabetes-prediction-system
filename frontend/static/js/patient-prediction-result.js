@@ -233,43 +233,9 @@ async function loadResult() {
         const actionPanel = document.getElementById('actionPanel');
         if (actionPanel) actionPanel.innerHTML = cfg.alertHtml;
 
-        // ── All-3-models comparison panel ─────────────────────────────────────
-        if (p.model_comparison && p.model_comparison.length > 1) {
-            var compCard = document.getElementById('modelComparisonCard');
-            if (!compCard) {
-                compCard = document.createElement('div');
-                compCard.id = 'modelComparisonCard';
-                compCard.className = 'card mb-4';
-                compCard.innerHTML =
-                    '<div class="card-header" style="background:linear-gradient(90deg,#1e3a8a,#2563eb);">' +
-                    '<h5 style="color:#fff;margin:0;"><i class="bi bi-bar-chart-steps me-2"></i>All 3 Models — Comparison</h5></div>' +
-                    '<div class="p-4" id="modelComparisonBody"></div>';
-                if (actionPanel) actionPanel.after(compCard);
-            }
-            var riskColors = {
-                'LOW RISK': '#16a34a', 'MODERATE RISK': '#d97706',
-                'HIGH RISK': '#dc2626', 'VERY HIGH RISK': '#7c3aed'
-            };
-            var compBody = document.getElementById('modelComparisonBody');
-            if (compBody) {
-                compBody.innerHTML =
-                    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">' +
-                    p.model_comparison.map(function(m) {
-                        var color  = riskColors[m.risk_level] || '#64748b';
-                        var border = m.is_active ? '2px solid #2563eb' : '1px solid #e2e8f0';
-                        var bg     = m.is_active ? '#eff6ff' : '#f8fafc';
-                        return '<div style="border:' + border + ';background:' + bg + ';border-radius:12px;padding:1rem;text-align:center;">' +
-                            (m.is_active ? '<div style="font-size:.65rem;font-weight:700;color:#2563eb;text-transform:uppercase;margin-bottom:.4rem;">Active Model</div>' : '') +
-                            '<div style="font-weight:700;font-size:.9rem;color:#1e293b;margin-bottom:.3rem;">' + m.algorithm + '</div>' +
-                            '<div style="font-size:.75rem;color:#64748b;margin-bottom:.6rem;">Accuracy: ' + m.accuracy + '%</div>' +
-                            '<div style="font-size:1.4rem;font-weight:800;color:' + color + ';">' + (m.probability_percent || 0).toFixed(1) + '%</div>' +
-                            '<div style="font-size:.72rem;font-weight:600;color:' + color + ';margin-top:.2rem;">' + m.risk_level + '</div>' +
-                            '</div>';
-                    }).join('') +
-                    '</div>' +
-                    '<p style="font-size:.75rem;color:#94a3b8;margin-top:.75rem;text-align:center;">Primary result uses the active model. All models trained on the same dataset.</p>';
-            }
-        }
+        // ── All-3-models comparison panel — REMOVED ──────────────────────────
+        // Model comparison is admin-only. Patients only see the active model result.
+        // Admin can switch the active model from /templates/admin/manage_models.html
 
         // ── Feature importance chart ──────────────────────────────────────────
         if (p.feature_importance && p.feature_importance.length) {

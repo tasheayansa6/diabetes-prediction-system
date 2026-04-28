@@ -557,17 +557,16 @@ def predict(current_user):
             current_app.logger.error(f'HealthRecord create error: {hr_err}')
             return jsonify({"success": False, "message": f"Health record error: {str(hr_err)}"}), 500
 
-        # Make prediction using ML service — run all 3 models for comparison
+        # Make prediction using active model only
         try:
-            from backend.services.ml_service import get_ml_service, MLService
+            from backend.services.ml_service import get_ml_service
             ml = get_ml_service()
             if not ml.is_ready():
                 ml = get_ml_service(force_reload=True)
             if not ml.is_ready():
                 db.session.rollback()
                 return jsonify({"success": False, "message": "ML model failed to load. Please contact admin."}), 500
-            # Use predict_all_models to run all 3 and return comparison
-            prediction_result = ml.predict_all_models(data)
+            prediction_result = ml.predict(data)
         except Exception as ml_err:
             db.session.rollback()
             current_app.logger.error(f'ML prediction error: {ml_err}')
@@ -587,15 +586,8 @@ def predict(current_user):
                 "message": err
             }), 500
 
-        # Create prediction record — store model_comparison in input_data
+        # Create prediction record — active model only, no comparison data
         try:
-            # Attach model comparison to input_data for later retrieval
-            input_data_with_comparison = dict(data)
-            if prediction_result.get('model_comparison'):
-                input_data_with_comparison['_model_comparison'] = prediction_result['model_comparison']
-            if prediction_result.get('feature_importance'):
-                input_data_with_comparison['_feature_importance'] = prediction_result['feature_importance']
-
             prediction = Prediction(
                 patient_id=current_user['id'],
                 health_record_id=health_record.id,
@@ -605,12 +597,11 @@ def predict(current_user):
                 risk_level=prediction_result.get('risk_level', 'UNKNOWN'),
                 model_version=prediction_result.get('model_version', '1.0.0'),
                 explanation=prediction_result.get('interpretation', ''),
-                input_data=input_data_with_comparison,
+                input_data=data,
                 ip_address=request.remote_addr,
                 created_at=datetime.utcnow()
             )
             db.session.add(prediction)
-            # Audit trail
             _audit('prediction_created', 'predictions',
                    description=f"risk={prediction_result.get('risk_level')} prob={round(prediction_result.get('probability_percent',0),1)}%")
             db.session.commit()

@@ -12,7 +12,7 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 
 /* ── Layout ── */
 .app-layout { display: block; min-height: 100vh; }
-.app-body   { display: block; margin-top: 60px; padding-left: 220px; min-height: calc(100vh - 60px); }
+.app-body   { display: block; margin-top: 60px; min-height: calc(100vh - 60px); }
 
 /* ── Sidebar ── */
 .sidebar {
@@ -30,6 +30,7 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 
 /* ── Main content ── */
 .main {
+    margin-left: 220px;
     padding: 1.25rem;
     padding-bottom: 3rem;
     background: #f1f5f9;
@@ -68,19 +69,7 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 }
 .topbar-btn:hover { background: rgba(255,255,255,0.22); color: #fff; }
 
-/* ── Sidebar ── */
-.sidebar {
-    width: 220px;
-    background: linear-gradient(180deg, #0f172a 0%, #1e3a8a 100%);
-    padding: 1rem 0.75rem;
-    position: fixed;
-    top: 60px;
-    left: 0;
-    height: calc(100vh - 60px);
-    overflow-y: auto;
-    box-shadow: 2px 0 12px rgba(0,0,0,0.15);
-    z-index: 190;
-}
+/* sidebar-profile hidden */
 .sidebar-profile { display: none; }
 .sidebar-avatar  { display: none; }
 .sidebar-name    { display: none; }
@@ -96,21 +85,6 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #
 .nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; transform: translateX(3px); }
 .nav-item.active { background: linear-gradient(90deg,#3b82f6,#2563eb); color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
 
-/* ── Main content ── */
-.main {
-    margin-left: 220px;
-    padding: 1.25rem;
-    padding-bottom: 3rem;
-    background: #f1f5f9;
-    min-height: calc(100vh - 60px);
-    overflow-x: hidden;
-}
-/* ── Footer ── */
-.footer-area {
-    background: #f1f5f9;
-    min-height: calc(100vh - 60px);
-    overflow-x: hidden;
-}
 .page-title { font-size: 1.4rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.5rem; }
 .page-subtitle { color: #64748b; font-size: 0.875rem; margin-top: 0.2rem; }
 

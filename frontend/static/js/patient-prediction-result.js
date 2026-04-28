@@ -45,17 +45,17 @@ const RISK_CONFIG = {
             '</div></div></div>'
     },
     'VERY HIGH RISK': {
-        key: 'veryhigh', label: 'VERY HIGH RISK', color: '#7c3aed', boxKey: 'high',
+        key: 'veryhigh', label: 'VERY HIGH RISK', color: '#991b1b', boxKey: 'high',
         icon: 'bi-heart-pulse-fill',
         summary: 'Immediate medical attention is strongly recommended.',
         recommendation: 'Please see a doctor immediately. You may require diagnostic tests, medication, or a structured diabetes management program. Do not delay.',
-        alertHtml: '<div style="background:linear-gradient(135deg,#4c1d95,#6d28d9);border-radius:14px;padding:1.25rem;display:flex;gap:1rem;align-items:flex-start;">' +
-            '<i class="bi bi-heart-pulse-fill" style="color:#ddd6fe;font-size:1.75rem;flex-shrink:0;"></i>' +
+        alertHtml: '<div style="background:linear-gradient(135deg,#7f1d1d,#991b1b);border-radius:14px;padding:1.25rem;display:flex;gap:1rem;align-items:flex-start;animation:pulse-border 2s infinite;">' +
+            '<i class="bi bi-heart-pulse-fill" style="color:#fca5a5;font-size:1.75rem;flex-shrink:0;"></i>' +
             '<div><div style="font-weight:700;color:#fff;font-size:1rem;margin-bottom:.35rem;">Very High Risk — See a Doctor Immediately</div>' +
-            '<div style="color:#ddd6fe;font-size:.875rem;line-height:1.6;">Your result indicates a very high diabetes risk. Immediate medical consultation is required. You may need diagnostic tests, medication, or a diabetes management program.</div>' +
+            '<div style="color:#fecaca;font-size:.875rem;line-height:1.6;">Your result indicates a very high diabetes risk. Immediate medical consultation is required. You may need diagnostic tests, medication, or a diabetes management program.</div>' +
             '<div style="margin-top:.85rem;display:flex;gap:.6rem;flex-wrap:wrap;">' +
-            '<a href="/templates/patient/appointment.html?reason=Very+High+Risk+Diabetes+Urgent" class="btn btn-sm" style="background:#fff;color:#6d28d9;border:none;font-weight:700;">Book Urgent Appointment</a>' +
-            '<button onclick="downloadReport()" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#ddd6fe;border:1px solid rgba(255,255,255,.3);">Download Report</button>' +
+            '<a href="/templates/patient/appointment.html?reason=Very+High+Risk+Diabetes+Urgent" class="btn btn-sm" style="background:#fff;color:#991b1b;border:none;font-weight:700;">Book Urgent Appointment</a>' +
+            '<button onclick="downloadReport()" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fecaca;border:1px solid rgba(255,255,255,.3);">Download Report</button>' +
             '</div></div></div>'
     }
 };

@@ -152,15 +152,28 @@ function getCurrentUser() {
 // ── updateUserDisplay ─────────────────────────────────────────────────────────
 function updateUserDisplay(user) {
     const displayName = user.name || user.username || 'User';
+    const uid = user.unique_id || null;
+
     ['topUserName', 'userName', 'navUserName', 'sidebarName', 'sidebarDoctorName'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = displayName;
     });
-    // Show unique ID under sidebar name for all roles
-    if (user.unique_id) {
+
+    // Show unique ID badge in topbar
+    if (uid) {
+        const topUser = document.querySelector('.topbar-user');
+        if (topUser && !topUser.querySelector('.uid-badge')) {
+            const badge = document.createElement('span');
+            badge.className = 'uid-badge';
+            badge.title = 'Your unique system ID';
+            badge.style.cssText = 'font-size:.65rem;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:1px 8px;color:#bfdbfe;margin-left:4px;font-weight:600;letter-spacing:.02em;white-space:nowrap;';
+            badge.textContent = uid;
+            topUser.appendChild(badge);
+        }
+        // Also update sidebar unique ID elements
         ['sidebarUniqueId', 'sidebarPatientId'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.textContent = 'ID: ' + user.unique_id;
+            if (el) el.textContent = 'ID: ' + uid;
         });
     }
 }

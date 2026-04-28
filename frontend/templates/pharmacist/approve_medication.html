@@ -16,7 +16,7 @@
 <div class="modal-overlay" id="predictionModal" style="display:none;">
   <div class="modal-box">
     <div class="modal-header"><h5><i class="bi bi-graph-up"></i> ML Prediction Result</h5><button onclick="document.getElementById('predictionModal').style.display='none'" class="modal-close">&times;</button></div>
-    <div class="modal-body" id="predictionBody"><p class="text-gray-400">Loading...</p></div>
+    <div class="modal-body" id="predictionBody"><p class="text-gray-400">—</p></div>
     <div class="modal-footer"><button class="btn btn-secondary" onclick="document.getElementById('predictionModal').style.display='none'">Close</button></div>
   </div>
 </div>
@@ -51,7 +51,7 @@
         <div class="table-responsive">
           <table class="table">
             <thead><tr><th>ID</th><th>Patient</th><th>Medication</th><th>Dosage</th><th>Doctor</th><th>Date</th><th>Actions</th></tr></thead>
-            <tbody id="approvalTable"><tr><td colspan="7" class="text-center text-gray-400">Loading...</td></tr></tbody>
+            <tbody id="approvalTable"></tbody>
           </table>
         </div>
       </div>

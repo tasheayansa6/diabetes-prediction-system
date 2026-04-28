@@ -58,16 +58,6 @@ async function handleLogin(event) {
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
 
-            // Show welcome message with name + unique ID
-            const u = data.user;
-            const uid = u.unique_id || ('#' + u.id);
-            const box = document.getElementById('alertBox');
-            if (box) {
-                box.innerHTML = '<div style="background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:10px;padding:.75rem 1rem;font-size:.875rem;font-weight:600;">' +
-                    '<i class="bi bi-check-circle-fill me-2"></i>Welcome, <strong>' + (u.name || u.username) + '</strong> &nbsp;·&nbsp; ID: <code style="background:#bbf7d0;padding:1px 6px;border-radius:4px;">' + uid + '</code>' +
-                    '</div>';
-            }
-
             const next = new URLSearchParams(window.location.search).get('next');
             setTimeout(() => {
                 if (next && next.startsWith('/')) {
@@ -75,7 +65,7 @@ async function handleLogin(event) {
                 } else {
                     redirectToDashboard(data.user.role);
                 }
-            }, 2000);
+            }, 400);
             return;
         }
 

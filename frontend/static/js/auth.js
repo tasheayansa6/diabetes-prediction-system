@@ -190,14 +190,11 @@ function updateUserDisplay(user) {
         }
     }
 
-    // Sidebar unique ID elements (keep in sidebar only)
-    const uid = user.unique_id || null;
-    if (uid) {
-        ['sidebarUniqueId', 'sidebarPatientId'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = 'ID: ' + uid;
-        });
-    }
+    // Sidebar name only — no unique ID displayed anywhere
+    ['sidebarUniqueId', 'sidebarPatientId'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
 }
 
 // ── initAuth ──────────────────────────────────────────────────────────────────

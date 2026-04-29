@@ -1,4 +1,5 @@
 import os
+import socket
 from flask import send_from_directory, send_file
 from backend import create_app
 from backend.extensions import socketio
@@ -6,6 +7,35 @@ from backend.extensions import socketio
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 if not os.path.exists(os.path.join(PROJECT_ROOT, 'backend')):
     raise RuntimeError("Backend package directory not found relative to run.py")
+
+# ── Kill any non-Python process blocking port 5000 ───────────────────────────
+def _free_port_5000():
+    """Kill any process (e.g. Node.js) blocking port 5000 before Flask starts."""
+    try:
+        import subprocess, sys
+        port = 5000
+        if sys.platform == 'win32':
+            result = subprocess.run(
+                ['netstat', '-ano'],
+                capture_output=True, text=True, timeout=5
+            )
+            for line in result.stdout.splitlines():
+                if f':{port}' in line and 'LISTENING' in line:
+                    parts = line.strip().split()
+                    pid = int(parts[-1])
+                    # Only kill non-Python processes
+                    proc_result = subprocess.run(
+                        ['tasklist', '/FI', f'PID eq {pid}', '/FO', 'CSV', '/NH'],
+                        capture_output=True, text=True, timeout=5
+                    )
+                    if 'python' not in proc_result.stdout.lower():
+                        subprocess.run(['taskkill', '/F', '/PID', str(pid)],
+                                       capture_output=True, timeout=5)
+                        print(f'[run.py] Killed non-Python process {pid} blocking port {port}')
+    except Exception as e:
+        print(f'[run.py] Port check warning: {e}')
+
+_free_port_5000()
 
 config_name = os.getenv('FLASK_ENV', 'development')
 app = create_app(config_name)

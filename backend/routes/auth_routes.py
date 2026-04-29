@@ -377,6 +377,15 @@ def register():
             'exp': datetime.utcnow() + timedelta(seconds=expiry_secs)
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
         
+        _ROLE_ID_FIELD_REG = {
+            'patient':        'patient_id',
+            'doctor':         'doctor_id',
+            'nurse':          'nurse_id',
+            'lab_technician': 'technician_id',
+            'pharmacist':     'pharmacist_id',
+            'admin':          'admin_id',
+        }
+        reg_id_field = _ROLE_ID_FIELD_REG.get(new_user.role)
         return jsonify({
             "success": True,
             "message": "User registered successfully",
@@ -388,6 +397,7 @@ def register():
                 "email": new_user.email,
                 "role": new_user.role,
                 "email_verified": getattr(new_user, 'email_verified', False),
+                "unique_id": getattr(new_user, reg_id_field, None) if reg_id_field else None,
                 "created_at": new_user.created_at.isoformat() if getattr(new_user, 'created_at', None) else None
             }
         }), 201

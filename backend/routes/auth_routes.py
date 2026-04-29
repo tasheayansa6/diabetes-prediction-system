@@ -342,6 +342,31 @@ def register():
                            ip_address=request.remote_addr, status='success',
                            details=f'Role: {role}')
 
+        # Send welcome notification to the new user
+        try:
+            from backend.models.notification import Notification
+            role_welcome = {
+                'patient':        'Welcome! Your patient portal is ready. A nurse will record your vitals before your first prediction.',
+                'doctor':         'Welcome, Doctor! Your dashboard is ready. You can now manage patients, prescriptions, and lab requests.',
+                'nurse':          'Welcome! You can now record patient vitals and manage the patient queue.',
+                'lab_technician': 'Welcome! You can now manage lab tests, enter results, and generate reports.',
+                'pharmacist':     'Welcome! You can now review prescriptions and manage medication dispensing.',
+                'admin':          'Welcome, Administrator! You have full system access.',
+            }
+            db.session.add(Notification(
+                user_id=new_user.id,
+                title=f'Welcome to Diabetes Prediction System, {new_user.username}!',
+                message=role_welcome.get(role, 'Welcome! Your account is ready.'),
+                type='info',
+                category='general',
+                is_read=False,
+                link='/',
+                created_at=datetime.utcnow()
+            ))
+            db.session.commit()
+        except Exception:
+            pass
+
         # Generate JWT token for auto-login
         expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 86400)
         token = jwt.encode({

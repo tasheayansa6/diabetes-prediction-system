@@ -85,7 +85,7 @@ async function initNotifications() {
                     <button class="notif-mark-all" id="notifMarkAll">Mark all read</button>
                 </div>
                 <div class="notif-list" id="notifList">
-                    <div class="notif-empty"><i class="bi bi-arrow-repeat"></i><p>Loading...</p></div>
+                    <div class="notif-empty"><i class="bi bi-bell-slash"></i><p>No notifications yet</p></div>
                 </div>
                 <div class="notif-footer" id="notifFooter">0 notifications</div>
             </div>

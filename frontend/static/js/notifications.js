@@ -48,17 +48,56 @@ const ICON_MAP = {
     'info':            { icon: 'bi-info-circle-fill',          color: '#64748b' },
 };
 
-const NOTIF_URLS = {
-    'high_risk_alert': '/templates/patient/prediction_history.html',
-    'prediction':      '/templates/patient/prediction_history.html',
-    'vitals':          '/templates/doctor/patient_list.html',
-    'lab_result':      '/templates/patient/lab_results.html',
-    'lab_order':       '/templates/lab/enter_lab_results.html',
-    'prescription':    '/templates/pharmacist/prescription_review.html',
-    'appointment':     '/templates/patient/appointment.html',
-    'payment':         '/templates/payment/payment_history.html',
-    'info':            '/templates/patient/dashboard.html',
-};
+// Role-aware notification URLs — each role gets sent to their own relevant page
+function getNotifUrl(notif, userRole) {
+    // Use the notification's own link if set
+    if (notif.link) return notif.link;
+
+    // Role-specific fallbacks by notification type
+    const roleUrls = {
+        nurse: {
+            'info':            '/templates/nurse/dashboard.html',
+            'vitals':          '/templates/nurse/dashboard.html',
+            'appointment':     '/templates/nurse/dashboard.html',
+        },
+        doctor: {
+            'high_risk_alert': '/templates/doctor/patient_list.html',
+            'prediction':      '/templates/doctor/patient_list.html',
+            'vitals':          '/templates/doctor/lab_requests.html',
+            'lab_result':      '/templates/doctor/lab_requests.html',
+            'lab_order':       '/templates/doctor/lab_requests.html',
+            'prescription':    '/templates/doctor/patient_list.html',
+            'appointment':     '/templates/doctor/appointments.html',
+            'info':            '/templates/doctor/dashboard.html',
+        },
+        lab_technician: {
+            'lab_order':       '/templates/lab/enter_lab_results.html',
+            'lab_result':      '/templates/lab/lab_report.html',
+            'info':            '/templates/lab/dashboard.html',
+        },
+        pharmacist: {
+            'prescription':    '/templates/pharmacist/prescription_review.html',
+            'lab_order':       '/templates/pharmacist/prescription_review.html',
+            'info':            '/templates/pharmacist/dashboard.html',
+        },
+        patient: {
+            'high_risk_alert': '/templates/patient/prediction_history.html',
+            'prediction':      '/templates/patient/prediction_history.html',
+            'lab_result':      '/templates/patient/lab_results.html',
+            'prescription':    '/templates/patient/prescriptions.html',
+            'appointment':     '/templates/patient/appointment.html',
+            'payment':         '/templates/payment/payment_history.html',
+            'info':            '/templates/patient/dashboard.html',
+        },
+        admin: {
+            'info':            '/templates/admin/dashboard.html',
+        }
+    };
+
+    const role = userRole || (JSON.parse(localStorage.getItem('user') || '{}').role) || 'patient';
+    const roleMap = roleUrls[role] || roleUrls['patient'];
+    return roleMap[notif.type] || roleMap['info'] || '/';
+}
 
 let _notifInterval = null;
 
@@ -162,7 +201,7 @@ function renderNotifications(notifications) {
         const cfg    = ICON_MAP[n.type] || ICON_MAP['info'];
         const time   = n.created_at ? timeAgo(n.created_at) : '';
         const unread = !n.is_read;
-        const url    = n.link || NOTIF_URLS[n.type] || '';
+        const url    = getNotifUrl(n);
         return `
             <div class="notif-item ${unread ? 'unread' : ''}" id="notif-${n.id}">
                 <div class="notif-icon" style="background:${cfg.color}20;color:${cfg.color};">
@@ -194,7 +233,7 @@ function renderNotifications(notifications) {
         // Whole row is clickable for navigation
         const row = document.getElementById('notif-' + n.id);
         if (row) {
-            const url = n.link || NOTIF_URLS[n.type] || '';
+            const url = getNotifUrl(n);
             row.style.cursor = 'pointer';
             row.addEventListener('click', function(e) {
                 if (e.target.closest('.notif-delete-btn')) return;

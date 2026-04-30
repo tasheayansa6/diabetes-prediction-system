@@ -156,15 +156,25 @@ async function initNotifications() {
 }
 
 async function loadNotifications() {
-    // Guard: if no token or user in storage, clear the widget and stop
+    // Guard: if no token in storage, clear the widget and stop
     const token = getToken();
-    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-    if (!token || !storedUser.id) {
+    if (!token) {
         const list = document.getElementById('notifList');
         if (list) list.innerHTML = '<div class="notif-empty"><i class="bi bi-bell-slash"></i><p>Not signed in</p></div>';
         updateBadge(0);
         return;
     }
+    // Validate token has not expired client-side
+    try {
+        const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(b64 + '='.repeat((4 - b64.length % 4) % 4)));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+            const list = document.getElementById('notifList');
+            if (list) list.innerHTML = '<div class="notif-empty"><i class="bi bi-bell-slash"></i><p>Session expired</p></div>';
+            updateBadge(0);
+            return;
+        }
+    } catch (_) { /* token decode failed — let server validate */ }
     try {
         const res  = await fetch('/api/auth/notifications?limit=20&offset=0', {
             headers: { 'Authorization': 'Bearer ' + token }

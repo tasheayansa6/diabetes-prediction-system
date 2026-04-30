@@ -146,7 +146,7 @@ async function loadWaitingPatients() {
                         <span style="background:${priColor}20;color:${priColor};padding:.1rem .45rem;border-radius:99px;font-size:.68rem;font-weight:700;">${pri}</span>
                     </div>
                 </div>
-                <a href="/templates/nurse/record_vitals.html?patient_id=${patId}"
+                <a href="/templates/nurse/record_vitals.html?patient_id=${patId}&patient_name=${encodeURIComponent(q.patient ? q.patient.name : '')}"
                    class="btn btn-sm btn-primary" style="padding:.3rem .75rem;font-size:.78rem;flex-shrink:0;">
                     <i class="bi bi-heart-pulse"></i> Record Vitals
                 </a>
@@ -183,7 +183,7 @@ function showNewPatientPopup(name, patientId, dbId) {
         `<div style="background:rgba(255,255,255,.25);border-radius:6px;padding:.2rem .6rem;font-family:monospace;font-weight:700;font-size:.85rem;display:inline-block;margin:.3rem 0;">${esc(patientId)}</div>` +
         '<div style="font-size:.78rem;opacity:.9;margin-top:.2rem;">Waiting for vitals recording</div>' +
         '</div>' +
-        `<a href="/templates/nurse/record_vitals.html?patient_id=${dbId}" ` +
+        `<a href="/templates/nurse/record_vitals.html?patient_id=${dbId}&patient_name=${encodeURIComponent(name)}" ` +
         'style="background:#fff;color:#059669;border:none;border-radius:10px;padding:.4rem .85rem;font-size:.8rem;font-weight:700;cursor:pointer;text-decoration:none;flex-shrink:0;margin-left:.5rem;align-self:center;">' +
         '<i class="bi bi-heart-pulse"></i> Record</a>' +
         '</div>' +

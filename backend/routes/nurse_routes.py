@@ -694,7 +694,7 @@ def register_patient(current_nurse):
                     category='general',
                     is_read=False,
                     link=(
-                        f'/templates/nurse/record_vitals.html?patient_id={new_patient.id}'
+                        f'/templates/nurse/record_vitals.html?patient_id={new_patient.id}&patient_name={new_patient.username}'
                         if is_nurse else
                         f'/templates/doctor/patient_list.html?highlight={new_patient.id}'
                     ),

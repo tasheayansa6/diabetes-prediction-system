@@ -153,6 +153,14 @@ function getCurrentUser() {
 // Shows name in the topbar on EVERY page for ALL roles.
 function updateUserDisplay(user) {
     const displayName = user.name || user.username || 'User';
+    const uid = user.unique_id || null;
+
+    // ── Update browser tab title: "kena (PAT20260417) — Diabetes Prediction System"
+    if (uid) {
+        document.title = displayName + ' (' + uid + ') — Diabetes Prediction System';
+    } else {
+        document.title = displayName + ' — Diabetes Prediction System';
+    }
 
     // Set name in any named element
     ['topUserName', 'userName', 'navUserName', 'sidebarName', 'sidebarDoctorName'].forEach(id => {
@@ -191,7 +199,6 @@ function updateUserDisplay(user) {
     }
 
     // Show unique ID in sidebar after sign-in
-    const uid = user.unique_id || null;
     if (uid) {
         ['sidebarUniqueId', 'sidebarPatientId'].forEach(function(id) {
             const el = document.getElementById(id);

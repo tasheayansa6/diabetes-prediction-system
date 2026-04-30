@@ -294,7 +294,7 @@ def register():
                         type='info',
                         category='general',
                         is_read=False,
-                        link=f'/templates/nurse/record_vitals.html?patient_id={new_user.id}',
+                        link=f'/templates/nurse/record_vitals.html?patient_id={new_user.id}&patient_name={username}',
                         created_at=datetime.utcnow()
                     ))
                 db.session.commit()

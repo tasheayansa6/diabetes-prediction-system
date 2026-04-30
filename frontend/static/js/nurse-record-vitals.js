@@ -373,8 +373,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setCurrentDateTime();
 
+    // Read URL params — patient_id and patient_name from notification link
+    const urlParams    = new URLSearchParams(window.location.search);
+    const urlPatientId = urlParams.get('patient_id');
+    const urlPatientName = urlParams.get('patient_name');
+
+    // If patient_name is in URL, show it immediately before API loads
+    if (urlPatientId && urlPatientName) {
+        const nameEl = document.getElementById('selectedPatientName');
+        const uidEl  = document.getElementById('selectedPatientUniqueId');
+        const infoEl = document.getElementById('patientInfo');
+        const newTag = document.getElementById('newPatientTag');
+        if (nameEl)  nameEl.textContent  = decodeURIComponent(urlPatientName);
+        if (uidEl)   uidEl.textContent   = 'Loading ID...';
+        if (infoEl)  infoEl.style.display = '';
+        if (newTag)  { newTag.style.display = 'inline'; }
+        showToast('New patient ' + decodeURIComponent(urlPatientName) + ' — please fill vitals.', 'success');
+    }
+
     // Load patients, then auto-select from URL ?patient_id= if present
-    const urlPatientId = new URLSearchParams(window.location.search).get('patient_id');
     loadPatients().then(function() {
         if (urlPatientId) {
             const select = document.getElementById('patient_id');
@@ -386,20 +403,20 @@ document.addEventListener('DOMContentLoaded', function () {
                     onPatientChange();
                 } else {
                     // Patient not in list yet — fetch individually and add option
-                    fetch(`/api/nurse/patient-profile/${urlPatientId}`, {
+                    fetch('/api/nurse/patient-profile/' + urlPatientId, {
                         headers: { 'Authorization': 'Bearer ' + getToken() }
-                    }).then(r => r.json()).then(data => {
+                    }).then(function(r) { return r.json(); }).then(function(data) {
                         if (data.success) {
-                            const p = data.patient;
-                            const opt = document.createElement('option');
+                            var p = data.patient;
+                            var opt = document.createElement('option');
                             opt.value = p.id;
-                            opt.textContent = `${p.username} (${p.patient_id || 'ID:' + p.id})`;
+                            opt.textContent = p.username + ' (' + (p.patient_id || 'ID:' + p.id) + ')';
                             select.appendChild(opt);
                             select.value = p.id;
                             select.disabled = true;
                             onPatientChange();
                         }
-                    }).catch(() => {});
+                    }).catch(function() {});
                 }
             }
         }

@@ -109,10 +109,11 @@
 <script src="/static/js/notifications.js"></script>
 <script src="/static/js/nurse-dashboard.js"></script>
 <script>
-if(typeof initNotifications==='function') initNotifications('nurse');
-// Reload waiting list on real-time notification
 document.addEventListener('DOMContentLoaded', function() {
-    document.addEventListener('ws-notification', loadWaitingPatients);
+    if(typeof initNotifications==='function') initNotifications('nurse');
+    document.addEventListener('ws-notification', function() {
+        if(typeof loadWaitingPatients==='function') loadWaitingPatients();
+    });
 });
 </script>
 </body>

@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: diabetes_db
+    environment:
+      POSTGRES_DB: diabetes_db
+      POSTGRES_USER: diabetes_user
+      POSTGRES_PASSWORD: diabetes_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U diabetes_user -d diabetes_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - diabetes_network
+
+  # Web Application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: diabetes_web
+    environment:
+      FLASK_ENV: production
+      DATABASE_URL: postgresql://diabetes_user:diabetes_password@postgres:5432/diabetes_db
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      ADMIN_BOOTSTRAP_EMAIL: admin@system.com
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_PASSWORD:-Admin@1234}
+      MAIL_SUPPRESS_SEND: "True"
+      CHAPA_SECRET_KEY: ${CHAPA_SECRET_KEY:-}
+      CHAPA_PUBLIC_KEY: ${CHAPA_PUBLIC_KEY:-}
+    volumes:
+      - ./database:/app/database
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+      - ./ml_model:/app/ml_model
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - diabetes_network
+    restart: unless-stopped
+
+  # Redis for caching and session management (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: diabetes_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - diabetes_network
+    profiles:
+      - with-cache
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  diabetes_network:
+    driver: bridge

@@ -105,6 +105,6 @@
 <script src="/static/js/auth.js"></script>
 <script src="/static/js/notifications.js"></script>
 <script src="/static/js/pharmacist-dashboard.js"></script>
-<script>if(typeof initNotifications==='function') initNotifications('pharmacist');</script>
+<script>document.addEventListener("DOMContentLoaded", function() { if(typeof initNotifications==="function") initNotifications("pharmacist"); });</script>
 </body>
 </html>

@@ -24,6 +24,7 @@ from backend.utils.decorators import token_required
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import uuid
+import re
 
 payment_bp = Blueprint('payment', __name__, url_prefix='/api/payments')
 
@@ -95,21 +96,34 @@ def _make_payment(patient_id, data, method, subtotal, tax, discount=0.0,
 
 
 def _resolve_patient_id(current_user, data):
-    """Return patient_id for the payer, supporting doctor-on-behalf-of-patient flows."""
+    """Return patient_id for the payer, supporting all role flows."""
+    # If the logged-in user is a patient, use their own ID
     patient = Patient.query.filter_by(id=current_user['id']).first()
     if patient:
         return patient.id
 
-    if current_user['role'] == 'doctor':
-        lab_request_id = data.get('lab_request_id')
-        if lab_request_id:
+    # Doctor/nurse/lab/pharmacist paying on behalf of a patient
+    # Try explicit patient_id in request data first
+    explicit_patient_id = data.get('patient_id')
+    if explicit_patient_id:
+        p = Patient.query.get(int(explicit_patient_id))
+        if p:
+            return p.id
+
+    # Lab request context
+    if data.get('lab_request_id'):
+        try:
             from backend.models.lab_test import LabTest
-            lab = LabTest.query.get(int(lab_request_id))
+            lab = LabTest.query.get(int(data['lab_request_id']))
             if lab:
                 return lab.patient_id
-        fallback = Patient.query.first()
-        if fallback:
-            return fallback.id
+        except (TypeError, ValueError):
+            pass
+
+    # Fallback: first patient in DB (for staff-initiated payments)
+    fallback = Patient.query.first()
+    if fallback:
+        return fallback.id
 
     return None
 
@@ -155,7 +169,7 @@ def _send_confirmation(patient_id, total, payment_id):
 # ── Chapa ─────────────────────────────────────────────────────────────────────
 
 @payment_bp.route('/chapa/initialize', methods=['POST'])
-@token_required(['patient', 'admin', 'doctor'])
+@token_required(['patient', 'admin', 'doctor', 'nurse', 'lab_technician', 'pharmacist'])
 def chapa_initialize(current_user):
     """
     POST /api/payments/chapa/initialize
@@ -181,10 +195,20 @@ def chapa_initialize(current_user):
         patient = Patient.query.get(patient_id)
 
         tx_ref = generate_tx_ref()
-        callback_url = current_app.config.get(
-            'CHAPA_CALLBACK_URL', 'http://localhost:5000/api/payments/chapa/webhook')
-        base_return = current_app.config.get(
-            'CHAPA_RETURN_URL', 'http://localhost:5000/templates/payment/payment_success.html')
+        host_url = request.host_url.rstrip('/')
+        
+        config_callback = current_app.config.get('CHAPA_CALLBACK_URL', '')
+        if not config_callback or 'localhost' in config_callback or '127.0.0.1' in config_callback:
+            callback_url = f"{host_url}/api/payments/chapa/webhook"
+        else:
+            callback_url = config_callback
+
+        config_return = current_app.config.get('CHAPA_RETURN_URL', '')
+        if not config_return or 'localhost' in config_return or '127.0.0.1' in config_return:
+            base_return = f"{host_url}/templates/payment/payment_success.html"
+        else:
+            base_return = config_return
+            
         # Append tx_ref so the success page can auto-verify without relying on localStorage
         return_url = f"{base_return}?tx_ref={tx_ref}"
 
@@ -197,8 +221,10 @@ def chapa_initialize(current_user):
             'tx_ref': tx_ref,
             'callback_url': callback_url,
             'return_url': return_url,
-            'customization[title]': 'Diabetes Prediction System',
-            'customization[description]': data.get('notes', 'Healthcare Services'),
+            'customization': {
+                'title': 'DiabetesPredict',
+                'description': re.sub(r'[^a-zA-Z0-9\-_ .]', ' ', data.get('notes', 'Healthcare Services'))[:100].strip(),
+            },
         }
 
         secret_key = current_app.config['CHAPA_SECRET_KEY']
@@ -210,8 +236,10 @@ def chapa_initialize(current_user):
         result = resp.json()
 
         if result.get('status') != 'success':
+            current_app.logger.error(f'Chapa init failed: {result}')
             return jsonify({'success': False,
-                            'message': result.get('message', 'Chapa initialization failed')}), 400
+                            'message': result.get('message', 'Chapa initialization failed'),
+                            'chapa_error': result}), 400
 
         ref_id, ref_type = _ref_from_data(data)
         payment, invoice = _make_payment(
@@ -238,15 +266,24 @@ def chapa_initialize(current_user):
 
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f'Chapa initialize exception: {e}', exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@payment_bp.route('/chapa/verify', methods=['GET', 'POST'])
 @token_required(['patient', 'admin', 'doctor'])
 def chapa_verify(current_user):
     """
     GET/POST /api/payments/chapa/verify?tx_ref=...
     Called by the frontend (with auth token) to verify and mark payment completed.
+    """
+    return _do_chapa_verify()
+
+
+@payment_bp.route('/chapa/verify-public', methods=['GET'])
+def chapa_verify_public():
+    """
+    GET /api/payments/chapa/verify-public?tx_ref=...
+    Public endpoint — no auth required.
+    Used by payment_success.html when Chapa redirects back and the browser
+    session/token is missing. Only marks payment completed, returns status.
     """
     return _do_chapa_verify()
 
@@ -337,16 +374,26 @@ def check_lab_payment(current_user):
 @token_required(['patient'])
 def check_prediction_access(current_user):
     """Returns whether the patient has an unused paid prediction slot.
-    Accepts: completed payments OR pending cash/insurance payments made within last 2 hours.
+    Accepts: completed payments OR pending cash/insurance/chapa within last 2 hours.
     """
     try:
+        two_hours_ago = datetime.utcnow() - timedelta(hours=2)
+
         # First check: completed prediction payment (unconsumed)
-        payment = Payment.query.filter(
-            Payment.patient_id == current_user['id'],
-            Payment.payment_type == 'prediction',
-            Payment.payment_status == 'completed',
-            Payment.prediction_consumed == False,
-        ).order_by(Payment.created_at.desc()).first()
+        try:
+            payment = Payment.query.filter(
+                Payment.patient_id == current_user['id'],
+                Payment.payment_type == 'prediction',
+                Payment.payment_status == 'completed',
+                Payment.prediction_consumed == False,
+            ).order_by(Payment.created_at.desc()).first()
+        except AttributeError:
+            # prediction_consumed column missing — query without it
+            payment = Payment.query.filter(
+                Payment.patient_id == current_user['id'],
+                Payment.payment_type == 'prediction',
+                Payment.payment_status == 'completed',
+            ).order_by(Payment.created_at.desc()).first()
 
         if payment:
             return jsonify({
@@ -355,22 +402,21 @@ def check_prediction_access(current_user):
                 'message': 'Payment verified. You may proceed.',
             }), 200
 
-        # Second check: pending cash/insurance payment made within last 2 hours
-        # (patient paid at cashier but admin hasn't approved yet)
-        two_hours_ago = datetime.utcnow() - timedelta(hours=2)
-        pending_cash = Payment.query.filter(
+        # Second check: pending cash/insurance/chapa payment within last 2 hours
+        # (patient paid but webhook/admin hasn't confirmed yet)
+        pending = Payment.query.filter(
             Payment.patient_id == current_user['id'],
             Payment.payment_type == 'prediction',
             Payment.payment_status == 'pending',
-            Payment.payment_method.in_(['cash', 'insurance', 'bank_transfer']),
+            Payment.payment_method.in_(['cash', 'insurance', 'bank_transfer', 'chapa']),
             Payment.created_at >= two_hours_ago,
         ).order_by(Payment.created_at.desc()).first()
 
-        if pending_cash:
+        if pending:
             return jsonify({
                 'success': True, 'has_access': True,
-                'payment_id': pending_cash.payment_id,
-                'message': 'Cash payment pending confirmation. Prediction allowed.',
+                'payment_id': pending.payment_id,
+                'message': 'Payment pending confirmation. Prediction allowed.',
             }), 200
 
         return jsonify({
@@ -378,21 +424,6 @@ def check_prediction_access(current_user):
             'message': 'Payment required to run prediction.',
         }), 200
 
-    except AttributeError:
-        # prediction_consumed column missing — fallback
-        try:
-            payment = Payment.query.filter(
-                Payment.patient_id == current_user['id'],
-                Payment.payment_type == 'prediction',
-                Payment.payment_status.in_(['completed', 'pending']),
-            ).order_by(Payment.created_at.desc()).first()
-            return jsonify({
-                'success': True,
-                'has_access': payment is not None,
-                'message': 'Payment verified (fallback).' if payment else 'Payment required.',
-            }), 200
-        except Exception:
-            return jsonify({'success': True, 'has_access': False, 'message': 'Payment required.'}), 200
     except Exception as e:
         current_app.logger.error(f'check-prediction-access error: {e}')
         return jsonify({'success': False, 'has_access': False,
@@ -423,7 +454,7 @@ def consume_prediction_payment(current_user):
 # ── Process payment (cash / card / mobile / bank / insurance) ─────────────────
 
 @payment_bp.route('/process', methods=['POST'])
-@token_required(['patient', 'admin', 'doctor'])
+@token_required(['patient', 'admin', 'doctor', 'nurse', 'lab_technician', 'pharmacist'])
 def process_payment(current_user):
     """
     POST /api/payments/process

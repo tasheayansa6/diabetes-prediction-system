@@ -212,6 +212,8 @@ async function processPayment(event) {
             localStorage.setItem('predictionPaid', 'true');
         }
         // Always redirect directly to the target page — never go through login
+        // For pending payments (cash/insurance), go to payment_success which will
+        // then redirect to the correct service page (health form for prediction)
         const dest = data.payment.is_pending
             ? '/templates/payment/payment_success.html'
             : nextPageAfterPayment(serviceContext, returnTo);
@@ -258,7 +260,10 @@ async function initiateChapaPayment() {
                 document.getElementById('cashPayment').checked = true;
                 togglePaymentFields();
             } else {
-                showAlert(data.message || 'Chapa initialization failed.');
+                // Show the actual error from Chapa if available
+                const msg = data.message || 'Chapa initialization failed.';
+                const detail = data.chapa_error ? JSON.stringify(data.chapa_error) : '';
+                showAlert(msg + (detail ? '<br><small class="text-muted">' + detail + '</small>' : ''));
             }
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-lock"></i> <span id="submitBtnText">Pay with Chapa</span>';
@@ -339,8 +344,31 @@ function preselectServices() {
     }).catch(() => {});
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    const user = checkAuth(['patient', 'doctor']);
+document.addEventListener('DOMContentLoaded', async function () {
+    // Silently refresh token before checkAuth so an expired token from the
+    // Chapa redirect does not immediately kick the user to login.
+    const _tok = localStorage.getItem('token');
+    if (_tok) {
+        try {
+            const _r = await fetch('/api/auth/refresh', {
+                method: 'POST', headers: { 'Authorization': 'Bearer ' + _tok }
+            });
+            if (_r.ok) {
+                const _d = await _r.json();
+                if (_d.success && _d.token) {
+                    localStorage.setItem('token', _d.token);
+                    if (_d.user) {
+                        const _s = JSON.parse(localStorage.getItem('user') || '{}');
+                        const _m = Object.assign({}, _s);
+                        Object.keys(_d.user).forEach(k => { if (_d.user[k] != null) _m[k] = _d.user[k]; });
+                        localStorage.setItem('user', JSON.stringify(_m));
+                    }
+                }
+            }
+        } catch (_) {}
+    }
+
+    const user = checkAuth(['patient', 'doctor', 'nurse', 'lab_technician', 'pharmacist', 'admin']);
     if (!user) return;
     document.getElementById('navUserName').textContent = user.name || user.username;
     togglePaymentFields();

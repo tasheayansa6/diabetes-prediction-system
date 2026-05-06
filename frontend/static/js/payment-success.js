@@ -1,7 +1,6 @@
 // Payment Success Page
-// Handles Chapa return redirect and displays transaction details.
-// Does NOT require the user to be logged in to display — Chapa redirects here
-// as a plain browser GET, so we show the page first, then verify in the background.
+// Handles Chapa return redirect. Does NOT require auth — Chapa redirects here
+// as a plain browser GET so we must work with or without a token.
 
 const METHOD_NAMES = {
     credit_card: 'Credit Card', debit_card: 'Debit Card',
@@ -11,140 +10,183 @@ const METHOD_NAMES = {
     telebirr: 'TeleBirr', cbe_birr: 'CBE Birr', m_birr: 'M-Birr'
 };
 
-// ── User-scoped key helpers (mirrors payment-page.js) ─────────────────────────
-// Keys are scoped to user ID so different users on the same browser
-// never see each other's payment data.
+// ── Role-aware dashboard resolver ───────────────────────────────────────────
+// Returns the correct dashboard for the currently logged-in user.
+// Falls back to `defaultTarget` (e.g. the service-specific page) if role unknown.
+function _dashboardForCurrentUser(defaultTarget) {
+    try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const map = {
+            patient:        '/templates/patient/dashboard.html',
+            doctor:         '/templates/doctor/dashboard.html',
+            nurse:          '/templates/nurse/dashboard.html',
+            lab_technician: '/templates/lab/dashboard.html',
+            pharmacist:     '/templates/pharmacist/dashboard.html',
+            admin:          '/templates/admin/dashboard.html',
+        };
+        return map[u.role] || defaultTarget || '/templates/patient/dashboard.html';
+    } catch (_) {
+        return defaultTarget || '/templates/patient/dashboard.html';
+    }
+}
+
+// ── User ID helper ────────────────────────────────────────────────────────────
+// Try to get user ID from localStorage. If missing (session lost during Chapa
+// redirect), fall back to scanning all lastTransaction_* keys.
 function _uid() {
     try {
         const u = JSON.parse(localStorage.getItem('user') || '{}');
-        // id is a number from the server — convert to string for consistent key
         const id = u.id || u.user_id;
-        return id != null ? String(id) : 'anon';
-    } catch (_) { return 'anon'; }
+        if (id != null) return String(id);
+    } catch (_) {}
+    return null;
 }
-function txKey()  { return 'lastTransaction_' + _uid(); }
-function ctxKey() { return 'chapaPendingContext_' + _uid(); }
 
-// Read transaction for the CURRENT user only.
-// Never falls back to legacy unscoped keys — that caused cross-user data leaks.
-function readTransaction() {
-    try {
-        const raw = localStorage.getItem(txKey());
-        if (!raw) return {};
-        const t = JSON.parse(raw);
-        // Extra safety: if the stored record has a userId that doesn't match, discard it
-        if (t.userId != null && String(t.userId) !== _uid()) {
-            localStorage.removeItem(txKey());
-            return {};
+function txKey(uid)  { return 'lastTransaction_' + uid; }
+function ctxKey(uid) { return 'chapaPendingContext_' + uid; }
+
+// Find the stored transaction even if uid is unknown (session lost during Chapa)
+function findTransaction(txRef) {
+    const uid = _uid();
+
+    // Try known uid first
+    if (uid) {
+        try {
+            const raw = localStorage.getItem(txKey(uid));
+            if (raw) {
+                const t = JSON.parse(raw);
+                if (!txRef || t.tx_ref === txRef || t.id === txRef) return { t, uid };
+            }
+        } catch (_) {}
+    }
+
+    // Scan all keys — handles case where session was lost during Chapa redirect
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('lastTransaction_')) {
+            try {
+                const t = JSON.parse(localStorage.getItem(key));
+                if (t && (!txRef || t.tx_ref === txRef || t.id === txRef)) {
+                    const scannedUid = key.replace('lastTransaction_', '');
+                    return { t, uid: scannedUid };
+                }
+            } catch (_) {}
         }
-        return t;
-    } catch (_) { return {}; }
+    }
+    return { t: {}, uid: uid || 'anon' };
 }
 
-function readContext() {
+// ── Restore / refresh session after Chapa redirect ──────────────────────────
+// Always attempts a token refresh so an expired token gets renewed before
+// navigating to the dashboard. Without this, checkAuth on the next page
+// sees an expired token and redirects to login.
+async function restoreSession() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Check if token is expired (or close to it — within 5 min)
     try {
-        const raw = localStorage.getItem(ctxKey());
-        if (!raw) return {};
-        return JSON.parse(raw);
-    } catch (_) { return {}; }
+        const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(b64 + '='.repeat((4 - b64.length % 4) % 4)));
+        const secsLeft = (payload.exp || 0) - Math.floor(Date.now() / 1000);
+        // Token still has plenty of time and user object is intact — skip refresh
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (secsLeft > 300 && user.id && user.role) return;
+    } catch (_) {}
+
+    // Refresh token
+    try {
+        const res = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && data.token) {
+            localStorage.setItem('token', data.token);
+            if (data.user) {
+                const stored = JSON.parse(localStorage.getItem('user') || '{}');
+                const merged = Object.assign({}, stored);
+                Object.keys(data.user).forEach(k => { if (data.user[k] != null) merged[k] = data.user[k]; });
+                localStorage.setItem('user', JSON.stringify(merged));
+            }
+        }
+    } catch (_) {}
 }
 
 // ── Chapa verification ────────────────────────────────────────────────────────
-async function verifyChapaIfNeeded() {
-    // tx_ref comes from the URL when Chapa redirects back (?tx_ref=...)
-    const params = new URLSearchParams(window.location.search);
-    let txRef = params.get('tx_ref') || params.get('trx_ref') || params.get('reference');
-
-    // Fallback: read from stored pending context
-    if (!txRef) {
-        const ctx = readContext();
-        if (ctx.tx_ref) txRef = ctx.tx_ref;
-    }
-    if (!txRef) {
-        const t = readTransaction();
-        if (t.paymentMethod === 'chapa' && t.status === 'pending' && t.tx_ref) txRef = t.tx_ref;
-    }
+async function verifyChapaIfNeeded(txRef) {
     if (!txRef) return;
 
     const token = localStorage.getItem('token');
-    if (!token) {
-        // No token — mark as pending, user will see the pending state
-        // The webhook will update the DB in the background
-        const t = readTransaction();
-        if (t.tx_ref === txRef) {
-            // Already have the transaction stored — just show it
-        }
-        return;
-    }
+    const endpoint = token
+        ? '/api/payments/chapa/verify?tx_ref=' + encodeURIComponent(txRef)
+        : '/api/payments/chapa/verify-public?tx_ref=' + encodeURIComponent(txRef);
 
     try {
-        const res = await fetch('/api/payments/chapa/verify?tx_ref=' + encodeURIComponent(txRef), {
-            headers: { Authorization: 'Bearer ' + token }
-        });
+        const headers = token ? { Authorization: 'Bearer ' + token } : {};
+        const res  = await fetch(endpoint, { headers });
+
+        // 401 = token expired during Chapa flow — try public endpoint
+        if (res.status === 401) {
+            const res2 = await fetch(
+                '/api/payments/chapa/verify-public?tx_ref=' + encodeURIComponent(txRef)
+            );
+            if (!res2.ok) return;
+            const data2 = await res2.json();
+            return data2.success ? 'success' : 'pending';
+        }
+
         const data = await res.json().catch(() => ({}));
-
-        const t   = readTransaction();
-        const ctx = readContext();
-
-        const merged = {
-            ...t,
-            id: t.id || data.payment_id || txRef,
-            tx_ref: txRef,
-            paymentMethod: 'chapa',
-            status: data.success ? 'success' : (t.status || 'pending'),
-            serviceContext: ctx.serviceContext || t.serviceContext,
-            returnTo: ctx.returnTo || t.returnTo,
-            userId: _uid(),
-        };
-
-        // Write back to scoped key only — never write to legacy unscoped keys
-        const merged_str = JSON.stringify(merged);
-        localStorage.setItem(txKey(), merged_str);
-        // Clean up legacy keys to prevent future cross-user leaks
-        localStorage.removeItem('lastTransaction');
-        localStorage.removeItem('chapaPendingContext');
-        localStorage.removeItem(ctxKey());
-
-        if (merged.serviceContext === 'prediction' ||
-            (merged.services || []).some(s => (s.name || '').toLowerCase().includes('prediction'))) {
-            localStorage.setItem('predictionPaid_' + _uid(), 'true');
-            localStorage.setItem('predictionPaid', 'true');
-        }
-        if (merged.serviceContext === 'lab') {
-            localStorage.setItem('labPaid_' + _uid(), 'true');
-            localStorage.setItem('labPaid', 'true');
-        }
+        return data.success ? 'success' : 'pending';
     } catch (_) {
-        /* non-fatal — show whatever we have stored */
+        return null;
     }
 }
 
 // ── Display ───────────────────────────────────────────────────────────────────
 async function loadTransaction() {
-    // Show a loading state immediately
     const statusTitle = document.getElementById('statusTitle');
     if (statusTitle) statusTitle.textContent = 'Confirming Payment...';
 
-    await verifyChapaIfNeeded();
+    // Step 1: restore session if lost during Chapa redirect
+    await restoreSession();
 
-    const t = readTransaction();
-
-    // If we have a tx_ref in the URL but nothing in storage, build a minimal record
+    // Step 2: get tx_ref from URL
     const params = new URLSearchParams(window.location.search);
-    const urlTxRef = params.get('tx_ref') || params.get('trx_ref');
-    if (!t.id && urlTxRef) {
-        t.id = urlTxRef;
-        t.tx_ref = urlTxRef;
+    const urlTxRef = params.get('tx_ref') || params.get('trx_ref') || params.get('reference');
+
+    // Step 3: find stored transaction (works even if uid changed)
+    const { t, uid } = findTransaction(urlTxRef);
+
+    // Step 4: verify with Chapa if we have a tx_ref
+    const txRef = urlTxRef || t.tx_ref;
+    if (txRef) {
+        const verifyStatus = await verifyChapaIfNeeded(txRef);
+        if (verifyStatus === 'success') {
+            t.status = 'success';
+            // Write back with correct uid
+            if (uid && uid !== 'anon') {
+                localStorage.setItem(txKey(uid), JSON.stringify({ ...t, status: 'success' }));
+            }
+        }
+    }
+
+    // Step 5: if still no transaction data, build minimal from URL
+    if (!t.id && txRef) {
+        t.id = txRef;
+        t.tx_ref = txRef;
         t.paymentMethod = 'chapa';
         t.status = 'success';
         t.date = new Date().toLocaleDateString();
     }
 
-    document.getElementById('transactionId').textContent    = t.id || '—';
+    // Step 6: display
+    document.getElementById('transactionId').textContent     = t.id || '—';
     document.getElementById('transactionAmount').textContent = t.amount
         ? 'ETB ' + parseFloat(t.amount).toFixed(2) : '—';
-    document.getElementById('transactionDate').textContent  = t.date || new Date().toLocaleDateString();
-    document.getElementById('paymentMethod').textContent    = METHOD_NAMES[t.paymentMethod] || t.paymentMethod || '—';
+    document.getElementById('transactionDate').textContent   = t.date || new Date().toLocaleDateString();
+    document.getElementById('paymentMethod').textContent     = METHOD_NAMES[t.paymentMethod] || t.paymentMethod || '—';
 
     if (t.invoice_id) {
         const invoiceBtn = document.querySelector('a[href*="invoice.html"]');
@@ -158,83 +200,92 @@ async function loadTransaction() {
         badge.className   = isPending ? 'badge bg-warning text-dark' : 'badge bg-success';
     }
 
-    // Update title/icon for Chapa success
-    if (t.paymentMethod === 'chapa' && !isPending) {
-        const icon = document.getElementById('statusIcon');
-        if (icon) icon.className = 'bi bi-check-circle-fill text-6xl text-green-500 mb-4';
-        if (statusTitle) {
-            statusTitle.textContent  = 'Payment Successful!';
-            statusTitle.className    = 'text-2xl font-bold mb-2 text-green-600';
-        }
-        const msg = document.getElementById('statusMessage');
-        if (msg) msg.textContent = 'Your Chapa payment has been confirmed.';
+    if (statusTitle) {
+        statusTitle.textContent = isPending ? 'Payment Pending' : 'Payment Successful!';
+        statusTitle.className   = 'text-2xl font-bold mb-2 ' + (isPending ? 'text-yellow-600' : 'text-green-600');
+    }
+    const msg = document.getElementById('statusMessage');
+    if (msg) {
+        msg.textContent = isPending
+            ? 'Your payment is being confirmed. This may take a few minutes.'
+            : 'Your Chapa payment has been confirmed.';
     }
 
     if (t.paymentMethod === 'cash') {
-        const icon = document.getElementById('statusIcon');
-        if (icon) icon.className = 'bi bi-receipt text-6xl text-yellow-500 mb-4';
-        if (statusTitle) { statusTitle.textContent = 'Reference Number Generated!'; statusTitle.className = 'text-2xl font-bold mb-2 text-yellow-600'; }
-        const msg = document.getElementById('statusMessage');
-        if (msg) msg.textContent = 'Please pay at the hospital cashier desk.';
         const ci = document.getElementById('cashInstructions');
         if (ci) ci.style.display = 'block';
         showRefRow(t.referenceNumber);
     }
-
     if (t.paymentMethod === 'insurance') {
-        const icon = document.getElementById('statusIcon');
-        if (icon) icon.className = 'bi bi-shield-check text-6xl text-blue-500 mb-4';
-        if (statusTitle) { statusTitle.textContent = 'Insurance Claim Submitted!'; statusTitle.className = 'text-2xl font-bold mb-2 text-blue-600'; }
-        const msg = document.getElementById('statusMessage');
-        if (msg) msg.textContent = 'Your claim is pending approval from your insurance provider.';
         const ii = document.getElementById('insuranceInstructions');
         if (ii) ii.style.display = 'block';
         showRefRow(t.referenceNumber);
     }
 
-    // Show "Continue" button — check if user is logged in first.
-    // If logged in as the correct user, go directly to the target page.
-    // If not logged in (or different user), go to login with a next= redirect.
-    if (t.id) {
-        const returnMap = {
-            'health_form':  '/templates/patient/health_data_form.html',
-            'health-form':  '/templates/patient/health_data_form.html',
-            'prediction':   '/templates/patient/health_data_form.html',
+    // Step 7: set up Continue button and auto-redirect
+    const returnMap = {
+        'health_form':  '/templates/patient/health_data_form.html',
+        'health-form':  '/templates/patient/health_data_form.html',
+        'prediction':   '/templates/patient/health_data_form.html',
+    };
+    const rawReturn = t.returnTo || '';
+    const resolvedReturn = returnMap[rawReturn] || (rawReturn.startsWith('/') ? rawReturn : '');
+    const target = resolvedReturn ||
+        (t.serviceContext === 'prediction'   ? '/templates/patient/health_data_form.html' :
+         t.serviceContext === 'lab'          ? '/templates/patient/lab_results.html?paid=true' :
+         t.serviceContext === 'consultation' ? '/templates/patient/appointment.html?paid=true' :
+         t.serviceContext === 'medication'   ? '/templates/patient/prescriptions.html?paid=true' :
+         '/templates/patient/dashboard.html');
+
+    const continueBtn = document.getElementById('continueBtn');
+    if (continueBtn) {
+        continueBtn.href = target;
+        continueBtn.style.display = 'inline-flex';
+        continueBtn.onclick = async function(e) {
+            e.preventDefault();
+            await restoreSession();
+            sessionStorage.setItem('_fromPayment', '1');
+            window.location.href = target;
         };
-        const rawReturn = t.returnTo || '';
-        const resolvedReturn = returnMap[rawReturn] || (rawReturn.startsWith('/') ? rawReturn : '');
-
-        const target = resolvedReturn ||
-            (t.serviceContext === 'prediction'   ? '/templates/patient/health_data_form.html' :
-             t.serviceContext === 'lab'          ? '/templates/patient/lab_results.html?paid=true' :
-             t.serviceContext === 'consultation' ? '/templates/patient/appointment.html?paid=true' :
-             t.serviceContext === 'medication'   ? '/templates/patient/prescriptions.html?paid=true' :
-             '/templates/patient/dashboard.html');
-
-        const continueBtn = document.getElementById('continueBtn');
-        const countdownEl = document.getElementById('redirectCountdown');
-        if (countdownEl) countdownEl.style.display = 'none';
-
-        if (continueBtn) {
-            continueBtn.href = target;
-            continueBtn.style.display = 'inline-flex';
-        }
-
-        // Auto-redirect after 5 minutes (300 seconds)
-        let secs = 300;
-        const autoRedirect = setInterval(() => {
-            secs--;
-            if (countdownEl) {
-                countdownEl.style.display = '';
-                const mins = Math.floor(secs / 60);
-                const s    = secs % 60;
-                countdownEl.textContent = mins > 0
-                    ? 'Auto-redirecting in ' + mins + 'm ' + (s < 10 ? '0' : '') + s + 's...'
-                    : 'Auto-redirecting in ' + secs + 's...';
-            }
-            if (secs <= 0) { clearInterval(autoRedirect); window.location.href = target; }
-        }, 1000);
     }
+
+    // ── Set predictionPaid flag for pending cash/insurance payments ──────────
+    // Cash/insurance payments are pending in DB but the patient has paid.
+    // Set the flag so the health form can auto-run the prediction on return.
+    if (t.serviceContext === 'prediction' || rawReturn === 'health_form' || rawReturn === 'health-form' || rawReturn === 'prediction') {
+        try {
+            const uid = _uid() || 'anon';
+            localStorage.setItem('predictionPaid_' + uid, 'true');
+            localStorage.setItem('predictionPaid', 'true');
+        } catch (_) {}
+    }
+
+    // Auto-redirect after 5 seconds — go to service page if prediction, else dashboard
+    const countdownEl = document.getElementById('redirectCountdown');
+    let secs = 5;
+    const autoTarget = target !== '/templates/patient/dashboard.html' ? target : _dashboardForCurrentUser(target);
+    const isPredictionPayment = (t.serviceContext === 'prediction' ||
+        rawReturn === 'health_form' || rawReturn === 'health-form' || rawReturn === 'prediction');
+    const redirectLabel = isPredictionPayment ? 'health form' : 'dashboard';
+
+    if (countdownEl) {
+        countdownEl.style.display = '';
+        countdownEl.textContent = 'Auto-redirecting to ' + redirectLabel + ' in ' + secs + 's...';
+    }
+    const timer = setInterval(async () => {
+        secs--;
+        if (countdownEl) {
+            countdownEl.textContent = secs > 0
+                ? 'Auto-redirecting to ' + redirectLabel + ' in ' + secs + 's...'
+                : 'Redirecting...';
+        }
+        if (secs <= 0) {
+            clearInterval(timer);
+            await restoreSession();
+            sessionStorage.setItem('_fromPayment', '1');
+            window.location.href = autoTarget;
+        }
+    }, 1000);
 }
 
 function showRefRow(ref) {
@@ -244,13 +295,14 @@ function showRefRow(ref) {
     if (el) el.textContent = ref || '—';
 }
 
-// ── Init — does NOT call checkAuth so Chapa return always lands here ──────────
 document.addEventListener('DOMContentLoaded', function () {
-    // Try to show username if logged in, but don't redirect if not
+    // Show username if available
     try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const nameEl = document.getElementById('navUserName');
-        if (nameEl && user.username) nameEl.textContent = user.username;
+        if (nameEl && (user.name || user.username)) {
+            nameEl.textContent = user.name || user.username;
+        }
     } catch (_) {}
 
     loadTransaction();

@@ -8,7 +8,7 @@ async function apiFetch(path, options = {}) {
         ...options,
         headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json', ...(options.headers || {}) }
     });
-    if (res.status === 401) { logout(); return {}; }
+    if (res.status === 401) { window.location.href = '/login?reason=session_expired'; return {}; }
     return res.json();
 }
 

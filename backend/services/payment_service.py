@@ -43,8 +43,9 @@ def generate_invoice_id() -> str:
 
 
 def generate_tx_ref() -> str:
-    # CHAPA- + 12 + - + 6 = 25 chars — stored in transaction_id VARCHAR(100)
-    return f"CHAPA-{datetime.utcnow().strftime('%y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+    # CHAPA- + 12 + - + 8 = 27 chars — stored in transaction_id VARCHAR(100)
+    # Uses microseconds + random hex to guarantee uniqueness
+    return f"CHAPA-{datetime.utcnow().strftime('%y%m%d%H%M%S%f')}-{uuid.uuid4().hex[:8].upper()}"
 
 
 # ── Pricing helpers ───────────────────────────────────────────────────────────

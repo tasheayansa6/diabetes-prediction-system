@@ -97,11 +97,7 @@ async function loadPredictions() {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
         
-        // Handle 401 — token expired or invalid after redeploy
         if (res.status === 401) {
-            // Clear stale token and redirect to login
-            if (typeof _clearAllStorage === 'function') _clearAllStorage();
-            else { localStorage.removeItem('token'); localStorage.removeItem('user'); }
             window.location.href = '/login?reason=session_expired';
             return;
         }

@@ -823,18 +823,34 @@ def logout():
 def refresh_token():
     """
     POST /api/auth/refresh
-    Silently renews a valid (non-expired) JWT and returns a fresh one.
-    Called by the frontend before expiry to keep the session alive.
+    Renews a JWT. Accepts tokens expired within the last 2 days so that
+    sessions lost during Chapa redirect can always be recovered.
     """
     token = request.headers.get('Authorization', '')
     if token.startswith('Bearer '):
         token = token[7:]
     if not token:
         return jsonify({'success': False, 'message': 'Token required'}), 401
+
     try:
+        # First try normal decode (non-expired token)
         payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
     except jwt.ExpiredSignatureError:
-        return jsonify({'success': False, 'message': 'Token expired — please log in again'}), 401
+        # Token expired — allow refresh within a 2-day grace period
+        try:
+            payload = jwt.decode(
+                token,
+                current_app.config['SECRET_KEY'],
+                algorithms=['HS256'],
+                options={'verify_exp': False}
+            )
+            # Reject if expired more than 2 days ago
+            exp = payload.get('exp', 0)
+            grace = 2 * 24 * 3600  # 2 days in seconds
+            if exp and (datetime.utcnow().timestamp() - exp) > grace:
+                return jsonify({'success': False, 'message': 'Token expired — please log in again'}), 401
+        except Exception:
+            return jsonify({'success': False, 'message': 'Invalid token'}), 401
     except jwt.InvalidTokenError:
         return jsonify({'success': False, 'message': 'Invalid token'}), 401
 
@@ -860,18 +876,17 @@ def refresh_token():
         'admin':          'admin_id',
     }
     id_field = _ROLE_ID_FIELD.get(user.role)
-    user_obj = {
-        'id': user.id,
-        'username': user.username,
-        'name': getattr(user, 'full_name', None) or user.username,
-        'email': user.email,
-        'role': user.role,
-        'unique_id': getattr(user, id_field, None) if id_field else None,
-    }
     return jsonify({
         'success': True,
         'token': new_token,
-        'user': user_obj
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'name': getattr(user, 'full_name', None) or user.username,
+            'email': user.email,
+            'role': user.role,
+            'unique_id': getattr(user, id_field, None) if id_field else None,
+        }
     }), 200
 
 

@@ -151,7 +151,7 @@ async function loadResult() {
         const res = await fetch(API + '/patient/predictions/' + predId, {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
-        if (res.status === 401) { if (typeof logout === 'function') logout(); else window.location.href='/login'; return; }
+        if (res.status === 401) { window.location.href = '/login?reason=session_expired'; return; }
 
         let data;
         try { data = await res.json(); }
@@ -301,7 +301,7 @@ async function loadPrescriptions() {
         const res  = await fetch(API + '/patient/prescriptions?limit=20', {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
-        if (res.status === 401) { logout(); return; }
+        if (res.status === 401) { window.location.href = '/login?reason=session_expired'; return; }
         const data = await res.json();
         const rxs  = (data.prescriptions || []).filter(function(r) {
             return ['active','pending','verified','dispensed'].includes(r.status);
@@ -347,7 +347,7 @@ async function loadMedicationTaken() {
         const res  = await fetch(API + '/patient/prescriptions?limit=20', {
             headers: { 'Authorization': 'Bearer ' + getToken() }
         });
-        if (res.status === 401) { logout(); return; }
+        if (res.status === 401) { window.location.href = '/login?reason=session_expired'; return; }
         const data = await res.json();
         const rxs  = (data.prescriptions || []).filter(function(r) {
             return ['active','pending','verified','dispensed'].includes(r.status);

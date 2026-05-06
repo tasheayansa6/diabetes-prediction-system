@@ -30,10 +30,7 @@ async function loadPatients(offset) {
             headers: { 'Authorization': 'Bearer ' + token }
         });
 
-        // Handle auth errors
         if (res.status === 401 || res.status === 403) {
-            if (typeof _clearAllStorage === 'function') _clearAllStorage();
-            else { localStorage.removeItem('token'); localStorage.removeItem('user'); }
             window.location.href = '/login?reason=session_expired';
             return;
         }

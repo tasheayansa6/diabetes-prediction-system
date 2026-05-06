@@ -29,7 +29,7 @@ async function loadPrescriptions() {
 
     try {
         const res  = await fetch('/api/patient/prescriptions?limit=100', { headers: authHeaders() });
-        if (res.status === 401) { logout(); return; }
+        if (res.status === 401) { window.location.href = '/login?reason=session_expired'; return; }
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
         allPrescriptions = data.prescriptions || [];

@@ -45,8 +45,8 @@ async function handleRegister(event) {
         const data = await res.json();
 
         if (res.ok && data.success) {
-            // Clear ALL previous user data before storing new session
-            if (typeof _clearAllStorage === 'function') _clearAllStorage();
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
 
             const token = data.token || '';
             let roleFromToken = data?.user?.role || role;
@@ -89,10 +89,6 @@ async function handleRegister(event) {
 // If user intentionally opens /register while previously logged in (e.g., nurse),
 // stale localStorage can force wrong dashboard redirects in other scripts.
 window.addEventListener('DOMContentLoaded', () => {
-    if (typeof _clearAllStorage === 'function') {
-        _clearAllStorage();
-        return;
-    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
 });

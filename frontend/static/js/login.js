@@ -1,6 +1,5 @@
 // Login Page
-
-const API_BASE_URL = "";
+const API_BASE_URL = '';
 
 function showError(msg) {
     let el = document.getElementById('loginAlert');
@@ -14,7 +13,7 @@ function showError(msg) {
     el.style.background = '#fee2e2';
     el.style.color = '#991b1b';
     el.style.border = '1px solid #fca5a5';
-    el.innerHTML = `<i class="bi bi-exclamation-circle-fill me-2"></i>${msg}`;
+    el.innerHTML = '<i class="bi bi-exclamation-circle-fill me-2"></i>' + msg;
 }
 
 function showInfo(msg) {
@@ -29,7 +28,19 @@ function showInfo(msg) {
     el.style.background = '#eff6ff';
     el.style.color = '#1d4ed8';
     el.style.border = '1px solid #bfdbfe';
-    el.innerHTML = `<i class="bi bi-info-circle-fill me-2"></i>${msg}`;
+    el.innerHTML = '<i class="bi bi-info-circle-fill me-2"></i>' + msg;
+}
+
+function redirectToDashboard(role) {
+    const dashboards = {
+        patient:        '/templates/patient/dashboard.html',
+        doctor:         '/templates/doctor/dashboard.html',
+        nurse:          '/templates/nurse/dashboard.html',
+        lab_technician: '/templates/lab/dashboard.html',
+        pharmacist:     '/templates/pharmacist/dashboard.html',
+        admin:          '/templates/admin/dashboard.html'
+    };
+    window.location.href = dashboards[role] || '/login';
 }
 
 async function handleLogin(event) {
@@ -45,7 +56,7 @@ async function handleLogin(event) {
     btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Signing in...';
 
     try {
-        const res  = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        const res  = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -53,41 +64,32 @@ async function handleLogin(event) {
         const data = await res.json();
 
         if (res.ok && data.success) {
-            // Clear ALL previous user data before storing new session
-            if (typeof _clearAllStorage === 'function') _clearAllStorage();
+            // Wipe only token+user — preserve payment keys in case user
+            // is returning from a Chapa payment flow
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
 
             const next = new URLSearchParams(window.location.search).get('next');
-            setTimeout(() => {
-                if (next && next.startsWith('/')) {
-                    window.location.href = next;
-                } else {
-                    redirectToDashboard(data.user.role);
-                }
-            }, 400);
+            if (next && next.startsWith('/')) {
+                window.location.href = next;
+            } else {
+                redirectToDashboard(data.user.role);
+            }
             return;
         }
 
-        // Email verification required
         if (res.status === 403 && data.requires_verification) {
             showInfo('Email not verified. Sending verification code...');
-            // Auto-send OTP
             await fetch('/api/auth/send-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, username: email.split('@')[0] })
             });
-            // Redirect to verify page
             setTimeout(() => {
-                window.location.href = `/verify-email?email=${encodeURIComponent(email)}&next=login`;
+                window.location.href = '/verify-email?email=' + encodeURIComponent(email) + '&next=login';
             }, 1200);
-            return;
-        }
-
-        // Payment required (for prediction — shouldn't happen on login but handle gracefully)
-        if (res.status === 402) {
-            showError('Payment required to access this feature.');
             return;
         }
 
@@ -101,27 +103,25 @@ async function handleLogin(event) {
     }
 }
 
-function redirectToDashboard(role) {
-    const dashboards = {
-        patient:        '/templates/patient/dashboard.html',
-        doctor:         '/templates/doctor/dashboard.html',
-        nurse:          '/templates/nurse/dashboard.html',
-        lab_technician: '/templates/lab/dashboard.html',
-        pharmacist:     '/templates/pharmacist/dashboard.html',
-        admin:          '/templates/admin/dashboard.html'
-    };
-    window.location.href = dashboards[role] || '/login';
-}
-
-// Auto-redirect if already logged in — DISABLED.
-// We never auto-redirect on the login page. The user must always
-// enter their credentials explicitly. This prevents one user's
-// session from silently logging in as another user.
 window.addEventListener('DOMContentLoaded', function () {
-    // Only pre-fill email if coming back from a Chapa payment redirect
-    // (tx_ref in URL means Chapa sent the user here — show a message)
+    // If already logged in with a valid token, redirect to dashboard immediately
+    const token = localStorage.getItem('token');
+    const user  = JSON.parse(localStorage.getItem('user') || '{}');
+    if (token && user.role) {
+        try {
+            const b64     = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            const padded  = b64 + '='.repeat((4 - b64.length % 4) % 4);
+            const payload = JSON.parse(atob(padded));
+            if (payload.exp && payload.exp * 1000 > Date.now()) {
+                // Valid token — go straight to dashboard, no need to log in again
+                redirectToDashboard(user.role);
+                return;
+            }
+        } catch (_) {}
+    }
+
     const params = new URLSearchParams(window.location.search);
-    const txRef = params.get('tx_ref') || params.get('trx_ref');
+    const txRef  = params.get('tx_ref') || params.get('trx_ref');
     if (txRef) {
         showInfo('Your payment was processed. Please sign in to view your receipt.');
     }

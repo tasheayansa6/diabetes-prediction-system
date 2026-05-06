@@ -7,7 +7,7 @@ function apiFetch(path, options = {}) {
         ...options,
         headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json', ...(options.headers || {}) }
     }).then(r => {
-        if (r.status === 401) { logout(); return { success: false, message: 'Session expired' }; }
+        if (r.status === 401) { window.location.href = '/login?reason=session_expired'; return { success: false, message: 'Session expired' }; }
         return r.json();
     });
 }

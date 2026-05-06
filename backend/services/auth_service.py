@@ -13,7 +13,7 @@ import json
 class AuthService:
    
     
-    def __init__(self, db_session=None, secret_key=None, token_expiry_hours=24):
+    def __init__(self, db_session=None, secret_key=None, token_expiry_hours=720):  # 30 days
        
         self.db_session = db_session
         self.secret_key = secret_key or os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')

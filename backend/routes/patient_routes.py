@@ -1890,15 +1890,16 @@ def update_patient_profile(current_user):
         
         db.session.commit()
         
-        # Generate new token if username/email changed
+        # Generate new token if username/email changed — use same 30-day expiry
         new_token = None
         if 'username' in data or 'email' in data:
+            expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 2592000)
             new_token = jwt.encode({
                 'user_id': patient.id,
                 'email': patient.email,
                 'username': patient.username,
                 'role': patient.role,
-                'exp': datetime.utcnow() + timedelta(days=1)
+                'exp': datetime.utcnow() + timedelta(seconds=expiry_secs)
             }, current_app.config['SECRET_KEY'], algorithm="HS256")
         
         # Build profile response

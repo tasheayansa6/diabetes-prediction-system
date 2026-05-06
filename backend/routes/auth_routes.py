@@ -367,8 +367,8 @@ def register():
         except Exception:
             pass
 
-        # Generate JWT token for auto-login
-        expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 86400)
+        # Generate JWT token for auto-login — 30 days default
+        expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 2592000)
         token = jwt.encode({
             'user_id': new_user.id,
             'email': new_user.email,
@@ -526,8 +526,8 @@ def login():
             except Exception:
                 pass
         
-        # Generate JWT token
-        expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 86400)
+        # Generate JWT token — 30 days default
+        expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 2592000)
         token = jwt.encode({
             'user_id': user.id,
             'email': user.email,
@@ -858,7 +858,7 @@ def refresh_token():
     if not user or not getattr(user, 'is_active', True):
         return jsonify({'success': False, 'message': 'User not found or inactive'}), 401
 
-    expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 7776000)
+    expiry_secs = current_app.config.get('JWT_EXPIRY_SECONDS', 2592000)
     new_token = jwt.encode({
         'user_id': user.id,
         'email': user.email,

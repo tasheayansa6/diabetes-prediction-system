@@ -11,7 +11,8 @@ function esc(str) {
 }
 
 function updateDate() {
-    document.getElementById('currentDate').textContent =
+    const el = document.getElementById('currentDate');
+    if (el) el.textContent =
         new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
@@ -213,10 +214,11 @@ async function loadDashboard() {
         if (!data.success) throw new Error(data.message);
 
         const stats = data.dashboard.statistics;
-        document.getElementById('statPatientsSeen').textContent = stats.patients_seen_today ?? 0;
-        document.getElementById('statAppointments').textContent = stats.today_appointments  ?? 0;
-        document.getElementById('statWaiting').textContent      = stats.patients_in_queue   ?? 0;
-        document.getElementById('statTotal').textContent        = stats.total_patients       ?? 0;
+        const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        setText('statPatientsSeen', stats.patients_seen_today ?? 0);
+        setText('statAppointments', stats.today_appointments  ?? 0);
+        setText('statWaiting',      stats.patients_in_queue   ?? 0);
+        setText('statTotal',        stats.total_patients       ?? 0);
 
         initCharts(stats);
         renderRecentActivity(data.dashboard.recent_activity);
@@ -237,7 +239,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const user = checkAuth('nurse');
     if (!user) return;
 
-    document.getElementById('navUserName').textContent = user.name || user.username;
+    const navEl = document.getElementById('navUserName');
+    if (navEl) navEl.textContent = user.name || user.username;
     const sb = document.getElementById('sidebarName');
     if (sb) sb.textContent = user.name || user.username;
 

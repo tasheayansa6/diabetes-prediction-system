@@ -53,11 +53,11 @@ def setup_security_headers(app):
             response.headers['Strict-Transport-Security'] = \
                 'max-age=31536000; includeSubDomains; preload'
 
-        # ── Content Security Policy (fix #3) ─────────────────────────────────
-        # Allow same-origin + WebSocket for SocketIO + Chapa payment gateway
+        # ── Content Security Policy ───────────────────────────────────────────
+        # Allow same-origin + CDN for Chart.js + WebSocket + Chapa payment gateway
         csp = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' data: https://fonts.gstatic.com; "
             "img-src 'self' data:; "

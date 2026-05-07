@@ -877,21 +877,45 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (paid && pending) {
         clearPredictionPaid();
         _clearPendingData();
-        // Wait for all async auto-fills to complete
-        await delay(600);
+
+        // Show "running prediction" banner immediately
+        showAlert(
+            '<i class="bi bi-hourglass-split me-2"></i>' +
+            '<strong>Payment confirmed!</strong> Running your prediction — please wait...',
+            'success'
+        );
+
+        // Wait for all async auto-fills (vitals + lab results) to settle
+        await delay(1200);
+
         const body = collectFormData();
-        const err  = validateForm(body);
-        if (!err) {
-            showAlert('Payment confirmed! Running your prediction now...', 'success');
-            await delay(600);
+
+        // If glucose is still missing (no lab result yet), show a clear message
+        // and let the patient submit manually once the lab result arrives
+        const glucoseVal = parseFloat(body.glucose);
+        if (!glucoseVal || glucoseVal <= 0) {
             hideAlert();
-            // Run prediction directly — bypass server payment check
-            // (cash/insurance payments are pending in DB but patient has paid)
-            await runPredictionDirect(body);
-        } else {
             showAlert(
                 '<i class="bi bi-check-circle-fill me-2" style="color:#059669;"></i>' +
-                '<strong>Payment confirmed!</strong> Your form is ready. Click <strong>Get Prediction</strong> to run your assessment.',
+                '<strong>Payment confirmed!</strong> Waiting for your glucose lab result. ' +
+                'Once the lab technician enters your result, click <strong>Get Prediction</strong>.',
+                'success'
+            );
+            const btn = document.getElementById('submitBtn');
+            if (btn) btn.disabled = false;
+            return;
+        }
+
+        const err = validateForm(body);
+        if (!err) {
+            hideAlert();
+            // Run prediction and go directly to result page
+            await runPredictionDirect(body);
+        } else {
+            hideAlert();
+            showAlert(
+                '<i class="bi bi-check-circle-fill me-2" style="color:#059669;"></i>' +
+                '<strong>Payment confirmed!</strong> Please review your data and click <strong>Get Prediction</strong>.',
                 'success'
             );
             const btn = document.getElementById('submitBtn');

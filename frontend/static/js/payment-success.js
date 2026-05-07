@@ -208,7 +208,9 @@ async function loadTransaction() {
     if (msg) {
         msg.textContent = isPending
             ? 'Your payment is being confirmed. This may take a few minutes.'
-            : 'Your Chapa payment has been confirmed.';
+            : (t.serviceContext === 'prediction' || (t.returnTo || '').includes('health')
+                ? 'Payment confirmed! Taking you to your prediction now...'
+                : 'Your payment has been confirmed.');
     }
 
     if (t.paymentMethod === 'cash') {
@@ -252,7 +254,10 @@ async function loadTransaction() {
     // ── Set predictionPaid flag for pending cash/insurance payments ──────────
     // Cash/insurance payments are pending in DB but the patient has paid.
     // Set the flag so the health form can auto-run the prediction on return.
-    if (t.serviceContext === 'prediction' || rawReturn === 'health_form' || rawReturn === 'health-form' || rawReturn === 'prediction') {
+    const isPredictionPayment = (t.serviceContext === 'prediction' ||
+        rawReturn === 'health_form' || rawReturn === 'health-form' || rawReturn === 'prediction');
+
+    if (isPredictionPayment) {
         try {
             const uid = _uid() || 'anon';
             localStorage.setItem('predictionPaid_' + uid, 'true');
@@ -260,23 +265,25 @@ async function loadTransaction() {
         } catch (_) {}
     }
 
-    // Auto-redirect after 5 seconds — go to service page if prediction, else dashboard
+    // Auto-redirect after 3s for prediction, 5s for others
     const countdownEl = document.getElementById('redirectCountdown');
-    let secs = 5;
+    let secs = isPredictionPayment ? 3 : 5;
     const autoTarget = target !== '/templates/patient/dashboard.html' ? target : _dashboardForCurrentUser(target);
-    const isPredictionPayment = (t.serviceContext === 'prediction' ||
-        rawReturn === 'health_form' || rawReturn === 'health-form' || rawReturn === 'prediction');
-    const redirectLabel = isPredictionPayment ? 'health form' : 'dashboard';
+    const redirectLabel = isPredictionPayment ? 'running your prediction' : 'dashboard';
 
     if (countdownEl) {
         countdownEl.style.display = '';
-        countdownEl.textContent = 'Auto-redirecting to ' + redirectLabel + ' in ' + secs + 's...';
+        countdownEl.textContent = isPredictionPayment
+            ? 'Running your prediction in ' + secs + 's...'
+            : 'Auto-redirecting to ' + redirectLabel + ' in ' + secs + 's...';
     }
     const timer = setInterval(async () => {
         secs--;
         if (countdownEl) {
             countdownEl.textContent = secs > 0
-                ? 'Auto-redirecting to ' + redirectLabel + ' in ' + secs + 's...'
+                ? (isPredictionPayment
+                    ? 'Running your prediction in ' + secs + 's...'
+                    : 'Auto-redirecting to ' + redirectLabel + ' in ' + secs + 's...')
                 : 'Redirecting...';
         }
         if (secs <= 0) {

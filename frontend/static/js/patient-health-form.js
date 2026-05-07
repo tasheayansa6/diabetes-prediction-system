@@ -865,7 +865,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!document.hidden) refreshLabResultsIfNeeded();
     });
 
-    // Check if returning from payment page
+    // ── Check if returning from payment (Chapa or cash/insurance) ──────────────
     const paid    = isPredictionPaid();
     const pending = restorePendingData();
 
@@ -874,24 +874,24 @@ document.addEventListener('DOMContentLoaded', async function () {
         applyRestoredData(pending);
     }
 
-    if (paid && pending) {
+    if (paid) {
+        // Payment confirmed — clear flags immediately so we don't re-run on refresh
         clearPredictionPaid();
         _clearPendingData();
 
-        // Show "running prediction" banner immediately
+        // Show banner
         showAlert(
             '<i class="bi bi-hourglass-split me-2"></i>' +
             '<strong>Payment confirmed!</strong> Running your prediction — please wait...',
             'success'
         );
 
-        // Wait for all async auto-fills (vitals + lab results) to settle
-        await delay(1200);
+        // Wait for all async auto-fills (vitals + lab results) to fully settle
+        await delay(1500);
 
         const body = collectFormData();
 
-        // If glucose is still missing (no lab result yet), show a clear message
-        // and let the patient submit manually once the lab result arrives
+        // If glucose is still missing (lab result not yet entered), wait for it
         const glucoseVal = parseFloat(body.glucose);
         if (!glucoseVal || glucoseVal <= 0) {
             hideAlert();
@@ -909,7 +909,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         const err = validateForm(body);
         if (!err) {
             hideAlert();
-            // Run prediction and go directly to result page
             await runPredictionDirect(body);
         } else {
             hideAlert();

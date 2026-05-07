@@ -250,16 +250,23 @@ async function verifyChapaIfNeeded(txRef) {
         };
     }
 
-    // ── Set predictionPaid flag for pending cash/insurance payments ──────────
-    // Cash/insurance payments are pending in DB but the patient has paid.
-    // Set the flag so the health form can auto-run the prediction on return.
+    // ── Set predictionPaid flag ───────────────────────────────────────────────
+    // Set for ALL possible uid formats so the health form always finds it,
+    // even if the session uid differs from the transaction uid.
     const isPredictionPayment = (t.serviceContext === 'prediction' ||
         rawReturn === 'health_form' || rawReturn === 'health-form' || rawReturn === 'prediction');
 
     if (isPredictionPayment) {
         try {
+            // Set with transaction uid
             const storedUid = uid || 'anon';
             localStorage.setItem('predictionPaid_' + storedUid, 'true');
+            // Set with current session uid (what health form reads)
+            const sessionUid = _uid();
+            if (sessionUid && sessionUid !== storedUid) {
+                localStorage.setItem('predictionPaid_' + sessionUid, 'true');
+            }
+            // Always set legacy key as final fallback
             localStorage.setItem('predictionPaid', 'true');
         } catch (_) {}
     }

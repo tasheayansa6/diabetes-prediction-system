@@ -70,12 +70,13 @@ function initCharts(stats) {
 
 function renderRecentActivity(activity) {
     const measureList = document.getElementById('recentMeasurementsList');
+    // recentVitalsList may not exist in all dashboard versions — guard it
     const vitalsList  = document.getElementById('recentVitalsList');
 
     if (!activity || !activity.length) {
         const empty = '<div class="list-item" style="justify-content:center;color:#64748b;font-size:.85rem;">No recent activity</div>';
-        measureList.innerHTML = empty;
-        vitalsList.innerHTML  = empty;
+        if (measureList) measureList.innerHTML = empty;
+        if (vitalsList)  vitalsList.innerHTML  = empty;
         return;
     }
 
@@ -94,8 +95,8 @@ function renderRecentActivity(activity) {
         </div>`;
     }).join('');
 
-    measureList.innerHTML = rows;
-    vitalsList.innerHTML  = rows;
+    if (measureList) measureList.innerHTML = rows;
+    if (vitalsList)  vitalsList.innerHTML  = rows;
 }
 
 async function loadWaitingPatients() {
@@ -133,7 +134,15 @@ async function loadWaitingPatients() {
         list.innerHTML = queue.map(function(q) {
             const name = esc(q.patient ? q.patient.name : 'Patient #' + q.id);
             const pid  = esc(q.patient ? q.patient.patient_id : '');
-            const wait = esc(q.waiting_time || '');
+            // Human-readable waiting time
+            const rawWait = q.waiting_time || '';
+            const mins = parseInt(rawWait);
+            let waitLabel = rawWait;
+            if (!isNaN(mins)) {
+                if (mins < 60)        waitLabel = mins + ' min';
+                else if (mins < 1440) waitLabel = Math.floor(mins / 60) + ' hr ' + (mins % 60) + ' min';
+                else                  waitLabel = Math.floor(mins / 1440) + ' day(s)';
+            }
             const pri  = q.priority_label || 'Normal';
             const priColor = pri === 'Emergency' ? '#dc2626' : pri === 'Urgent' ? '#f59e0b' : '#22c55e';
             const patId = q.patient ? q.patient.id : '';
@@ -142,7 +151,7 @@ async function loadWaitingPatients() {
                     <div style="font-weight:700;font-size:.9rem;color:#0f172a;">${name}</div>
                     <div style="display:flex;align-items:center;gap:.4rem;margin-top:.25rem;flex-wrap:wrap;">
                         <span style="background:#1e3a8a;color:#fff;border-radius:6px;padding:.1rem .5rem;font-weight:700;font-family:monospace;font-size:.78rem;">${pid}</span>
-                        <span style="font-size:.72rem;color:#64748b;">Waiting: ${wait}</span>
+                        <span style="font-size:.72rem;color:#64748b;">Waiting: ${esc(waitLabel)}</span>
                         <span style="background:${priColor}20;color:${priColor};padding:.1rem .45rem;border-radius:99px;font-size:.68rem;font-weight:700;">${pri}</span>
                     </div>
                 </div>
@@ -215,8 +224,10 @@ async function loadDashboard() {
 
     } catch (e) {
         const err = `<div class="list-item" style="justify-content:center;color:#ef4444;font-size:.85rem;">Failed to load: ${esc(e.message)}</div>`;
-        document.getElementById('recentMeasurementsList').innerHTML = err;
-        document.getElementById('recentVitalsList').innerHTML = err;
+        const ml = document.getElementById('recentMeasurementsList');
+        const vl = document.getElementById('recentVitalsList');
+        if (ml) ml.innerHTML = err;
+        if (vl) vl.innerHTML = err;
         // Still init charts with zeros so page doesn't break
         initCharts({});
     }

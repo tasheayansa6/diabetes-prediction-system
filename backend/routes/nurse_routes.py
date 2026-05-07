@@ -351,6 +351,19 @@ def record_vitals(current_nurse):
         db.session.add(vital)
         db.session.commit()
 
+        # Mark patient's queue entry as completed so they leave the waiting list
+        try:
+            queue_item = PatientQueue.query.filter_by(
+                patient_id=data['patient_id'],
+                status='waiting'
+            ).order_by(PatientQueue.created_at.desc()).first()
+            if queue_item:
+                queue_item.status = 'completed'
+                queue_item.updated_at = datetime.utcnow()
+                db.session.commit()
+        except Exception as q_err:
+            current_app.logger.warning(f'Queue update error: {q_err}')
+
         # Save gender to patient record if provided
         if data.get('gender') in ('male', 'female', 'other'):
             try:
@@ -486,12 +499,17 @@ def get_queue(current_nurse):
         queue_list = []
         for q in queue:
             patient = Patient.query.get(q.patient_id)
-            # Calculate waiting time
+            # Calculate waiting time — human readable
             waiting_time = None
             if q.check_in_time:
                 delta = datetime.utcnow() - q.check_in_time
-                minutes = delta.total_seconds() // 60
-                waiting_time = f"{int(minutes)} minutes"
+                minutes = int(delta.total_seconds() // 60)
+                if minutes < 60:
+                    waiting_time = f"{minutes} min"
+                elif minutes < 1440:
+                    waiting_time = f"{minutes // 60} hr {minutes % 60} min"
+                else:
+                    waiting_time = f"{minutes // 1440} day(s)"
             
             # Priority label
             priority_labels = {0: "Normal", 1: "Urgent", 2: "Emergency"}

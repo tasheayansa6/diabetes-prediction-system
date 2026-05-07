@@ -347,8 +347,24 @@ async function loadTransaction() {
 
     // ── For prediction payments: run prediction directly, skip health form ───
     if (isPredictionPayment && t.status === 'success') {
-        // Small delay so the user sees the "Payment Successful!" screen briefly
-        await new Promise(r => setTimeout(r, 1500));
+        // 10-second countdown so the user can see the payment confirmation
+        const cdEl = document.getElementById('redirectCountdown');
+        let cd = 10;
+        if (cdEl) {
+            cdEl.style.display = '';
+            cdEl.textContent = 'Running your prediction in ' + cd + 's...';
+        }
+        await new Promise(resolve => {
+            const iv = setInterval(() => {
+                cd--;
+                if (cdEl) {
+                    cdEl.textContent = cd > 0
+                        ? 'Running your prediction in ' + cd + 's...'
+                        : 'Starting prediction...';
+                }
+                if (cd <= 0) { clearInterval(iv); resolve(); }
+            }, 1000);
+        });
         await runPredictionAfterPayment(uid || 'anon');
         return; // runPredictionAfterPayment handles all further navigation
     }

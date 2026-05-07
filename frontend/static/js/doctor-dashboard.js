@@ -53,7 +53,7 @@ async function loadPatientsList() {
 
     try {
         // Single call — get all patients using doctor API
-        const data = await apiFetch('/api/doctor/patients?limit=50');
+        const data = await apiFetch('/doctor/patients?limit=50');
 
         if (!data.success) {
             list.innerHTML = `<div class="list-item" style="justify-content:center;color:#dc2626;padding:1.5rem;">
@@ -132,8 +132,8 @@ async function loadDashboard() {
 
     // Load dashboard stats + lab count in parallel
     const [dashData, labData] = await Promise.all([
-        apiFetch('/api/doctor/dashboard'),
-        apiFetch('/api/doctor/lab-requests/statistics')
+        apiFetch('/doctor/dashboard'),
+        apiFetch('/doctor/lab-requests/statistics')
     ]);
 
     if (dashData.success) {
@@ -231,7 +231,7 @@ async function openQuickLabModal() {
     const sel = document.getElementById('qlPatient');
     sel.innerHTML = '<option value="">Loading...</option>';
     try {
-        const data = await apiFetch('/api/doctor/patients?limit=100');
+        const data = await apiFetch('/doctor/patients?limit=100');
         const patients = data.patients || [];
         sel.innerHTML = '<option value="">Select patient...</option>' +
             patients.map(p => `<option value="${p.id}">${esc(p.username)} (${esc(p.patient_id || 'ID:' + p.id)})</option>`).join('');
@@ -269,7 +269,7 @@ async function submitQuickLab() {
         if (!data.success) throw new Error(data.message);
         closeQuickLabModal();
         // Refresh lab count
-        const labData = await apiFetch('/api/doctor/lab-requests/statistics');
+        const labData = await apiFetch('/doctor/lab-requests/statistics');
         if (labData.success) {
             const el = document.getElementById('labRequestsCount');
             if (el) el.textContent = labData.statistics?.by_status?.pending ?? 0;

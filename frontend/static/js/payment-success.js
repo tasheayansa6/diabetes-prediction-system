@@ -10,9 +10,7 @@ const METHOD_NAMES = {
     telebirr: 'TeleBirr', cbe_birr: 'CBE Birr', m_birr: 'M-Birr'
 };
 
-// ── Role-aware dashboard resolver ───────────────────────────────────────────
-// Returns the correct dashboard for the currently logged-in user.
-// Falls back to `defaultTarget` (e.g. the service-specific page) if role unknown.
+// ── Role-aware dashboard resolver ────────────────────────────────────────────
 function _dashboardForCurrentUser(defaultTarget) {
     try {
         const u = JSON.parse(localStorage.getItem('user') || '{}');
@@ -31,8 +29,6 @@ function _dashboardForCurrentUser(defaultTarget) {
 }
 
 // ── User ID helper ────────────────────────────────────────────────────────────
-// Try to get user ID from localStorage. If missing (session lost during Chapa
-// redirect), fall back to scanning all lastTransaction_* keys.
 function _uid() {
     try {
         const u = JSON.parse(localStorage.getItem('user') || '{}');
@@ -76,25 +72,19 @@ function findTransaction(txRef) {
     return { t: {}, uid: uid || 'anon' };
 }
 
-// ── Restore / refresh session after Chapa redirect ──────────────────────────
-// Always attempts a token refresh so an expired token gets renewed before
-// navigating to the dashboard. Without this, checkAuth on the next page
-// sees an expired token and redirects to login.
+// ── Restore / refresh session after Chapa redirect ───────────────────────────
 async function restoreSession() {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    // Check if token is expired (or close to it — within 5 min)
     try {
         const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
         const payload = JSON.parse(atob(b64 + '='.repeat((4 - b64.length % 4) % 4)));
         const secsLeft = (payload.exp || 0) - Math.floor(Date.now() / 1000);
-        // Token still has plenty of time and user object is intact — skip refresh
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (secsLeft > 300 && user.id && user.role) return;
     } catch (_) {}
 
-    // Refresh token
     try {
         const res = await fetch('/api/auth/refresh', {
             method: 'POST',
@@ -116,7 +106,7 @@ async function restoreSession() {
 
 // ── Chapa verification ────────────────────────────────────────────────────────
 async function verifyChapaIfNeeded(txRef) {
-    if (!txRef) return;
+    if (!txRef) return null;
 
     const token = localStorage.getItem('token');
     const endpoint = token
@@ -125,14 +115,12 @@ async function verifyChapaIfNeeded(txRef) {
 
     try {
         const headers = token ? { Authorization: 'Bearer ' + token } : {};
-        const res  = await fetch(endpoint, { headers });
+        const res = await fetch(endpoint, { headers });
 
-        // 401 = token expired during Chapa flow — try public endpoint
+        // 401 = token expired — try public endpoint
         if (res.status === 401) {
-            const res2 = await fetch(
-                '/api/payments/chapa/verify-public?tx_ref=' + encodeURIComponent(txRef)
-            );
-            if (!res2.ok) return;
+            const res2 = await fetch('/api/payments/chapa/verify-public?tx_ref=' + encodeURIComponent(txRef));
+            if (!res2.ok) return null;
             const data2 = await res2.json();
             return data2.success ? 'success' : 'pending';
         }
@@ -144,7 +132,8 @@ async function verifyChapaIfNeeded(txRef) {
     }
 }
 
-// ── Display ───────────────────────────────────────────────────────────────────
+// ── Main: load and display transaction, then redirect ────────────────────────
+async function loadTransaction() {
     const statusTitle = document.getElementById('statusTitle');
     if (statusTitle) statusTitle.textContent = 'Confirming Payment...';
 
@@ -152,40 +141,39 @@ async function verifyChapaIfNeeded(txRef) {
     await restoreSession();
 
     // Step 2: get tx_ref from URL
-    const params = new URLSearchParams(window.location.search);
+    const params   = new URLSearchParams(window.location.search);
     const urlTxRef = params.get('tx_ref') || params.get('trx_ref') || params.get('reference');
 
-    // Step 3: find stored transaction (works even if uid changed)
+    // Step 3: find stored transaction
     const { t, uid } = findTransaction(urlTxRef);
 
-    // Step 4: verify with Chapa if we have a tx_ref
+    // Step 4: verify with Chapa (marks payment completed in DB)
     const txRef = urlTxRef || t.tx_ref;
     if (txRef) {
         const verifyStatus = await verifyChapaIfNeeded(txRef);
         if (verifyStatus === 'success') {
             t.status = 'success';
-            // Write back with correct uid
             if (uid && uid !== 'anon') {
-                localStorage.setItem(txKey(uid), JSON.stringify({ ...t, status: 'success' }));
+                try { localStorage.setItem(txKey(uid), JSON.stringify({ ...t, status: 'success' })); } catch (_) {}
             }
         }
     }
 
-    // Step 5: if still no transaction data, build minimal from URL
+    // Step 5: if no transaction data at all, build minimal from URL
     if (!t.id && txRef) {
-        t.id = txRef;
-        t.tx_ref = txRef;
+        t.id          = txRef;
+        t.tx_ref      = txRef;
         t.paymentMethod = 'chapa';
-        t.status = 'success';
-        t.date = new Date().toLocaleDateString();
+        t.status      = 'success';
+        t.date        = new Date().toLocaleDateString();
     }
 
-    // Step 6: display
-    document.getElementById('transactionId').textContent     = t.id || '—';
-    document.getElementById('transactionAmount').textContent = t.amount
-        ? 'ETB ' + parseFloat(t.amount).toFixed(2) : '—';
-    document.getElementById('transactionDate').textContent   = t.date || new Date().toLocaleDateString();
-    document.getElementById('paymentMethod').textContent     = METHOD_NAMES[t.paymentMethod] || t.paymentMethod || '—';
+    // Step 6: display transaction details
+    const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setText('transactionId',     t.id || '—');
+    setText('transactionAmount', t.amount ? 'ETB ' + parseFloat(t.amount).toFixed(2) : '—');
+    setText('transactionDate',   t.date  || new Date().toLocaleDateString());
+    setText('paymentMethod',     METHOD_NAMES[t.paymentMethod] || t.paymentMethod || '—');
 
     if (t.invoice_id) {
         const invoiceBtn = document.querySelector('a[href*="invoice.html"]');
@@ -198,16 +186,24 @@ async function verifyChapaIfNeeded(txRef) {
         badge.textContent = isPending ? 'Pending Confirmation' : 'Completed';
         badge.className   = isPending ? 'badge bg-warning text-dark' : 'badge bg-success';
     }
-
     if (statusTitle) {
         statusTitle.textContent = isPending ? 'Payment Pending' : 'Payment Successful!';
         statusTitle.className   = 'text-2xl font-bold mb-2 ' + (isPending ? 'text-yellow-600' : 'text-green-600');
     }
+
+    const rawReturn = t.returnTo || '';
+    const isPredictionPayment = (
+        t.serviceContext === 'prediction' ||
+        rawReturn === 'health_form' ||
+        rawReturn === 'health-form' ||
+        rawReturn === 'prediction'
+    );
+
     const msg = document.getElementById('statusMessage');
     if (msg) {
         msg.textContent = isPending
             ? 'Your payment is being confirmed. This may take a few minutes.'
-            : (t.serviceContext === 'prediction' || (t.returnTo || '').includes('health')
+            : (isPredictionPayment
                 ? 'Payment confirmed! Taking you to your prediction now...'
                 : 'Your payment has been confirmed.');
     }
@@ -223,13 +219,12 @@ async function verifyChapaIfNeeded(txRef) {
         showRefRow(t.referenceNumber);
     }
 
-    // Step 7: set up Continue button and auto-redirect
+    // Step 7: set up Continue button
     const returnMap = {
         'health_form':  '/templates/patient/health_data_form.html',
         'health-form':  '/templates/patient/health_data_form.html',
         'prediction':   '/templates/patient/health_data_form.html',
     };
-    const rawReturn = t.returnTo || '';
     const resolvedReturn = returnMap[rawReturn] || (rawReturn.startsWith('/') ? rawReturn : '');
     const target = resolvedReturn ||
         (t.serviceContext === 'prediction'   ? '/templates/patient/health_data_form.html' :
@@ -246,48 +241,35 @@ async function verifyChapaIfNeeded(txRef) {
             e.preventDefault();
             await restoreSession();
             sessionStorage.setItem('_fromPayment', '1');
-            window.location.href = target;
+            window.location.href = isPredictionPayment
+                ? '/templates/patient/health_data_form.html'
+                : target;
         };
     }
 
-    // ── Set predictionPaid flag ───────────────────────────────────────────────
-    // Set for ALL possible uid formats so the health form always finds it,
-    // even if the session uid differs from the transaction uid.
-    const isPredictionPayment = (t.serviceContext === 'prediction' ||
-        rawReturn === 'health_form' || rawReturn === 'health-form' || rawReturn === 'prediction');
-
+    // Step 8: set predictionPaid flag (all uid variants so health form always finds it)
     if (isPredictionPayment) {
         try {
-            // Set with transaction uid
-            const storedUid = uid || 'anon';
-            localStorage.setItem('predictionPaid_' + storedUid, 'true');
-            // Set with current session uid (what health form reads)
+            const storedUid  = uid || 'anon';
             const sessionUid = _uid();
+            localStorage.setItem('predictionPaid_' + storedUid, 'true');
             if (sessionUid && sessionUid !== storedUid) {
                 localStorage.setItem('predictionPaid_' + sessionUid, 'true');
             }
-            // Always set legacy key as final fallback
             localStorage.setItem('predictionPaid', 'true');
         } catch (_) {}
     }
 
-    // ── For prediction payments: 10s countdown then go to health form ──────────
-    // Runs for both 'success' and 'pending' status — the verify endpoint
-    // marks the payment completed in DB, so the health form will find it.
+    // Step 9: auto-redirect
+    const cdEl = document.getElementById('redirectCountdown');
+
     if (isPredictionPayment) {
-        const cdEl = document.getElementById('redirectCountdown');
+        // 10-second countdown then go to health form which auto-runs prediction
         let cd = 10;
-        if (cdEl) {
-            cdEl.style.display = '';
-            cdEl.textContent = 'Taking you to your prediction in ' + cd + 's...';
-        }
+        if (cdEl) { cdEl.style.display = ''; cdEl.textContent = 'Taking you to your prediction in ' + cd + 's...'; }
         const iv = setInterval(async () => {
             cd--;
-            if (cdEl) {
-                cdEl.textContent = cd > 0
-                    ? 'Taking you to your prediction in ' + cd + 's...'
-                    : 'Loading...';
-            }
+            if (cdEl) cdEl.textContent = cd > 0 ? 'Taking you to your prediction in ' + cd + 's...' : 'Loading...';
             if (cd <= 0) {
                 clearInterval(iv);
                 await restoreSession();
@@ -295,33 +277,22 @@ async function verifyChapaIfNeeded(txRef) {
                 window.location.href = '/templates/patient/health_data_form.html';
             }
         }, 1000);
-        return; // countdown handles navigation
+    } else {
+        // 5-second countdown to dashboard for non-prediction payments
+        let secs = 5;
+        const autoTarget = _dashboardForCurrentUser(target);
+        if (cdEl) { cdEl.style.display = ''; cdEl.textContent = 'Redirecting to dashboard in ' + secs + 's...'; }
+        const timer = setInterval(async () => {
+            secs--;
+            if (cdEl) cdEl.textContent = secs > 0 ? 'Redirecting to dashboard in ' + secs + 's...' : 'Redirecting...';
+            if (secs <= 0) {
+                clearInterval(timer);
+                await restoreSession();
+                sessionStorage.setItem('_fromPayment', '1');
+                window.location.href = autoTarget;
+            }
+        }, 1000);
     }
-
-    // Non-prediction payments: 5s countdown to dashboard
-    const countdownEl = document.getElementById('redirectCountdown');
-    let secs = 5;
-    const autoTarget = _dashboardForCurrentUser(target);
-    const redirectLabel = 'dashboard';
-
-    if (countdownEl) {
-        countdownEl.style.display = '';
-        countdownEl.textContent = 'Auto-redirecting to ' + redirectLabel + ' in ' + secs + 's...';
-    }
-    const timer = setInterval(async () => {
-        secs--;
-        if (countdownEl) {
-            countdownEl.textContent = secs > 0
-                ? 'Auto-redirecting to ' + redirectLabel + ' in ' + secs + 's...'
-                : 'Redirecting...';
-        }
-        if (secs <= 0) {
-            clearInterval(timer);
-            await restoreSession();
-            sessionStorage.setItem('_fromPayment', '1');
-            window.location.href = autoTarget;
-        }
-    }, 1000);
 }
 
 function showRefRow(ref) {
@@ -332,13 +303,10 @@ function showRefRow(ref) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Show username if available
     try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const nameEl = document.getElementById('navUserName');
-        if (nameEl && (user.name || user.username)) {
-            nameEl.textContent = user.name || user.username;
-        }
+        if (nameEl && (user.name || user.username)) nameEl.textContent = user.name || user.username;
     } catch (_) {}
 
     loadTransaction();

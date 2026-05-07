@@ -306,6 +306,28 @@ def _do_chapa_verify():
             return jsonify({'success': False, 'message': 'tx_ref required'}), 400
 
         secret_key = current_app.config['CHAPA_SECRET_KEY']
+        is_test_key = secret_key.startswith('CHASECK_TEST-')
+
+        # ── Test mode: skip Chapa API call, mark payment completed directly ──
+        if is_test_key:
+            payment = Payment.query.filter_by(transaction_id=tx_ref).first()
+            if payment and payment.payment_status != 'completed':
+                payment.payment_status = 'completed'
+                payment.payment_date = datetime.utcnow()
+                invoice = Invoice.query.filter_by(payment_id=payment.id).first()
+                if invoice:
+                    invoice.status = 'paid'
+                    invoice.paid_at = datetime.utcnow()
+                db.session.commit()
+                _send_confirmation(payment.patient_id, payment.total_amount, payment.payment_id)
+            return jsonify({
+                'success': True,
+                'message': 'Payment verified (test mode)',
+                'payment_id': payment.payment_id if payment else tx_ref,
+                'status': 'completed',
+            }), 200
+
+        # ── Live mode: verify with Chapa API ─────────────────────────────────
         headers = {'Authorization': f'Bearer {secret_key}'}
         resp = req.get(
             f"{current_app.config.get('CHAPA_BASE_URL', 'https://api.chapa.co/v1')}/transaction/verify/{tx_ref}",

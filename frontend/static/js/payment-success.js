@@ -272,8 +272,8 @@ async function verifyChapaIfNeeded(txRef) {
     }
 
     // ── For prediction payments: 10s countdown then go to health form ──────────
-    // The health form auto-fills from DB (vitals + lab results) then runs
-    // the prediction automatically and redirects to prediction_result.html
+    // Runs for both 'success' and 'pending' status — the verify endpoint
+    // marks the payment completed in DB, so the health form will find it.
     if (isPredictionPayment) {
         const cdEl = document.getElementById('redirectCountdown');
         let cd = 10;

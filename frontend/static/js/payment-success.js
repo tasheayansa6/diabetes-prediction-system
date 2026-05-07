@@ -144,7 +144,87 @@ async function verifyChapaIfNeeded(txRef) {
     }
 }
 
-// ── Display ───────────────────────────────────────────────────────────────────
+// ── Run prediction directly from payment success page ────────────────────────
+// Called when Chapa payment is verified and serviceContext === 'prediction'.
+// Uses the pendingHealthData stored before the payment redirect.
+async function runPredictionAfterPayment(uid) {
+    const statusTitle = document.getElementById('statusTitle');
+    const msg         = document.getElementById('statusMessage');
+    const countdownEl = document.getElementById('redirectCountdown');
+
+    // Read pending health data stored by the health form before redirecting to payment
+    let body = null;
+    try {
+        const scoped = localStorage.getItem('pendingHealthData_' + uid);
+        if (scoped) body = JSON.parse(scoped);
+    } catch (_) {}
+    if (!body) {
+        try {
+            const legacy = localStorage.getItem('pendingHealthData');
+            if (legacy) body = JSON.parse(legacy);
+        } catch (_) {}
+    }
+
+    if (!body) {
+        // No pending data — fall back to health form
+        if (msg) msg.textContent = 'Redirecting to health form...';
+        if (countdownEl) countdownEl.textContent = '';
+        await new Promise(r => setTimeout(r, 800));
+        window.location.href = '/templates/patient/health_data_form.html';
+        return;
+    }
+
+    if (statusTitle) statusTitle.textContent = 'Running Your Prediction...';
+    if (msg)         msg.textContent = 'Payment confirmed! Analysing your health data now...';
+    if (countdownEl) countdownEl.textContent = '⏳ Please wait — this takes a few seconds...';
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = '/templates/patient/health_data_form.html';
+        return;
+    }
+
+    try {
+        const res  = await fetch('/api/patient/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (data.success && data.prediction && data.prediction.id) {
+            // Consume payment token
+            fetch('/api/payments/consume-prediction-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+            }).catch(() => {});
+
+            // Clean up pending data
+            try { localStorage.removeItem('pendingHealthData_' + uid); } catch (_) {}
+            try { localStorage.removeItem('pendingHealthData'); } catch (_) {}
+            try { localStorage.removeItem('predictionPaid_' + uid); } catch (_) {}
+            try { localStorage.removeItem('predictionPaid'); } catch (_) {}
+
+            if (countdownEl) countdownEl.textContent = '✅ Prediction complete! Redirecting to your result...';
+            await new Promise(r => setTimeout(r, 800));
+            window.location.href = '/templates/patient/prediction_result.html?id=' + data.prediction.id;
+        } else if (res.status === 402 || data.requires_payment) {
+            // Payment not yet confirmed in DB — go to health form which will retry
+            if (msg) msg.textContent = 'Payment processing... redirecting to health form.';
+            await new Promise(r => setTimeout(r, 1000));
+            window.location.href = '/templates/patient/health_data_form.html';
+        } else {
+            // Other error — go to health form with error context
+            if (msg) msg.textContent = (data.message || 'Prediction failed') + ' — redirecting to health form.';
+            await new Promise(r => setTimeout(r, 1500));
+            window.location.href = '/templates/patient/health_data_form.html';
+        }
+    } catch (err) {
+        if (msg) msg.textContent = 'Network error — redirecting to health form.';
+        await new Promise(r => setTimeout(r, 1200));
+        window.location.href = '/templates/patient/health_data_form.html';
+    }
+}
 async function loadTransaction() {
     const statusTitle = document.getElementById('statusTitle');
     if (statusTitle) statusTitle.textContent = 'Confirming Payment...';
@@ -259,10 +339,18 @@ async function loadTransaction() {
 
     if (isPredictionPayment) {
         try {
-            const uid = _uid() || 'anon';
-            localStorage.setItem('predictionPaid_' + uid, 'true');
+            const storedUid = uid || 'anon';
+            localStorage.setItem('predictionPaid_' + storedUid, 'true');
             localStorage.setItem('predictionPaid', 'true');
         } catch (_) {}
+    }
+
+    // ── For prediction payments: run prediction directly, skip health form ───
+    if (isPredictionPayment && t.status === 'success') {
+        // Small delay so the user sees the "Payment Successful!" screen briefly
+        await new Promise(r => setTimeout(r, 1500));
+        await runPredictionAfterPayment(uid || 'anon');
+        return; // runPredictionAfterPayment handles all further navigation
     }
 
     // Auto-redirect after 3s for prediction, 5s for others

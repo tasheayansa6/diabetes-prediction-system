@@ -1,13 +1,18 @@
 {
   "algorithm": "Gradient Boosting",
-  "version": "v2.0.0",
-  "trained_at": "2026-04-27T09:34:48.409380",
-  "accuracy": 88.79,
-  "precision": 89.47,
-  "recall": 80.95,
-  "f1_score": 85.0,
-  "roc_auc": 97.26,
-  "cv_accuracy": 86.07,
+  "version": "v2.3.0",
+  "trained_at": "2026-05-07T18:19:46.310440",
+  "accuracy": 89.25,
+  "precision": 88.61,
+  "recall": 83.33,
+  "f1_score": 85.89,
+  "roc_auc": 97.06,
+  "avg_precision": 94.21,
+  "brier_score": 0.0705,
+  "cv_roc_auc_mean": 94.32,
+  "cv_roc_auc_std": 1.53,
+  "train_accuracy": 92.86,
+  "overfitting_gap": 3.6,
   "training_samples": 854,
   "test_samples": 214,
   "features": [
@@ -24,7 +29,10 @@
   "hyperparameters": {
     "n_estimators": 200,
     "learning_rate": 0.05,
-    "max_depth": 4,
-    "subsample": 0.8
+    "max_depth": 3,
+    "min_samples_split": 20,
+    "min_samples_leaf": 10,
+    "subsample": 0.8,
+    "max_features": "sqrt"
   }
 }

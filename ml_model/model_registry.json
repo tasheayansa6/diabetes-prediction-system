@@ -46,7 +46,30 @@
     "testSamples": 214,
     "features": 8,
     "date": "2026-04-27",
+    "status": "archived",
+    "notes": "v2.2.0 archived. Overfitting gap was 10.04%."
+  },
+  {
+    "id": 4,
+    "version": "v2.3.0",
+    "algorithm": "Gradient Boosting",
+    "filename": "gradient_boosting.pkl",
+    "accuracy": 89.25,
+    "precision": 88.61,
+    "recall": 83.33,
+    "f1Score": 85.89,
+    "rocAuc": 97.06,
+    "avgPrecision": 94.21,
+    "brierScore": 0.0705,
+    "cvRocAucMean": 94.32,
+    "cvRocAucStd": 1.53,
+    "trainAccuracy": 92.86,
+    "overfittingGap": 3.60,
+    "trainingSamples": 854,
+    "testSamples": 214,
+    "features": 8,
+    "date": "2026-05-07",
     "status": "active",
-    "notes": "Retrained v2.2.0. Pima (768) + Frankfurt (300) = 1068 samples. Accuracy 88.79%, Precision 89.47%, Recall 80.95%, F1 85.0%, ROC-AUC 97.26%, CV-5 86.07%."
+    "notes": "v2.3.0 — Regularization improved. Overfitting gap reduced from 10.04% to 3.60%. max_depth=3, min_samples_split=20, min_samples_leaf=10, max_features=sqrt. Accuracy 89.25%, Recall 83.33% (was 80.95%), F1 85.89%, ROC-AUC 97.06%, CV-AUC 94.32%±1.53%."
   }
 ]

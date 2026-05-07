@@ -268,6 +268,9 @@ def chapa_initialize(current_user):
         db.session.rollback()
         current_app.logger.error(f'Chapa initialize exception: {e}', exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@payment_bp.route('/chapa/verify', methods=['GET', 'POST'])
 @token_required(['patient', 'admin', 'doctor'])
 def chapa_verify(current_user):
     """

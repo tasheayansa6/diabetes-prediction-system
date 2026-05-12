@@ -668,6 +668,17 @@ async function runPredictionDirect(body) {
             hideOverlay();
             // If payment required, the localStorage flag was wrong — redirect to payment
             if (res.status === 402 || data.requires_payment) {
+                if (data.requires_admin_approval) {
+                    // Cash/insurance pending — don't redirect to payment, show message
+                    showAlert(
+                        '<i class="bi bi-hourglass-split me-2"></i>' +
+                        '<strong>Waiting for admin approval.</strong> Your cash/insurance payment has not been confirmed yet. ' +
+                        'Please wait for the admin to approve your payment, then <a href="/templates/patient/dashboard.html">return to your dashboard</a>.',
+                        'warning'
+                    );
+                    resetBtn();
+                    return;
+                }
                 goToPayment(body);
                 return;
             }
@@ -717,6 +728,16 @@ async function runPrediction(body) {
         if (!data.success) {
             hideOverlay();
             if (res.status === 402 || data.requires_payment) {
+                if (data.requires_admin_approval) {
+                    showAlert(
+                        '<i class="bi bi-hourglass-split me-2"></i>' +
+                        '<strong>Waiting for admin approval.</strong> Your cash/insurance payment has not been confirmed yet. ' +
+                        'Please wait for the admin to approve your payment, then <a href="/templates/patient/dashboard.html">return to your dashboard</a>.',
+                        'warning'
+                    );
+                    resetBtn();
+                    return;
+                }
                 goToPayment(body);
                 return;
             }

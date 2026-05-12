@@ -497,7 +497,7 @@ def predict(current_user):
         # ── Enforce payment before prediction ────────────────────────────────
         try:
             from backend.models.payment import Payment
-            # Check completed unconsumed prediction payment
+            # Check completed unconsumed prediction payment (all methods)
             paid = Payment.query.filter(
                 Payment.patient_id == current_user['id'],
                 Payment.payment_type == 'prediction',
@@ -506,17 +506,38 @@ def predict(current_user):
             ).order_by(Payment.created_at.desc()).first()
 
             if not paid:
-                # Also allow pending cash/insurance payments made within last 2 hours
+                # Allow pending Chapa payment within last 2 hours ONLY
+                # (Chapa is auto-verified — pending means webhook hasn't fired yet)
+                # Cash/Insurance: NEVER allow pending — must be admin-approved (completed)
                 two_hours_ago = datetime.utcnow() - timedelta(hours=2)
                 paid = Payment.query.filter(
                     Payment.patient_id == current_user['id'],
                     Payment.payment_type == 'prediction',
                     Payment.payment_status == 'pending',
-                    Payment.payment_method.in_(['cash', 'insurance', 'bank_transfer']),
+                    Payment.payment_method == 'chapa',
                     Payment.created_at >= two_hours_ago,
                 ).order_by(Payment.created_at.desc()).first()
 
             if not paid:
+                # Check if patient has a pending cash/insurance payment
+                # (to give a specific message instead of generic "payment required")
+                pending_manual = Payment.query.filter(
+                    Payment.patient_id == current_user['id'],
+                    Payment.payment_type == 'prediction',
+                    Payment.payment_status == 'pending',
+                    Payment.payment_method.in_(['cash', 'insurance', 'bank_transfer']),
+                ).order_by(Payment.created_at.desc()).first()
+
+                if pending_manual:
+                    return jsonify({
+                        "success": False,
+                        "message": "Your cash/insurance payment is awaiting admin approval. "
+                                   "Please wait for the admin to confirm your payment before running a prediction.",
+                        "requires_payment": True,
+                        "requires_admin_approval": True,
+                        "payment_method": pending_manual.payment_method,
+                    }), 402
+
                 return jsonify({
                     "success": False,
                     "message": "Payment required. Please pay for the Diabetes Prediction service before running a prediction.",

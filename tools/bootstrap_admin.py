@@ -1,16 +1,4 @@
-"""
-Create the first admin account when the database has no admin user.
 
-Set in .env (or environment):
-  ADMIN_BOOTSTRAP_EMAIL=owner@example.com
-  ADMIN_BOOTSTRAP_PASSWORD=YourStrongPass123
-  ADMIN_BOOTSTRAP_USERNAME=owner   (optional; defaults to part before @)
-
-Then run from project root:
-  python tools/bootstrap_admin.py
-
-Safe to run multiple times: does nothing if any admin user already exists.
-"""
 from __future__ import annotations
 
 import os

@@ -72,8 +72,17 @@
         <div class="table-responsive">
           <table class="table">
             <thead><tr><th>Version</th><th>Date</th><th>Algorithm</th><th>Accuracy</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody id="modelTableBody"></tbody>
+            <tbody id="modelTableBody">
+              <tr><td colspan="6" style="text-align:center;padding:2rem;"><i class="bi bi-hourglass-split"></i> Loading models...</td></tr>
+            </tbody>
           </table>
+        </div>
+        <div class="card-footer" style="background:#f9fafb;">
+          <p class="text-sm text-gray-600 mb-0">
+            <i class="bi bi-info-circle"></i> 
+            <strong>Active Model:</strong> Only one model can be active at a time. Click "Activate" on any archived model to switch to it. 
+            The active model is used for all diabetes predictions.
+          </p>
         </div>
       </div>
       <!-- Upload -->

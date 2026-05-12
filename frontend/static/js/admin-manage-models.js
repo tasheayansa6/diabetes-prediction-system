@@ -37,19 +37,33 @@ function renderAll(models) {
     document.getElementById('metricSamples').textContent = Number(active.trainingSamples).toLocaleString();
     document.getElementById('metricFeatures').textContent = active.features;
 
-    // Version table — active model only, archived hidden
+    // Version table — show ALL models (active and archived)
     document.getElementById('modelTableBody').innerHTML = models
-        .filter(m => m.status === 'active')
-        .map(m => `
-        <tr>
-            <td><strong>${m.version}</strong><br><span style="font-size:.68rem;color:#059669;font-weight:600;"><i class="bi bi-robot"></i> Predictions use this model</span></td>
-            <td>${m.date}</td>
-            <td>${m.algorithm}</td>
-            <td><strong style="color:#059669">${m.accuracy}%</strong></td>
-            <td><span style="background:#059669;color:#fff;border-radius:99px;padding:.2em .75em;font-size:.72rem;font-weight:700;"><i class="bi bi-check-circle-fill"></i> Active</span></td>
-            <td><button class="btn btn-sm btn-info" onclick="viewModel(${m.id})"><i class="bi bi-eye"></i> View</button></td>
-        </tr>`).join('') ||
-        '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:1.5rem;">No active model found.</td></tr>';
+        .map(m => {
+            const isActive = m.status === 'active';
+            const statusBadge = isActive
+                ? `<span style="background:#059669;color:#fff;border-radius:99px;padding:.2em .75em;font-size:.72rem;font-weight:700;"><i class="bi bi-check-circle-fill"></i> Active</span>`
+                : `<span style="background:#6b7280;color:#fff;border-radius:99px;padding:.2em .75em;font-size:.72rem;font-weight:700;"><i class="bi bi-pause-circle-fill"></i> Archived</span>`;
+            
+            const versionCell = isActive
+                ? `<strong>${m.version}</strong><br><span style="font-size:.68rem;color:#059669;font-weight:600;"><i class="bi bi-robot"></i> Predictions use this model</span>`
+                : `<strong>${m.version}</strong>`;
+            
+            const actions = isActive
+                ? `<button class="btn btn-sm btn-info" onclick="viewModel(${m.id})"><i class="bi bi-eye"></i> View</button>`
+                : `<button class="btn btn-sm btn-info" onclick="viewModel(${m.id})"><i class="bi bi-eye"></i> View</button>
+                   <button class="btn btn-sm btn-success" onclick="activateModel(${m.id})" style="margin-left:4px;"><i class="bi bi-power"></i> Activate</button>
+                   <button class="btn btn-sm btn-danger" onclick="deleteModel(${m.id})" style="margin-left:4px;"><i class="bi bi-trash"></i></button>`;
+            
+            return `<tr style="${isActive ? 'background:#f0fdf4;' : ''}">
+                <td>${versionCell}</td>
+                <td>${m.date}</td>
+                <td>${m.algorithm}</td>
+                <td><strong style="color:${m.accuracy >= 85 ? '#059669' : '#d97706'}">${m.accuracy}%</strong></td>
+                <td>${statusBadge}</td>
+                <td>${actions}</td>
+            </tr>`;
+        }).join('');
 }
 
 // ===== View =====

@@ -64,12 +64,12 @@
     "cvRocAucMean": 94.32,
     "cvRocAucStd": 1.53,
     "trainAccuracy": 92.86,
-    "overfittingGap": 3.60,
+    "overfittingGap": 3.6,
     "trainingSamples": 854,
     "testSamples": 214,
     "features": 8,
     "date": "2026-05-07",
     "status": "active",
-    "notes": "v2.3.0 — Regularization improved. Overfitting gap reduced from 10.04% to 3.60%. max_depth=3, min_samples_split=20, min_samples_leaf=10, max_features=sqrt. Accuracy 89.25%, Recall 83.33% (was 80.95%), F1 85.89%, ROC-AUC 97.06%, CV-AUC 94.32%±1.53%."
+    "notes": "v2.3.0 \u00e2\u20ac\u201d Regularization improved. Overfitting gap reduced from 10.04% to 3.60%. max_depth=3, min_samples_split=20, min_samples_leaf=10, max_features=sqrt. Accuracy 89.25%, Recall 83.33% (was 80.95%), F1 85.89%, ROC-AUC 97.06%, CV-AUC 94.32%\u00c2\u00b11.53%."
   }
 ]

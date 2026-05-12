@@ -198,6 +198,7 @@ async function processPayment(event) {
             id: data.payment.payment_id, invoice_id: data.invoice.invoice_id,
             services: selectedServices, serviceContext, returnTo,
             paymentMethod: method, amount: data.payment.total_amount,
+            payment_type: data.payment.payment_type,
             currency: 'ETB', date: new Date().toISOString().split('T')[0],
             status: data.payment.is_pending ? 'pending' : 'success',
             referenceNumber: data.payment.is_pending ? data.payment.payment_id : null,

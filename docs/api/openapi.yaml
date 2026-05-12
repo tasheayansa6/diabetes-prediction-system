@@ -1,0 +1,1002 @@
+openapi: 3.0.3
+info:
+  title: Diabetes Prediction System API
+  description: |
+    Comprehensive API for diabetes risk prediction, patient management, and healthcare workflow.
+    
+    ## Authentication
+    All authenticated endpoints require a JWT token in the Authorization header:
+    `Authorization: Bearer <token>`
+    
+    ## Rate Limiting
+    - Standard endpoints: 100 requests per minute
+    - Prediction endpoints: 20 requests per minute
+    - Authentication endpoints: 10 requests per minute
+    
+    ## Error Codes
+    - 400: Bad Request - Invalid input
+    - 401: Unauthorized - Missing or invalid token
+    - 403: Forbidden - Insufficient permissions
+    - 404: Not Found
+    - 429: Too Many Requests - Rate limit exceeded
+    - 500: Internal Server Error
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@diabetes-prediction.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.diabetes-prediction.com/v1
+    description: Production server
+  - url: http://localhost:5000/api/v1
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Patients
+    description: Patient management operations
+  - name: Predictions
+    description: Diabetes risk prediction
+  - name: Health Records
+    description: Patient health data management
+  - name: Appointments
+    description: Appointment scheduling
+  - name: Lab Tests
+    description: Lab test management
+  - name: Prescriptions
+    description: Medication prescriptions
+  - name: Payments
+    description: Payment processing
+  - name: Admin
+    description: Administrative operations
+  - name: System
+    description: System health and monitoring
+
+paths:
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check
+      description: Returns the health status of the API
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service unavailable
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input
+        '409':
+          description: Email already exists
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Password reset email sent
+
+  /predictions:
+    post:
+      tags:
+        - Predictions
+      summary: Create a diabetes prediction
+      operationId: createPrediction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictionRequest'
+      responses:
+        '201':
+          description: Prediction created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionResponse'
+        '400':
+          description: Invalid input
+        '429':
+          description: Rate limit exceeded
+
+    get:
+      tags:
+        - Predictions
+      summary: Get user's prediction history
+      operationId: getPredictions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Predictions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionsListResponse'
+
+  /predictions/{prediction_id}:
+    get:
+      tags:
+        - Predictions
+      summary: Get specific prediction
+      operationId: getPrediction
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: prediction_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Prediction retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionResponse'
+        '404':
+          description: Prediction not found
+
+  /patients:
+    get:
+      tags:
+        - Patients
+      summary: List patients (for doctors/nurses)
+      operationId: listPatients
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: risk_level
+          in: query
+          schema:
+            type: string
+            enum: [low, moderate, high, very_high]
+      responses:
+        '200':
+          description: Patients retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientsListResponse'
+
+  /patients/{patient_id}:
+    get:
+      tags:
+        - Patients
+      summary: Get patient details
+      operationId: getPatient
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patient_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Patient details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+        '404':
+          description: Patient not found
+
+  /health-records:
+    post:
+      tags:
+        - Health Records
+      summary: Create health record
+      operationId: createHealthRecord
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HealthRecordRequest'
+      responses:
+        '201':
+          description: Health record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthRecordResponse'
+
+  /appointments:
+    post:
+      tags:
+        - Appointments
+      summary: Book an appointment
+      operationId: bookAppointment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentRequest'
+      responses:
+        '201':
+          description: Appointment booked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '400':
+          description: Invalid input
+        '409':
+          description: Time slot not available
+
+    get:
+      tags:
+        - Appointments
+      summary: Get user's appointments
+      operationId: getAppointments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, completed, cancelled]
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Appointments retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentsListResponse'
+
+  /lab-tests:
+    post:
+      tags:
+        - Lab Tests
+      summary: Request lab tests
+      operationId: requestLabTests
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabTestRequest'
+      responses:
+        '201':
+          description: Lab test requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabTestResponse'
+
+  /lab-tests/{test_id}/results:
+    post:
+      tags:
+        - Lab Tests
+      summary: Enter lab test results (lab technician)
+      operationId: enterLabResults
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: test_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabResultsRequest'
+      responses:
+        '200':
+          description: Results entered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabTestResponse'
+
+  /prescriptions:
+    post:
+      tags:
+        - Prescriptions
+      summary: Create prescription (doctor only)
+      operationId: createPrescription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrescriptionRequest'
+      responses:
+        '201':
+          description: Prescription created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrescriptionResponse'
+
+  /payments:
+    post:
+      tags:
+        - Payments
+      summary: Initiate payment
+      operationId: initiatePayment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '201':
+          description: Payment initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+  /admin/users:
+    get:
+      tags:
+        - Admin
+      summary: List all users (admin only)
+      operationId: listUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [patient, doctor, nurse, lab_technician, pharmacist, admin]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, suspended]
+      responses:
+        '200':
+          description: Users retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersListResponse'
+        '403':
+          description: Admin access required
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        database:
+          type: string
+          enum: [connected, disconnected]
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - first_name
+        - last_name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$"
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        role:
+          type: string
+          enum: [patient, doctor, nurse, lab_technician, pharmacist]
+        phone:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        expires_in:
+          type: integer
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    PredictionRequest:
+      type: object
+      required:
+        - pregnancies
+        - glucose
+        - blood_pressure
+        - skin_thickness
+        - insulin
+        - bmi
+        - diabetes_pedigree_function
+        - age
+      properties:
+        pregnancies:
+          type: integer
+          minimum: 0
+          maximum: 20
+        glucose:
+          type: number
+          minimum: 0
+          maximum: 300
+        blood_pressure:
+          type: number
+          minimum: 0
+          maximum: 200
+        skin_thickness:
+          type: number
+          minimum: 0
+          maximum: 100
+        insulin:
+          type: number
+          minimum: 0
+          maximum: 1000
+        bmi:
+          type: number
+          minimum: 0
+          maximum: 70
+        diabetes_pedigree_function:
+          type: number
+          minimum: 0
+          maximum: 3
+        age:
+          type: integer
+          minimum: 1
+          maximum: 120
+
+    PredictionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        risk_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        risk_level:
+          type: string
+          enum: [low, moderate, high, very_high]
+        risk_percentage:
+          type: number
+          format: float
+        recommendations:
+          type: array
+          items:
+            type: string
+        doctor_review_status:
+          type: string
+          enum: [pending, approved, rejected, needs_followup]
+        created_at:
+          type: string
+          format: date-time
+
+    PredictionsListResponse:
+      type: object
+      properties:
+        predictions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PredictionResponse'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    PatientResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        latest_prediction:
+          $ref: '#/components/schemas/PredictionResponse'
+        risk_level:
+          type: string
+          enum: [low, moderate, high, very_high]
+
+    PatientsListResponse:
+      type: object
+      properties:
+        patients:
+          type: array
+          items:
+            $ref: '#/components/schemas/PatientResponse'
+        total:
+          type: integer
+
+    HealthRecordRequest:
+      type: object
+      properties:
+        weight:
+          type: number
+          minimum: 1
+          maximum: 500
+        height:
+          type: number
+          minimum: 50
+          maximum: 300
+        blood_pressure_systolic:
+          type: integer
+          minimum: 60
+          maximum: 250
+        blood_pressure_diastolic:
+          type: integer
+          minimum: 40
+          maximum: 150
+        cholesterol:
+          type: number
+        hba1c:
+          type: number
+          minimum: 3
+          maximum: 20
+        notes:
+          type: string
+          maxLength: 1000
+
+    HealthRecordResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        weight:
+          type: number
+        height:
+          type: number
+        bmi:
+          type: number
+        blood_pressure_systolic:
+          type: integer
+        blood_pressure_diastolic:
+          type: integer
+        cholesterol:
+          type: number
+        hba1c:
+          type: number
+        notes:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    AppointmentRequest:
+      type: object
+      required:
+        - doctor_id
+        - appointment_datetime
+        - reason
+      properties:
+        doctor_id:
+          type: string
+          format: uuid
+        appointment_datetime:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          maxLength: 500
+        duration_minutes:
+          type: integer
+          default: 30
+          minimum: 15
+          maximum: 120
+
+    AppointmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        doctor_id:
+          type: string
+          format: uuid
+        appointment_datetime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, confirmed, completed, cancelled]
+        reason:
+          type: string
+        duration_minutes:
+          type: integer
+
+    AppointmentsListResponse:
+      type: object
+      properties:
+        appointments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppointmentResponse'
+        total:
+          type: integer
+
+    LabTestRequest:
+      type: object
+      required:
+        - patient_id
+        - test_types
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        test_types:
+          type: array
+          items:
+            type: string
+            enum: [hba1c, fasting_glucose, oral_glucose_tolerance, lipid_panel, kidney_function]
+        priority:
+          type: string
+          enum: [routine, urgent, stat]
+          default: routine
+        notes:
+          type: string
+          maxLength: 500
+
+    LabTestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        test_types:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+        priority:
+          type: string
+        results:
+          type: object
+        ordered_by:
+          type: string
+          format: uuid
+        ordered_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    LabResultsRequest:
+      type: object
+      required:
+        - results
+      properties:
+        results:
+          type: object
+          additionalProperties:
+            type: number
+        notes:
+          type: string
+          maxLength: 500
+
+    PrescriptionRequest:
+      type: object
+      required:
+        - patient_id
+        - medications
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        medications:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - dosage
+              - frequency
+            properties:
+              name:
+                type: string
+              dosage:
+                type: string
+              frequency:
+                type: string
+              duration_days:
+                type: integer
+              instructions:
+                type: string
+        diagnosis:
+          type: string
+        notes:
+          type: string
+          maxLength: 1000
+
+    PrescriptionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        doctor_id:
+          type: string
+          format: uuid
+        medications:
+          type: array
+          items:
+            type: object
+        status:
+          type: string
+          enum: [pending, approved, dispensed, cancelled]
+        diagnosis:
+          type: string
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    PaymentRequest:
+      type: object
+      required:
+        - amount
+        - currency
+        - payment_method
+        - description
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+        currency:
+          type: string
+          enum: [ETB, USD]
+          default: ETB
+        payment_method:
+          type: string
+          enum: [card, mobile_banking, bank_transfer]
+        description:
+          type: string
+          maxLength: 200
+        invoice_id:
+          type: string
+          format: uuid
+
+    PaymentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [pending, completed, failed, refunded]
+        payment_method:
+          type: string
+        transaction_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    UsersListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserResponse'
+        total:
+          type: integer

@@ -194,6 +194,7 @@ async function loadTransaction() {
     const rawReturn = t.returnTo || '';
     const isPredictionPayment = (
         t.serviceContext === 'prediction' ||
+        t.payment_type   === 'prediction' ||
         rawReturn === 'health_form' ||
         rawReturn === 'health-form' ||
         rawReturn === 'prediction'

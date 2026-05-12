@@ -7,12 +7,12 @@ class Patient(User):
     id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     patient_id = db.Column(db.String(50), unique=True)
     gender = db.Column(db.String(10), nullable=True)  # 'male' | 'female' | 'other'
-    blood_group = db.Column(db.String(5))
-    emergency_contact = db.Column(db.String(50))
-    emergency_contact_name = db.Column(db.String(120))
-    medical_history = db.Column(db.Text)
-    allergies = db.Column(db.Text)
-    current_medications = db.Column(db.Text)
+    blood_group = db.Column(db.String(5), nullable=True)
+    emergency_contact = db.Column(db.String(50), nullable=True)
+    emergency_contact_name = db.Column(db.String(120), nullable=True)
+    medical_history = db.Column(db.Text, nullable=True)
+    allergies = db.Column(db.Text, nullable=True)
+    current_medications = db.Column(db.Text, nullable=True)
     registered_by = db.Column(db.Integer, db.ForeignKey('nurses.id'), nullable=True)
     # Consent & GDPR/HIPAA compliance
     consent_given = db.Column(db.Boolean, default=False, nullable=False)

@@ -399,7 +399,10 @@ def check_lab_payment(current_user):
 @token_required(['patient'])
 def check_prediction_access(current_user):
     """Returns whether the patient has an unused paid prediction slot.
-    Accepts: completed payments OR pending cash/insurance/chapa within last 2 hours.
+    
+    Access rules:
+    - Chapa: Completed payments OR pending within last 2 hours (auto-verified via webhook)
+    - Cash/Insurance: ONLY completed payments (requires admin manual approval)
     """
     try:
         two_hours_ago = datetime.utcnow() - timedelta(hours=2)
@@ -427,21 +430,40 @@ def check_prediction_access(current_user):
                 'message': 'Payment verified. You may proceed.',
             }), 200
 
-        # Second check: pending cash/insurance/chapa payment within last 2 hours
-        # (patient paid but webhook/admin hasn't confirmed yet)
-        pending = Payment.query.filter(
+        # Second check: pending chapa payment within last 2 hours
+        # (Chapa payments are auto-verified via webhook, so pending is allowed temporarily)
+        pending_chapa = Payment.query.filter(
             Payment.patient_id == current_user['id'],
             Payment.payment_type == 'prediction',
             Payment.payment_status == 'pending',
-            Payment.payment_method.in_(['cash', 'insurance', 'bank_transfer', 'chapa']),
+            Payment.payment_method == 'chapa',
             Payment.created_at >= two_hours_ago,
         ).order_by(Payment.created_at.desc()).first()
 
-        if pending:
+        if pending_chapa:
             return jsonify({
                 'success': True, 'has_access': True,
-                'payment_id': pending.payment_id,
+                'payment_id': pending_chapa.payment_id,
                 'message': 'Payment pending confirmation. Prediction allowed.',
+                'requires_admin_approval': False,
+            }), 200
+
+        # Third check: pending cash/insurance payment (requires admin approval)
+        pending_manual = Payment.query.filter(
+            Payment.patient_id == current_user['id'],
+            Payment.payment_type == 'prediction',
+            Payment.payment_status == 'pending',
+            Payment.payment_method.in_(['cash', 'insurance']),
+        ).order_by(Payment.created_at.desc()).first()
+
+        if pending_manual:
+            return jsonify({
+                'success': True,
+                'has_access': False,
+                'payment_id': pending_manual.payment_id,
+                'message': 'Payment submitted. Awaiting admin approval before you can proceed with the prediction.',
+                'requires_admin_approval': True,
+                'payment_method': pending_manual.payment_method,
             }), 200
 
         return jsonify({

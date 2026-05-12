@@ -865,8 +865,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!document.hidden) refreshLabResultsIfNeeded();
     });
 
-    // ── Check if returning from payment (Chapa or cash/insurance) ──────────────
-    const paid    = isPredictionPaid();
+    // ── Check if returning from payment OR arriving via payment-approved notification ──
+    const urlParams   = new URLSearchParams(window.location.search);
+    const paidFromUrl = urlParams.get('paid') === '1';   // ?paid=1 from admin approval notification
+
+    const paid    = paidFromUrl || isPredictionPaid();
     const pending = restorePendingData();
 
     if (pending) {
@@ -878,6 +881,28 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Payment confirmed — clear flags immediately so we don't re-run on refresh
         clearPredictionPaid();
         _clearPendingData();
+
+        // If ?paid=1 came from URL, verify server-side that payment is actually completed
+        // (handles the case where patient arrives from admin-approved notification)
+        if (paidFromUrl) {
+            try {
+                const chk    = await fetch(API + '/payments/check-prediction-access', {
+                    headers: { 'Authorization': 'Bearer ' + getToken() }
+                });
+                const access = await chk.json();
+                if (!access.has_access) {
+                    // Payment not yet confirmed — show waiting message
+                    showAlert(
+                        '<i class="bi bi-hourglass-split me-2"></i>' +
+                        '<strong>Payment pending confirmation.</strong> ' +
+                        'Please wait for admin to approve your payment, then return here.',
+                        'warning'
+                    );
+                    updateLiveRiskHint();
+                    return;
+                }
+            } catch (_) { /* network error — proceed anyway */ }
+        }
 
         // Show banner
         showAlert(

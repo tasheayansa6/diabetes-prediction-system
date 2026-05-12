@@ -219,6 +219,27 @@ async function loadTransaction() {
         showRefRow(t.referenceNumber);
     }
 
+    // ── Pending cash/insurance prediction payment: show "Check & Run" button ──
+    // Patient pays cash/insurance → status is 'pending' → admin approves → patient
+    // clicks this button → server confirms → prediction runs automatically
+    if (isPending && isPredictionPayment) {
+        const cdEl = document.getElementById('redirectCountdown');
+        if (cdEl) {
+            cdEl.style.display = '';
+            cdEl.innerHTML =
+                '<div style="margin-top:1.25rem;padding:1.25rem;background:#fef9c3;border:1px solid #fde047;border-radius:12px;text-align:center;">' +
+                '<p style="margin:0 0 .75rem;font-size:.9rem;color:#854d0e;">' +
+                '<strong>⏳ Waiting for admin to confirm your payment.</strong><br>' +
+                'After the cashier/admin approves, click the button below.</p>' +
+                '<button id="checkPaymentBtn" onclick="checkAndRunPrediction()" ' +
+                'style="background:#059669;color:#fff;border:none;border-radius:8px;padding:.65rem 1.75rem;font-weight:700;cursor:pointer;font-size:.9rem;">' +
+                '✅ Payment Approved — Run My Prediction</button>' +
+                '<p id="checkPaymentMsg" style="margin:.75rem 0 0;font-size:.82rem;color:#64748b;"></p>' +
+                '</div>';
+        }
+        return; // Don't start countdown — wait for manual check
+    }
+
     // Step 7: set up Continue button
     const returnMap = {
         'health_form':  '/templates/patient/health_data_form.html',
@@ -300,6 +321,48 @@ function showRefRow(ref) {
     if (row) row.style.cssText = 'display:flex !important';
     const el = document.getElementById('referenceNumber');
     if (el) el.textContent = ref || '—';
+}
+
+// ── Check payment status and redirect to prediction ───────────────────────────
+// Called when patient clicks "Payment Approved — Run My Prediction" button
+async function checkAndRunPrediction() {
+    const btn = document.getElementById('checkPaymentBtn');
+    const msgEl = document.getElementById('checkPaymentMsg');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Checking...'; }
+    if (msgEl) msgEl.textContent = '';
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+        if (msgEl) msgEl.textContent = 'Session expired. Please log in again.';
+        if (btn) { btn.disabled = false; btn.textContent = '✅ Payment Approved — Run My Prediction'; }
+        return;
+    }
+
+    try {
+        const res  = await fetch('/api/payments/check-prediction-access', {
+            headers: { Authorization: 'Bearer ' + token }
+        });
+        const data = await res.json();
+
+        if (data.has_access) {
+            if (msgEl) msgEl.textContent = '✅ Payment confirmed! Taking you to your prediction...';
+            // Set predictionPaid flag so health form auto-runs
+            const uid = _uid() || 'anon';
+            localStorage.setItem('predictionPaid_' + uid, 'true');
+            localStorage.setItem('predictionPaid', 'true');
+            await restoreSession();
+            sessionStorage.setItem('_fromPayment', '1');
+            setTimeout(() => {
+                window.location.href = '/templates/patient/health_data_form.html';
+            }, 800);
+        } else {
+            if (msgEl) msgEl.textContent = '⏳ Payment not yet confirmed by admin. Please wait and try again.';
+            if (btn) { btn.disabled = false; btn.textContent = '🔄 Check Again'; }
+        }
+    } catch (_) {
+        if (msgEl) msgEl.textContent = 'Network error. Please try again.';
+        if (btn) { btn.disabled = false; btn.textContent = '🔄 Check Again'; }
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function () {

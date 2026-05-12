@@ -1122,12 +1122,12 @@ def admin_update_payment_status(current_admin, payment_id):
                 from backend.models.notification import Notification
                 db.session.add(Notification(
                     user_id=payment.patient_id,
-                    title='Payment Approved',
+                    title='Payment Approved ✅',
                     message=f'Your payment of ETB {float(payment.total_amount):.2f} '
                             f'({payment.payment_method}) has been approved. '
-                            f'You can now proceed with your prediction.',
+                            f'Click here to run your prediction now.',
                     type='payment', category='general', is_read=False,
-                    link='/templates/patient/health_data_form.html',
+                    link='/templates/patient/health_data_form.html?paid=1',
                     created_at=datetime.utcnow()
                 ))
                 db.session.commit()

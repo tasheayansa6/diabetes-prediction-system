@@ -302,7 +302,7 @@ async function initiateChapaPayment() {
 function preselectServices() {
     const params = new URLSearchParams(window.location.search);
     const service = params.get('service');
-    const map = { prediction:'service1', consultation:'service2', lab:'service3', medication:'service4' };
+    const map = { prediction:'service1', consultation:'service2', medication:'service4' };
     if (map[service]) {
         const cb = document.getElementById(map[service]);
         if (cb) { cb.checked = true; }
@@ -311,20 +311,7 @@ function preselectServices() {
     const labReqId = params.get('lab_request_id');
     if (labReqId) {
         localStorage.setItem(labKey(), labReqId);
-        // Also write legacy key
         localStorage.setItem('lab_request_id', labReqId);
-        const labCost = params.get('lab_cost');
-        const labName = params.get('lab_name');
-        if (labCost && labName) {
-            const cb = document.getElementById('service3');
-            if (cb) {
-                cb.value = labCost;
-                cb.dataset.name = labName;
-                const priceEl = cb.closest('label')?.querySelector('.svc-price');
-                if (priceEl) { priceEl.textContent = 'ETB ' + parseFloat(labCost).toFixed(2); priceEl.dataset.etb = labCost; }
-                cb.checked = true;
-            }
-        }
     }
 
     updateTotal();

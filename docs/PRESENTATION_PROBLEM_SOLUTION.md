@@ -268,5 +268,188 @@ The platform is production-ready, deployed on Render, and designed to scale from
 
 ---
 
+## 9. TESTING
+
+### 9.1 Test Suite Overview
+
+The project includes a comprehensive automated test suite covering all layers of the application.
+
+| Test File | What It Tests | Tests |
+|-----------|--------------|-------|
+| `test_ml_model.py` | ML model training, prediction, evaluation | 24 |
+| `test_comprehensive.py` | Full system integration, performance | 22 |
+| `test_routes.py` | All API endpoints (auth, patient, doctor, nurse, lab, pharmacy, admin) | 60+ |
+| `test_models.py` | Database models and route handlers | 30+ |
+| `test_integration.py` | Cross-role workflows (patient → nurse → doctor → lab) | 10 |
+| `test_services.py` | Business logic services | 15 |
+| `test_environment.py` | Environment configuration and dependencies | 8 |
+| `test_db_config.py` | Database configuration and connectivity | 6 |
+
+**Total: 175+ automated tests**
+
+---
+
+### 9.2 ML Model Tests — All 24 PASSED ✅
+
+```
+tests/test_ml_model.py::TestDataPreprocessing::test_load_data              PASSED
+tests/test_ml_model.py::TestDataPreprocessing::test_data_no_missing_values PASSED
+tests/test_ml_model.py::TestDataPreprocessing::test_data_correct_types     PASSED
+tests/test_ml_model.py::TestDataPreprocessing::test_feature_ranges         PASSED
+tests/test_ml_model.py::TestModelTraining::test_train_logistic_regression  PASSED
+tests/test_ml_model.py::TestModelTraining::test_train_random_forest        PASSED
+tests/test_ml_model.py::TestModelTraining::test_model_accuracy             PASSED
+tests/test_ml_model.py::TestModelTraining::test_model_roc_auc              PASSED
+tests/test_ml_model.py::TestModelSaveLoad::test_save_model                 PASSED
+tests/test_ml_model.py::TestModelSaveLoad::test_load_model                 PASSED
+tests/test_ml_model.py::TestModelSaveLoad::test_save_scaler                PASSED
+tests/test_ml_model.py::TestModelSaveLoad::test_load_scaler                PASSED
+tests/test_ml_model.py::TestModelSaveLoad::test_save_features              PASSED
+tests/test_ml_model.py::TestPrediction::test_prediction_output_type        PASSED
+tests/test_ml_model.py::TestPrediction::test_prediction_probability_sum    PASSED
+tests/test_ml_model.py::TestPrediction::test_risk_level_mapping            PASSED
+tests/test_ml_model.py::TestPrediction::test_risk_color_mapping            PASSED
+tests/test_ml_model.py::TestModelEvaluation::test_confusion_matrix         PASSED
+tests/test_ml_model.py::TestModelEvaluation::test_precision_recall         PASSED
+tests/test_ml_model.py::TestModelEvaluation::test_f1_score                 PASSED
+tests/test_ml_model.py::TestMLServiceIntegration::test_ml_service_init     PASSED
+tests/test_ml_model.py::TestMLServiceIntegration::test_prediction_result   PASSED
+tests/test_ml_model.py::TestFeatureImportance::test_feature_importance     PASSED
+tests/test_ml_model.py::TestFeatureImportance::test_top_features           PASSED
+
+Result: 24/24 PASSED ✅
+```
+
+---
+
+### 9.3 What Each Test Category Verifies
+
+#### Data Preprocessing Tests
+- Dataset loads correctly (1,068 samples, 9 columns)
+- Zero values in medical columns are replaced with class-median imputation
+- All feature data types are numeric
+- Feature values are within clinically valid ranges
+
+#### Model Training Tests
+- Logistic Regression trains without errors
+- Random Forest trains without errors
+- Gradient Boosting achieves ≥ 75% accuracy (actual: **89.25%**)
+- ROC-AUC score ≥ 0.85 (actual: **0.9706**)
+
+#### Model Save/Load Tests
+- Model serializes to `.pkl` file correctly
+- Model loads from `.pkl` and produces identical predictions
+- Scaler saves and loads correctly
+- Feature names JSON saves and loads correctly
+
+#### Prediction Tests
+- Output type is correct (dict with `success`, `prediction`, `probability`)
+- Probabilities sum to 1.0 (valid probability distribution)
+- Risk levels map correctly: LOW / MODERATE / HIGH / VERY HIGH
+- Risk colors map correctly: green / yellow / orange / red
+
+#### Model Evaluation Tests
+- Confusion matrix has correct shape (2×2)
+- Precision and Recall are both > 0.75
+- F1 Score > 0.75
+
+#### ML Service Integration Tests
+- `MLService` initializes and loads model from correct path
+- Prediction result contains all required fields:
+  `success`, `prediction`, `probability`, `risk_level`, `feature_importance`
+
+---
+
+### 9.4 Comprehensive System Tests — 20/22 PASSED ✅
+
+```
+TestHealthCheck          — API health endpoint responds correctly
+TestAuthentication       — Login, logout, token validation
+TestPatientWorkflow      — Registration → vitals → prediction → result
+TestDoctorWorkflow       — Patient list → diagnosis → prescription
+TestNurseWorkflow        — Queue management → vitals recording
+TestLabWorkflow          — Lab test ordering → result entry
+TestPharmacyWorkflow     — Prescription review → dispensing
+TestPaymentWorkflow      — Payment processing → prediction access
+TestNotifications        — Real-time notification delivery
+TestAuditLogging         — All actions logged with timestamp and IP
+TestSecurityHeaders      — CSP, HSTS, X-Frame-Options present
+TestRateLimiting         — Login rate limit enforced (max 10/min)
+TestJWTAuthentication    — Token expiry, blacklist on logout
+TestRoleBasedAccess      — Each role can only access its own endpoints
+TestDataValidation       — Invalid inputs rejected with correct error codes
+TestDatabaseIntegrity    — Foreign keys, cascades work correctly
+TestMLPredictionFlow     — End-to-end: health data → ML → result stored
+TestPasswordSecurity     — bcrypt hashing, strength validation
+TestEmailNotifications   — OTP, appointment reminder, payment receipt
+TestPDFGeneration        — Prediction report and payment receipt PDFs
+
+Passed: 20/22  (2 skipped: concurrent load test, Redis background task)
+```
+
+---
+
+### 9.5 API Endpoint Tests
+
+Every API endpoint is tested for:
+- ✅ Correct HTTP status code (200, 201, 400, 401, 403, 404, 429)
+- ✅ Authentication required (401 without token)
+- ✅ Role enforcement (403 for wrong role)
+- ✅ Input validation (400 for missing/invalid fields)
+- ✅ Correct response structure (JSON with `success`, `message`, data)
+
+**Endpoints tested:**
+
+| Category | Endpoints Tested |
+|----------|-----------------|
+| Auth | register, login, logout, refresh, forgot-password, reset-password, verify-OTP |
+| Patient | dashboard, health-records, predict, predictions, vitals, lab-results, prescriptions, appointments, profile |
+| Doctor | dashboard, patients, predictions, prescriptions, lab-requests, appointments, notes, availability |
+| Nurse | dashboard, queue, vitals, register-patient, patients |
+| Lab | dashboard, lab-requests, test-types, enter-results, statistics |
+| Pharmacy | dashboard, prescriptions, inventory, dispense |
+| Admin | users, roles, payments, audit-logs, system-stats, reports |
+| Payment | process, history, summary, chapa/initialize, chapa/verify, check-prediction-access |
+
+---
+
+### 9.6 Manual Testing — User Acceptance Testing (UAT)
+
+In addition to automated tests, the following flows were manually tested end-to-end:
+
+| Test Scenario | Steps | Result |
+|---------------|-------|--------|
+| **Patient self-registration** | Register → verify email → login → dashboard | ✅ Pass |
+| **Nurse registers patient** | Nurse login → register patient → notification sent to doctors | ✅ Pass |
+| **Vitals recording** | Nurse selects patient → records BP/BMI/age → queue updated | ✅ Pass |
+| **Lab test flow** | Doctor orders test → lab tech enters result → patient notified | ✅ Pass |
+| **Chapa payment → prediction** | Select service → pay → verify → health form → ML result | ✅ Pass |
+| **Cash payment → admin approval → prediction** | Pay cash → admin approves → patient clicks button → prediction | ✅ Pass |
+| **High-risk alert** | Patient submits high-risk data → all doctors notified instantly | ✅ Pass |
+| **Prescription flow** | Doctor prescribes → pharmacist reviews → dispenses → patient notified | ✅ Pass |
+| **Password reset** | Forgot password → OTP email → reset → login | ✅ Pass |
+| **Multi-role isolation** | Patient cannot access doctor routes, doctor cannot access admin | ✅ Pass |
+| **Session expiry** | Token expires → user redirected to login → re-login works | ✅ Pass |
+| **Notification system** | Real-time WebSocket push → bell icon updates without refresh | ✅ Pass |
+
+---
+
+### 9.7 ML Model Validation Summary
+
+| Validation Method | Result |
+|-------------------|--------|
+| Train/Test Split (80/20, stratified) | ✅ |
+| 5-Fold Cross-Validation ROC-AUC | **94.32% ± 1.53%** |
+| Overfitting Gap (Train vs Test) | **3.60%** (< 5% threshold) ✅ |
+| Beats Baseline (dummy classifier) | **+44.25%** ROC-AUC ✅ |
+| Beats Logistic Regression | **+8.27%** ROC-AUC ✅ |
+| Brier Score (calibration) | **0.0705** (well-calibrated) ✅ |
+| Sensitivity (Recall) | **83.33%** — catches 5 out of 6 diabetics |
+| Specificity | **93.08%** — correctly clears 93% of non-diabetics |
+| Clinical threshold analysis | Threshold 0.3 catches 93% of diabetics ✅ |
+
+---
+
 *Diabetes Prediction System — Built with Flask, Python, SQLite/PostgreSQL, Gradient Boosting ML*  
 *GitHub: https://github.com/tasheayansa6/diabetes-prediction-system*
+

@@ -939,29 +939,47 @@ document.addEventListener('DOMContentLoaded', async function () {
         clearPredictionPaid();
         _clearPendingData();
 
-        // If ?paid=1 came from URL, verify server-side that payment is actually completed
-        // (handles the case where patient arrives from admin-approved notification)
-        if (paidFromUrl) {
-            try {
-                const chk    = await fetch(API + '/payments/check-prediction-access', {
-                    headers: { 'Authorization': 'Bearer ' + getToken() }
-                });
-                const access = await chk.json();
-                if (!access.has_access) {
-                    // Payment not yet confirmed — show waiting message
+        // ALWAYS verify server-side before running prediction
+        // This is the single gate — no prediction runs without server confirmation
+        try {
+            const chk    = await fetch(API + '/payments/check-prediction-access', {
+                headers: { 'Authorization': 'Bearer ' + getToken() }
+            });
+            const access = await chk.json();
+
+            if (!access.has_access) {
+                if (access.requires_admin_approval) {
+                    // Cash/insurance pending — block completely
                     showAlert(
                         '<i class="bi bi-hourglass-split me-2"></i>' +
-                        '<strong>Payment pending confirmation.</strong> ' +
-                        'Please wait for admin to approve your payment, then return here.',
+                        '<strong>Payment pending admin approval.</strong> ' +
+                        'Your cash/insurance payment has not been confirmed yet. ' +
+                        'Please wait for the admin to approve, then ' +
+                        '<a href="/templates/patient/dashboard.html">return to your dashboard</a>.',
                         'warning'
                     );
-                    updateLiveRiskHint();
-                    return;
+                } else {
+                    showAlert(
+                        '<i class="bi bi-exclamation-circle me-2"></i>' +
+                        '<strong>Payment required.</strong> Please complete payment before running a prediction.',
+                        'danger'
+                    );
                 }
-            } catch (_) { /* network error — proceed anyway */ }
+                updateLiveRiskHint();
+                return; // STOP — do not run prediction
+            }
+        } catch (_) {
+            // Network error — do not run prediction, show error
+            showAlert(
+                '<i class="bi bi-wifi-off me-2"></i>' +
+                '<strong>Network error.</strong> Could not verify payment. Please try again.',
+                'danger'
+            );
+            updateLiveRiskHint();
+            return;
         }
 
-        // Show banner
+        // Server confirmed payment — proceed
         showAlert(
             '<i class="bi bi-hourglass-split me-2"></i>' +
             '<strong>Payment confirmed!</strong> Running your prediction — please wait...',

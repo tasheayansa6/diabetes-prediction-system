@@ -1426,7 +1426,7 @@ def update_appointment_status(current_doctor, appointment_id):
                 title=notif_title,
                 message=notif_message,
                 type='appointment', category='appointment', is_read=False,
-                link='/templates/patient/appointment.html',
+                link=f'/templates/patient/appointment.html?highlight={appointment.id}',
                 created_at=datetime.utcnow()
             ))
             db.session.commit()

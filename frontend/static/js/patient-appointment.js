@@ -66,6 +66,37 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     await loadDoctors();
     await Promise.all([loadUpcoming(), loadHistory()]);
+
+    // ── Highlight a specific appointment from notification link ───────────────
+    // When patient clicks a notification like "Appointment Cancelled",
+    // the link includes ?highlight=<id> — switch to History tab and scroll to it
+    const highlightId = params.get('highlight');
+    if (highlightId) {
+        // Switch to history tab so cancelled appointments are visible
+        showTab('history');
+        // Wait for DOM to render
+        setTimeout(() => {
+            const el = document.getElementById('appt-' + highlightId);
+            if (el) {
+                // Scroll into view
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Flash highlight animation
+                el.style.transition = 'box-shadow 0.3s, border-color 0.3s';
+                el.style.boxShadow  = '0 0 0 3px #dc2626, 0 4px 20px rgba(220,38,38,0.3)';
+                el.style.borderColor = '#dc2626';
+                // Show a banner inside the card if it's cancelled
+                const reasonBanner = el.querySelector('.cancel-reason-banner');
+                if (reasonBanner) {
+                    reasonBanner.style.animation = 'pulse 1s ease-in-out 3';
+                }
+                // Fade back after 4 seconds
+                setTimeout(() => {
+                    el.style.boxShadow  = '';
+                    el.style.borderColor = '';
+                }, 4000);
+            }
+        }, 600);
+    }
 });
 
 // ── Load Doctors ──────────────────────────────────────────────────────────────
@@ -323,7 +354,7 @@ function apptCardHTML(a, canCancel) {
     const doctorSpec  = a.doctor_specialization || '';
 
     return `
-        <div class="appt-card">
+        <div class="appt-card" id="appt-${a.id}">
             <div class="appt-date-box">
                 <div class="appt-date-day">${day}</div>
                 <div class="appt-date-month">${month}</div>
@@ -332,11 +363,14 @@ function apptCardHTML(a, canCancel) {
                 <div class="appt-doctor">${esc(doctorName)}</div>
                 ${doctorSpec ? `<div style="font-size:0.75rem;color:#3b82f6;font-weight:600;">${esc(doctorSpec)}</div>` : ''}
                 <div class="appt-meta"><i class="bi bi-clock"></i> ${esc(a.appointment_time || 'Time TBD')} &nbsp;·&nbsp; <i class="bi bi-calendar3"></i> ${esc(a.appointment_date)}</div>
-                <div class="appt-reason"><i class="bi bi-chat-text"></i> ${esc(a.reason || '')}${a.notes ? ' — ' + esc(a.notes) : ''}</div>
+                <div class="appt-reason"><i class="bi bi-chat-text"></i> ${esc(a.reason || '')}${a.notes && !a.notes.includes('Cancellation reason:') ? ' — ' + esc(a.notes) : ''}</div>
                 ${a.status === 'cancelled' && a.notes && a.notes.includes('Cancellation reason:')
-                    ? `<div style="margin-top:.4rem;padding:.5rem .75rem;background:#fee2e2;border-left:3px solid #dc2626;border-radius:0 6px 6px 0;font-size:.8rem;color:#991b1b;">
+                    ? `<div class="cancel-reason-banner" style="margin-top:.5rem;padding:.6rem .85rem;
+                         background:#fee2e2;border-left:4px solid #dc2626;border-radius:0 8px 8px 0;
+                         font-size:.82rem;color:#991b1b;line-height:1.5;">
                          <i class="bi bi-x-circle-fill me-1"></i>
-                         <strong>Cancelled by doctor:</strong> ${esc(a.notes.split('Cancellation reason:').pop().trim())}
+                         <strong>Cancelled by doctor:</strong><br>
+                         ${esc(a.notes.split('Cancellation reason:').pop().trim())}
                        </div>`
                     : ''
                 }

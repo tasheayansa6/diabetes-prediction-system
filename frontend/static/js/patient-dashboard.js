@@ -293,6 +293,64 @@ function renderPayments(payments) {
     }).join('');
 }
 
+// ── Check if patient has an approved payment waiting to run prediction ────────
+// Runs on every dashboard load. Shows a prominent banner when:
+//   1. Admin approved a cash/insurance payment (status = completed, consumed = false)
+//   2. Patient has a pending cash/insurance payment (waiting for admin)
+async function checkPaymentAndShowBanner() {
+    const banner = document.getElementById('paymentApprovedBanner');
+    if (!banner) return;
+
+    try {
+        const res  = await fetch('/api/payments/check-prediction-access', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const data = await res.json();
+
+        if (data.has_access) {
+            // Payment confirmed — show green "Run Prediction" banner
+            banner.style.display = '';
+            banner.innerHTML =
+                '<div style="background:linear-gradient(135deg,#059669,#10b981);border-radius:14px;' +
+                'padding:1.1rem 1.5rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;' +
+                'box-shadow:0 4px 16px rgba(5,150,105,.3);">' +
+                '<i class="bi bi-check-circle-fill" style="font-size:1.8rem;color:#fff;flex-shrink:0;"></i>' +
+                '<div style="flex:1;">' +
+                '<div style="font-weight:800;font-size:1rem;color:#fff;">✅ Payment Approved — Ready to Run Your Prediction!</div>' +
+                '<div style="font-size:.85rem;color:#d1fae5;margin-top:.2rem;">Your payment has been confirmed. Click the button to get your diabetes risk result now.</div>' +
+                '</div>' +
+                '<a href="/templates/patient/health_data_form.html?paid=1" ' +
+                'style="background:#fff;color:#059669;border:none;border-radius:10px;padding:.6rem 1.4rem;' +
+                'font-weight:800;font-size:.9rem;text-decoration:none;flex-shrink:0;white-space:nowrap;">' +
+                '🔬 Run My Prediction</a>' +
+                '</div>';
+
+        } else if (data.requires_admin_approval) {
+            // Still pending — show yellow "waiting" banner
+            banner.style.display = '';
+            banner.innerHTML =
+                '<div style="background:linear-gradient(135deg,#d97706,#f59e0b);border-radius:14px;' +
+                'padding:1.1rem 1.5rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;' +
+                'box-shadow:0 4px 16px rgba(217,119,6,.3);">' +
+                '<i class="bi bi-hourglass-split" style="font-size:1.8rem;color:#fff;flex-shrink:0;"></i>' +
+                '<div style="flex:1;">' +
+                '<div style="font-weight:800;font-size:1rem;color:#fff;">⏳ Payment Pending Admin Confirmation</div>' +
+                '<div style="font-size:.85rem;color:#fef3c7;margin-top:.2rem;">Your cash/insurance payment is waiting for admin approval. Once confirmed, a button will appear here to run your prediction.</div>' +
+                '</div>' +
+                '<button onclick="checkPaymentAndShowBanner()" ' +
+                'style="background:#fff;color:#d97706;border:none;border-radius:10px;padding:.6rem 1.2rem;' +
+                'font-weight:800;font-size:.85rem;cursor:pointer;flex-shrink:0;white-space:nowrap;">' +
+                '🔄 Check Status</button>' +
+                '</div>';
+        } else {
+            banner.style.display = 'none';
+        }
+    } catch (_) {
+        // Network error — hide banner silently
+        if (banner) banner.style.display = 'none';
+    }
+}
+
 async function initDashboard() {
     const user = checkAuth('patient');
     if (!user) return;
@@ -307,6 +365,10 @@ async function initDashboard() {
         const heroId = document.getElementById('heroPatientId');
         if (heroId) heroId.innerHTML = `<i class="bi bi-person-badge"></i> ID: ${esc(user.unique_id)}`;
     }
+
+    // ── Check for approved payment immediately on load ────────────────────────
+    // This handles: patient paid cash/insurance → admin approved → patient logs back in
+    checkPaymentAndShowBanner();
 
     const [dashRes, predRes, rxRes, apptRes, dailyApptRes, payRes] = await Promise.all([
         apiFetch('/patient/dashboard'),

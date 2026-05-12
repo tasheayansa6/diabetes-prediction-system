@@ -869,6 +869,42 @@ document.addEventListener('DOMContentLoaded', async function () {
     const urlParams   = new URLSearchParams(window.location.search);
     const paidFromUrl = urlParams.get('paid') === '1';   // ?paid=1 from admin approval notification
 
+    // Always check server for pending/approved prediction payment and show banner
+    try {
+        const chk    = await fetch(API + '/payments/check-prediction-access', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const access = await chk.json();
+        const formBanner = document.getElementById('paymentApprovedBannerForm');
+        if (formBanner) {
+            if (access.has_access && !paidFromUrl) {
+                // Payment approved but patient didn't come via ?paid=1 — show banner
+                formBanner.style.display = '';
+                formBanner.innerHTML =
+                    '<div style="background:linear-gradient(135deg,#059669,#10b981);border-radius:12px;' +
+                    'padding:1rem 1.25rem;display:flex;align-items:center;gap:.85rem;' +
+                    'box-shadow:0 4px 12px rgba(5,150,105,.25);">' +
+                    '<i class="bi bi-check-circle-fill" style="font-size:1.5rem;color:#fff;flex-shrink:0;"></i>' +
+                    '<div style="flex:1;color:#fff;">' +
+                    '<div style="font-weight:800;font-size:.95rem;">✅ Payment Confirmed — Fill the form and click Get Prediction</div>' +
+                    '<div style="font-size:.82rem;color:#d1fae5;margin-top:.15rem;">Your payment has been approved. Complete the form below to run your prediction.</div>' +
+                    '</div></div>';
+            } else if (access.requires_admin_approval) {
+                formBanner.style.display = '';
+                formBanner.innerHTML =
+                    '<div style="background:linear-gradient(135deg,#d97706,#f59e0b);border-radius:12px;' +
+                    'padding:1rem 1.25rem;display:flex;align-items:center;gap:.85rem;">' +
+                    '<i class="bi bi-hourglass-split" style="font-size:1.5rem;color:#fff;flex-shrink:0;"></i>' +
+                    '<div style="flex:1;color:#fff;">' +
+                    '<div style="font-weight:800;font-size:.95rem;">⏳ Payment Pending Admin Approval</div>' +
+                    '<div style="font-size:.82rem;color:#fef3c7;margin-top:.15rem;">Your cash/insurance payment is waiting for admin confirmation. Return to dashboard to check status.</div>' +
+                    '</div>' +
+                    '<a href="/templates/patient/dashboard.html" style="background:#fff;color:#d97706;border-radius:8px;padding:.45rem 1rem;font-weight:700;font-size:.82rem;text-decoration:none;flex-shrink:0;">Dashboard</a>' +
+                    '</div>';
+            }
+        }
+    } catch (_) {}
+
     const paid    = paidFromUrl || isPredictionPaid();
     const pending = restorePendingData();
 

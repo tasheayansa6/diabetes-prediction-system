@@ -221,9 +221,11 @@ async function loadTransaction() {
     }
 
     // ── Pending cash/insurance prediction payment: show "Check & Run" button ──
-    // Patient pays cash/insurance → status is 'pending' → admin approves → patient
-    // clicks this button → server confirms → prediction runs automatically
-    if (isPending && isPredictionPayment) {
+    // Cash/insurance are ALWAYS pending until admin approves — never auto-redirect
+    const isCashOrInsurance = (t.paymentMethod === 'cash' || t.paymentMethod === 'insurance');
+
+    if (isCashOrInsurance && isPredictionPayment) {
+        // Always show the check button for cash/insurance — never auto-redirect
         const cdEl = document.getElementById('redirectCountdown');
         if (cdEl) {
             cdEl.style.display = '';
@@ -238,7 +240,10 @@ async function loadTransaction() {
                 '<p id="checkPaymentMsg" style="margin:.75rem 0 0;font-size:.82rem;color:#64748b;"></p>' +
                 '</div>';
         }
-        return; // Don't start countdown — wait for manual check
+        // Hide the Continue button — patient must use the check button
+        const continueBtn = document.getElementById('continueBtn');
+        if (continueBtn) continueBtn.style.display = 'none';
+        return; // Stop here — no countdown, no auto-redirect
     }
 
     // Step 7: set up Continue button
@@ -269,8 +274,9 @@ async function loadTransaction() {
         };
     }
 
-    // Step 8: set predictionPaid flag (all uid variants so health form always finds it)
-    if (isPredictionPayment) {
+    // Step 8: set predictionPaid flag — ONLY for Chapa (auto-verified)
+    // Cash/insurance must go through admin approval — never set this flag for them
+    if (isPredictionPayment && !isCashOrInsurance) {
         try {
             const storedUid  = uid || 'anon';
             const sessionUid = _uid();
@@ -282,10 +288,10 @@ async function loadTransaction() {
         } catch (_) {}
     }
 
-    // Step 9: auto-redirect
+    // Step 9: auto-redirect — ONLY for Chapa prediction payments
     const cdEl = document.getElementById('redirectCountdown');
 
-    if (isPredictionPayment) {
+    if (isPredictionPayment && !isCashOrInsurance) {
         // 10-second countdown then go to health form which auto-runs prediction
         let cd = 10;
         if (cdEl) { cdEl.style.display = ''; cdEl.textContent = 'Taking you to your prediction in ' + cd + 's...'; }
@@ -395,17 +401,16 @@ document.addEventListener('DOMContentLoaded', function () {
     loadTransaction();
 
     // ── Always check server for pending prediction payment ────────────────────
-    // This handles the case where patient returns after logout (localStorage gone)
-    // If they have a pending prediction payment, show the check button
+    // Handles: patient returns after logout, or localStorage is empty
     const token = localStorage.getItem('token');
     if (token) {
         fetch('/api/payments/check-prediction-access', {
             headers: { Authorization: 'Bearer ' + token }
         }).then(r => r.json()).then(data => {
             if (data.requires_admin_approval) {
-                // Show the check button even if localStorage transaction is gone
+                // Cash/insurance pending — override any countdown with the check button
                 const cdEl = document.getElementById('redirectCountdown');
-                if (cdEl && !cdEl.innerHTML.includes('checkPaymentBtn')) {
+                if (cdEl) {
                     cdEl.style.display = '';
                     cdEl.innerHTML =
                         '<div style="margin-top:1.25rem;padding:1.25rem;background:#fef9c3;border:1px solid #fde047;border-radius:12px;text-align:center;">' +
@@ -418,6 +423,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         '<p id="checkPaymentMsg" style="margin:.75rem 0 0;font-size:.82rem;color:#64748b;"></p>' +
                         '</div>';
                 }
+                // Hide Continue button
+                const continueBtn = document.getElementById('continueBtn');
+                if (continueBtn) continueBtn.style.display = 'none';
             }
         }).catch(() => {});
     }

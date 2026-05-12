@@ -333,6 +333,13 @@ function apptCardHTML(a, canCancel) {
                 ${doctorSpec ? `<div style="font-size:0.75rem;color:#3b82f6;font-weight:600;">${esc(doctorSpec)}</div>` : ''}
                 <div class="appt-meta"><i class="bi bi-clock"></i> ${esc(a.appointment_time || 'Time TBD')} &nbsp;·&nbsp; <i class="bi bi-calendar3"></i> ${esc(a.appointment_date)}</div>
                 <div class="appt-reason"><i class="bi bi-chat-text"></i> ${esc(a.reason || '')}${a.notes ? ' — ' + esc(a.notes) : ''}</div>
+                ${a.status === 'cancelled' && a.notes && a.notes.includes('Cancellation reason:')
+                    ? `<div style="margin-top:.4rem;padding:.5rem .75rem;background:#fee2e2;border-left:3px solid #dc2626;border-radius:0 6px 6px 0;font-size:.8rem;color:#991b1b;">
+                         <i class="bi bi-x-circle-fill me-1"></i>
+                         <strong>Cancelled by doctor:</strong> ${esc(a.notes.split('Cancellation reason:').pop().trim())}
+                       </div>`
+                    : ''
+                }
             </div>
             <div class="appt-actions">
                 <span class="${statusClass}">${esc(statusLabel)}</span>

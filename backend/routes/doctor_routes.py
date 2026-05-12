@@ -1379,6 +1379,12 @@ def update_appointment_status(current_doctor, appointment_id):
 
         appointment.status = data['status']
         appointment.updated_at = datetime.utcnow()
+        # Store cancellation reason in notes if provided
+        cancel_reason = (data.get('reason') or '').strip()
+        if data['status'] == 'cancelled' and cancel_reason:
+            existing_notes = appointment.notes or ''
+            appointment.notes = (existing_notes + '\n' if existing_notes else '') + \
+                                 f'Cancellation reason: {cancel_reason}'
         db.session.commit()
 
         # Notify patient of status change
@@ -1389,16 +1395,36 @@ def update_appointment_status(current_doctor, appointment_id):
                 {"id": appointment.patient_id}
             ).first()
             patient_name = row[0] if row else f"Patient #{appointment.patient_id}"
-            status_msgs = {
-                'confirmed': 'Your appointment has been confirmed by the doctor.',
-                'completed': 'Your appointment has been marked as completed.',
-                'cancelled': 'Your appointment has been cancelled by the doctor.',
-                'no-show':   'You were marked as no-show for your appointment.',
-            }
+
+            # Build notification message — include reason for cancellation
+            appt_date = appointment.appointment_date.strftime('%B %d, %Y') \
+                if appointment.appointment_date else 'your appointment'
+
+            if data['status'] == 'cancelled':
+                notif_title   = '❌ Appointment Cancelled by Doctor'
+                notif_message = (
+                    f'Your appointment on {appt_date} has been cancelled by the doctor.'
+                )
+                if cancel_reason:
+                    notif_message += f'\n\nReason: {cancel_reason}'
+                notif_message += '\n\nPlease book a new appointment at your convenience.'
+            elif data['status'] == 'confirmed':
+                notif_title   = '✅ Appointment Confirmed'
+                notif_message = f'Your appointment on {appt_date} has been confirmed by the doctor. Please arrive on time.'
+            elif data['status'] == 'completed':
+                notif_title   = 'Appointment Completed'
+                notif_message = f'Your appointment on {appt_date} has been marked as completed. Thank you for visiting.'
+            elif data['status'] == 'no-show':
+                notif_title   = 'Appointment — No Show'
+                notif_message = f'You were marked as no-show for your appointment on {appt_date}. Please contact us to reschedule.'
+            else:
+                notif_title   = f'Appointment {data["status"].title()}'
+                notif_message = f'Your appointment status has been updated to: {data["status"]}.'
+
             db.session.add(Notification(
                 user_id=appointment.patient_id,
-                title=f'Appointment {data["status"].title()}',
-                message=status_msgs.get(data['status'], f'Appointment status updated to {data["status"]}.'),
+                title=notif_title,
+                message=notif_message,
                 type='appointment', category='appointment', is_read=False,
                 link='/templates/patient/appointment.html',
                 created_at=datetime.utcnow()

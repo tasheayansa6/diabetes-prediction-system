@@ -187,17 +187,32 @@ function promptAction(id, action) {
     const patient = a ? (a.patient_name || 'Patient #' + a.patient_id) : `Appointment #${id}`;
 
     const configs = {
-        confirmed:  { title:'Confirm Appointment', color:'#2563eb', bg:'#2563eb', btnClass:'btn-primary', btnText:'<i class="bi bi-calendar-check"></i> Confirm', msg:`Confirm appointment with <strong>${esc(patient)}</strong>? The patient will be notified.` },
-        completed: { title:'Mark as Completed', color:'#059669', bg:'#059669', btnClass:'btn-success', btnText:'<i class="bi bi-check-circle"></i> Mark Complete', msg:`Mark appointment with <strong>${esc(patient)}</strong> as completed?` },
-        cancelled:  { title:'Cancel Appointment', color:'#dc2626', bg:'#dc2626', btnClass:'btn-danger',  btnText:'<i class="bi bi-x-circle"></i> Yes, Cancel',    msg:`Cancel appointment with <strong>${esc(patient)}</strong>? The patient will be notified.` },
-        'no-show':  { title:'Mark as No Show',    color:'#d97706', bg:'#d97706', btnClass:'btn-warning', btnText:'<i class="bi bi-person-x"></i> Mark No Show',   msg:`Mark <strong>${esc(patient)}</strong> as no-show for this appointment?` },
+        confirmed:  { title:'Confirm Appointment', color:'#2563eb', bg:'#2563eb', btnClass:'btn-primary', btnText:'<i class="bi bi-calendar-check"></i> Confirm', msg:`Confirm appointment with <strong>${esc(patient)}</strong>? The patient will be notified.`, showReason: false },
+        completed: { title:'Mark as Completed', color:'#059669', bg:'#059669', btnClass:'btn-success', btnText:'<i class="bi bi-check-circle"></i> Mark Complete', msg:`Mark appointment with <strong>${esc(patient)}</strong> as completed?`, showReason: false },
+        cancelled:  { title:'Cancel Appointment', color:'#dc2626', bg:'#dc2626', btnClass:'btn-danger',  btnText:'<i class="bi bi-x-circle"></i> Yes, Cancel',    msg:`Cancel appointment with <strong>${esc(patient)}</strong>? The patient will be notified with your reason.`, showReason: true },
+        'no-show':  { title:'Mark as No Show',    color:'#d97706', bg:'#d97706', btnClass:'btn-warning', btnText:'<i class="bi bi-person-x"></i> Mark No Show',   msg:`Mark <strong>${esc(patient)}</strong> as no-show for this appointment?`, showReason: false },
     };
     const cfg = configs[action] || configs.completed;
 
     document.getElementById('confirmModalHeader').style.background = cfg.bg;
     document.getElementById('confirmModalHeader').style.color = '#fff';
     document.getElementById('confirmModalTitle').textContent = cfg.title;
-    document.getElementById('confirmModalBody').innerHTML = `<p style="color:#334155;">${cfg.msg}</p>`;
+    document.getElementById('confirmModalBody').innerHTML =
+        `<p style="color:#334155;margin-bottom:${cfg.showReason ? '1rem' : '0'};">${cfg.msg}</p>` +
+        (cfg.showReason
+            ? `<div>
+                <label style="font-size:.85rem;font-weight:600;color:#374151;display:block;margin-bottom:.4rem;">
+                  Reason for cancellation <span style="color:#dc2626;">*</span>
+                </label>
+                <textarea id="cancelReasonInput" rows="3" placeholder="e.g. Doctor unavailable, schedule conflict, patient rescheduled..."
+                  style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:.6rem .75rem;
+                         font-size:.875rem;resize:vertical;outline:none;font-family:inherit;"
+                  oninput="this.style.borderColor=this.value.trim()?'#2563eb':'#e2e8f0'"></textarea>
+                <p id="cancelReasonError" style="color:#dc2626;font-size:.78rem;margin-top:.3rem;display:none;">
+                  Please enter a reason for cancellation.
+                </p>
+              </div>`
+            : '');
     const btn = document.getElementById('confirmModalBtn');
     btn.className = `btn ${cfg.btnClass}`;
     btn.innerHTML = cfg.btnText;
@@ -208,11 +223,25 @@ function promptAction(id, action) {
 function closeConfirmModal() { document.getElementById('confirmModal').style.display = 'none'; }
 
 async function executeConfirm() {
+    // Validate cancellation reason if required
+    if (confirmAction === 'cancelled') {
+        const reasonInput = document.getElementById('cancelReasonInput');
+        const reasonError = document.getElementById('cancelReasonError');
+        const reason = reasonInput ? reasonInput.value.trim() : '';
+        if (!reason) {
+            if (reasonError) reasonError.style.display = 'block';
+            if (reasonInput) reasonInput.style.borderColor = '#dc2626';
+            return; // Don't close modal — require reason
+        }
+    }
     closeConfirmModal();
     try {
+        const reason = confirmAction === 'cancelled'
+            ? (document.getElementById('cancelReasonInput')?.value?.trim() || '')
+            : '';
         const data = await apiFetch(`/api/doctor/appointments/${activeApptId}/status`, {
             method: 'PUT',
-            body: JSON.stringify({ status: confirmAction })
+            body: JSON.stringify({ status: confirmAction, reason: reason })
         });
         if (data.success) {
             showToast(`Appointment marked as ${confirmAction}`, 'success');

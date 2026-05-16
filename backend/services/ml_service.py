@@ -352,35 +352,36 @@ class MLService:
                 feature_array = np.array([feature_values])
                 feature_scaled = self.scaler.transform(feature_array)
             
-            # Make prediction
+            # Make prediction — 3-class model
             prediction = self.model.predict(feature_scaled)[0]
-            probability = self._get_probability(feature_scaled, prediction)
-            
-            # Get risk level
-            risk_info = self._get_risk_level(probability)
-            
-            # Calculate confidence — capped at 95% to reflect real-world model uncertainty
-            raw_confidence = max(probability, 1 - probability)
-            # Apply calibration: scale [0.5, 1.0] → [50%, 95%] to avoid misleading 100%
-            confidence = 50.0 + (raw_confidence - 0.5) * 90.0
-            
+            probabilities = self.model.predict_proba(feature_scaled)[0]  # [p_non, p_pre, p_diabetic]
+
+            # Get class-specific info
+            risk_info = self._get_risk_level_multiclass(int(prediction), probabilities)
+
+            # Confidence = probability of the predicted class
+            confidence = round(float(probabilities[int(prediction)]) * 100, 1)
+
             # Prepare result
             result = {
                 'success': True,
                 'timestamp': datetime.now().isoformat(),
-                'prediction': 'Diabetic' if prediction == 1 else 'Non-Diabetic',
+                'prediction': risk_info['label'],
                 'prediction_code': int(prediction),
-                'probability': round(float(probability), 4),
-                'probability_percent': round(float(probability * 100), 2),
+                'probability': round(float(probabilities[2]), 4),          # P(Diabetic)
+                'probability_percent': round(float(probabilities[2] * 100), 2),
+                'prob_non_diabetic': round(float(probabilities[0] * 100), 2),
+                'prob_pre_diabetic': round(float(probabilities[1] * 100), 2),
+                'prob_diabetic':     round(float(probabilities[2] * 100), 2),
                 'risk_level': risk_info['level'],
                 'risk_color': risk_info['color'],
                 'risk_category': risk_info['category'],
                 'interpretation': risk_info['interpretation'],
                 'action': risk_info['action'],
                 'recommendation': risk_info['recommendation'],
-                'confidence': round(confidence, 1),
+                'confidence': confidence,
                 'features_used': dict(zip(self.feature_names, feature_values)),
-                'model_version': (self.active_model_entry or {}).get('version', '1.0.0'),
+                'model_version': (self.active_model_entry or {}).get('version', '3.0.0'),
                 'model_algorithm': (self.active_model_entry or {}).get('algorithm', type(self.model).__name__),
                 'model_file': self.active_model_file
             }
@@ -489,38 +490,62 @@ class MLService:
         
         return None
     
+    def _get_risk_level_multiclass(self, prediction_code: int, probabilities: np.ndarray) -> Dict[str, str]:
+        """Map 3-class prediction to clinical label and guidance."""
+        CLASS_MAP = {
+            0: {
+                'label':          'Non-Diabetic',
+                'level':          'NON-DIABETIC',
+                'color':          'green',
+                'category':       'Non-Diabetic',
+                'interpretation': 'Your results are within the normal range. No diabetes detected.',
+                'action':         'Maintain a healthy lifestyle — balanced diet and regular exercise.',
+                'recommendation': 'Routine checkup every 1–2 years. Monitor if risk factors develop.'
+            },
+            1: {
+                'label':          'Pre-Diabetic',
+                'level':          'PRE-DIABETIC',
+                'color':          'yellow',
+                'category':       'Pre-Diabetic',
+                'interpretation': 'Your glucose is in the pre-diabetic range (100–125 mg/dL). You are at risk of developing Type 2 diabetes.',
+                'action':         'Lifestyle changes now can prevent or delay diabetes. Reduce sugar intake, increase physical activity.',
+                'recommendation': 'Consult your doctor. HbA1c test recommended. Follow-up every 6 months.'
+            },
+            2: {
+                'label':          'Diabetic',
+                'level':          'DIABETIC',
+                'color':          'red',
+                'category':       'Diabetic',
+                'interpretation': 'Your results indicate diabetes. Immediate medical attention is required.',
+                'action':         'Consult a doctor immediately. Do not delay treatment.',
+                'recommendation': 'Confirmatory HbA1c and fasting glucose tests. Begin diabetes management plan.'
+            }
+        }
+        return CLASS_MAP.get(prediction_code, CLASS_MAP[0])
+
     def _get_risk_level(self, probability: float) -> Dict[str, str]:
-        """Determine risk level based on probability (4-tier system)"""
+        """Legacy 4-tier method — kept for backward compatibility with old binary models."""
         prob_percent = probability * 100
-        
         if prob_percent < 30:
-            return {
-                'level': 'LOW RISK', 'color': 'green', 'category': 'Low Risk',
-                'interpretation': 'Very unlikely to have diabetes',
-                'action': 'Maintain healthy lifestyle',
-                'recommendation': 'Regular checkups every 2-3 years'
-            }
+            return {'level': 'LOW RISK', 'color': 'green', 'category': 'Low Risk',
+                    'interpretation': 'Very unlikely to have diabetes',
+                    'action': 'Maintain healthy lifestyle',
+                    'recommendation': 'Regular checkups every 2-3 years'}
         elif prob_percent < 50:
-            return {
-                'level': 'MODERATE RISK', 'color': 'yellow', 'category': 'Moderate Risk',
-                'interpretation': 'Some risk factors present — monitor closely',
-                'action': 'Consider dietary changes and exercise',
-                'recommendation': 'Annual checkup recommended'
-            }
+            return {'level': 'MODERATE RISK', 'color': 'yellow', 'category': 'Moderate Risk',
+                    'interpretation': 'Some risk factors present — monitor closely',
+                    'action': 'Consider dietary changes and exercise',
+                    'recommendation': 'Annual checkup recommended'}
         elif prob_percent < 70:
-            return {
-                'level': 'HIGH RISK', 'color': 'orange', 'category': 'High Risk',
-                'interpretation': 'Significant diabetes risk — medical consultation recommended',
-                'action': 'Consult healthcare provider soon',
-                'recommendation': 'Schedule appointment within 1 month'
-            }
+            return {'level': 'HIGH RISK', 'color': 'orange', 'category': 'High Risk',
+                    'interpretation': 'Significant diabetes risk',
+                    'action': 'Consult healthcare provider soon',
+                    'recommendation': 'Schedule appointment within 1 month'}
         else:
-            return {
-                'level': 'VERY HIGH RISK', 'color': 'red', 'category': 'Very High Risk',
-                'interpretation': 'Strong likelihood of diabetes — immediate action needed',
-                'action': 'Immediate medical attention needed',
-                'recommendation': 'Consult doctor within 1 week'
-            }
+            return {'level': 'VERY HIGH RISK', 'color': 'red', 'category': 'Very High Risk',
+                    'interpretation': 'Strong likelihood of diabetes',
+                    'action': 'Immediate medical attention needed',
+                    'recommendation': 'Consult doctor within 1 week'}
     
     def predict_all_models(self, features: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -665,15 +665,30 @@ def predict(current_user):
             from backend.models.notification import Notification
             patient_name = current_user.get('username', 'A patient')
             risk_level = prediction_result.get('risk_level', '')
-            is_high = 'HIGH' in risk_level
+            # 3-class: DIABETIC = urgent, PRE-DIABETIC = moderate, NON-DIABETIC = info
+            is_diabetic    = risk_level == 'DIABETIC'
+            is_prediabetic = risk_level == 'PRE-DIABETIC'
             prob = round(prediction_result.get('probability_percent', 0), 1)
-            notif_title = f'HIGH RISK Alert - {patient_name}' if is_high else f'Prediction Result - {patient_name}'
+
+            if is_diabetic:
+                notif_title = f'🔴 DIABETIC Alert — {patient_name}'
+                notif_type  = 'high_risk_alert'
+                notif_suffix = ' Immediate review recommended.'
+            elif is_prediabetic:
+                notif_title = f'🟡 Pre-Diabetic Result — {patient_name}'
+                notif_type  = 'prediction'
+                notif_suffix = ' Lifestyle intervention recommended.'
+            else:
+                notif_title = f'🟢 Prediction Result — {patient_name}'
+                notif_type  = 'prediction'
+                notif_suffix = ' Review when available.'
+
             notif_msg = (
-                f'{patient_name} completed a diabetes prediction: {risk_level} ({prob}%). '
+                f'{patient_name} completed a diabetes prediction: {risk_level}. '
                 f'Glucose: {data.get("glucose", "N/A")} mg/dL, '
                 f'BMI: {data.get("bmi", "N/A")}, '
                 f'Age: {data.get("age", "N/A")}.'
-                + (' Immediate review recommended.' if is_high else ' Review when available.')
+                + notif_suffix
             )
             doctors = User.query.filter_by(role='doctor', is_active=True).all()
             for doc in doctors:
@@ -681,7 +696,7 @@ def predict(current_user):
                     user_id=doc.id,
                     title=notif_title,
                     message=notif_msg,
-                    type='high_risk_alert' if is_high else 'prediction',
+                    type=notif_type,
                     category='general',
                     is_read=False,
                     link=f'/templates/doctor/patient_list.html?highlight={current_user["id"]}',

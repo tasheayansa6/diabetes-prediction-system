@@ -1,10 +1,32 @@
 {
-  "algorithm": "Gradient Boosting",
-  "version": "v2.3.1",
-  "trained_at": "2026-05-12T06:35:26.730451",
+  "algorithm": "Gradient Boosting (3-Class)",
+  "version": "v3.0.0",
+  "trained_at": "2026-05-16T17:18:06.287551",
   "sklearn_version": "1.8.0",
-  "accuracy": 89.25,
-  "roc_auc": 97.06,
+  "task": "multiclass_classification",
+  "classes": {
+    "0": "Non-Diabetic",
+    "1": "Pre-Diabetic",
+    "2": "Diabetic"
+  },
+  "class_thresholds": {
+    "Non-Diabetic": "Outcome=0 AND Glucose < 100 mg/dL",
+    "Pre-Diabetic": "Outcome=0 AND Glucose >= 100 mg/dL (ADA impaired fasting glucose)",
+    "Diabetic": "Outcome=1 (confirmed diabetic)"
+  },
+  "accuracy": 89.72,
+  "roc_auc_ovr": 97.31,
+  "macro_f1": 91.05,
+  "macro_precision": 91.05,
+  "macro_recall": 91.05,
+  "train_accuracy": 96.02,
+  "overfitting_gap": 6.3,
+  "cv_accuracy": 87.17,
+  "cv_accuracy_std": 1.39,
+  "cv_f1_macro": 88.27,
+  "cv_f1_macro_std": 1.33,
+  "training_samples": 854,
+  "test_samples": 214,
   "features": [
     "Pregnancies",
     "Glucose",
@@ -16,6 +38,7 @@
     "Age"
   ],
   "n_features": 8,
+  "n_classes": 3,
   "hyperparameters": {
     "n_estimators": 200,
     "learning_rate": 0.05,
@@ -23,6 +46,7 @@
     "min_samples_split": 20,
     "min_samples_leaf": 10,
     "subsample": 0.8,
-    "max_features": "sqrt"
+    "max_features": "sqrt",
+    "random_state": 42
   }
 }

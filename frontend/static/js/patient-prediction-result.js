@@ -2,65 +2,51 @@ const API = '/api';
 function getToken() { return localStorage.getItem('token'); }
 
 const RISK_CONFIG = {
-    'LOW RISK': {
-        key: 'low', label: 'LOW RISK', color: '#16a34a', boxKey: 'low',
+    'NON-DIABETIC': {
+        key: 'non_diabetic', label: 'NON-DIABETIC', color: '#16a34a', boxKey: 'low',
         icon: 'bi-emoji-smile-fill',
-        summary: 'You are not currently at significant risk of diabetes.',
-        recommendation: 'Your results look healthy. Maintain regular exercise (30 min/day), a balanced diet low in sugar, and an annual check-up. No immediate medical action is needed.',
+        summary: 'Your results are within the normal range. No diabetes detected.',
+        recommendation: 'Maintain a healthy lifestyle — balanced diet, regular exercise (30 min/day), and routine checkups every 1–2 years.',
         alertHtml: '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:1.25rem;display:flex;gap:1rem;align-items:flex-start;">' +
             '<i class="bi bi-emoji-smile-fill" style="color:#16a34a;font-size:1.75rem;flex-shrink:0;"></i>' +
-            '<div><div style="font-weight:700;color:#166534;font-size:1rem;margin-bottom:.35rem;">You are not at risk right now</div>' +
-            '<div style="color:#15803d;font-size:.875rem;line-height:1.6;">Keep up your healthy habits. No doctor visit is required at this time. Come back for a check-up in 12 months or if you notice any symptoms.</div>' +
+            '<div><div style="font-weight:700;color:#166534;font-size:1rem;margin-bottom:.35rem;">✅ Non-Diabetic — You are in the healthy range</div>' +
+            '<div style="color:#15803d;font-size:.875rem;line-height:1.6;">Your glucose and health indicators are normal. Keep up your healthy habits. No immediate medical action is needed. Return for a checkup in 12 months.</div>' +
             '<div style="margin-top:.85rem;display:flex;gap:.6rem;flex-wrap:wrap;">' +
             '<a href="/templates/patient/health_data_form.html" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;">New Prediction</a>' +
             '<a href="/templates/patient/prediction_history.html" class="btn btn-sm btn-outline">View History</a>' +
             '</div></div></div>'
     },
-    'MODERATE RISK': {
-        key: 'moderate', label: 'MODERATE RISK', color: '#d97706', boxKey: 'moderate',
+    'PRE-DIABETIC': {
+        key: 'pre_diabetic', label: 'PRE-DIABETIC', color: '#d97706', boxKey: 'moderate',
         icon: 'bi-exclamation-circle-fill',
-        summary: 'You have some risk factors. No diabetes yet, but worth monitoring.',
-        recommendation: 'Reduce sugar and refined carbohydrate intake, increase physical activity, and maintain a healthy weight. No doctor visit needed now — recheck in 3 months.',
+        summary: 'Your glucose is in the pre-diabetic range (100–125 mg/dL). You are at risk of developing Type 2 diabetes.',
+        recommendation: 'Lifestyle changes now can prevent or delay diabetes. Reduce sugar intake, increase physical activity, and consult your doctor. HbA1c test recommended.',
         alertHtml: '<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:1.25rem;display:flex;gap:1rem;align-items:flex-start;">' +
             '<i class="bi bi-exclamation-circle-fill" style="color:#d97706;font-size:1.75rem;flex-shrink:0;"></i>' +
-            '<div><div style="font-weight:700;color:#92400e;font-size:1rem;margin-bottom:.35rem;">No doctor needed — focus on lifestyle</div>' +
-            '<div style="color:#b45309;font-size:.875rem;line-height:1.6;">You do <strong>not</strong> have diabetes. Cut down on sugar, exercise 30 min daily, maintain healthy weight, and recheck in 3 months.</div>' +
+            '<div><div style="font-weight:700;color:#92400e;font-size:1rem;margin-bottom:.35rem;">⚠️ Pre-Diabetic — Action needed to prevent diabetes</div>' +
+            '<div style="color:#b45309;font-size:.875rem;line-height:1.6;">Your glucose is elevated but not yet diabetic. With lifestyle changes you can reverse this. Cut sugar, exercise 30 min daily, lose 5–7% body weight if overweight. See your doctor for an HbA1c test.</div>' +
             '<div style="margin-top:.85rem;display:flex;gap:.6rem;flex-wrap:wrap;">' +
-            '<a href="/templates/patient/health_data_form.html" class="btn btn-sm" style="background:#d97706;color:#fff;border:none;">New Prediction in 3 Months</a>' +
+            '<a href="/templates/patient/appointment.html?reason=Pre-Diabetic+Review" class="btn btn-sm" style="background:#d97706;color:#fff;border:none;font-weight:700;">Book Doctor Appointment</a>' +
             '<a href="/templates/patient/prediction_history.html" class="btn btn-sm btn-outline">View History</a>' +
             '</div></div></div>'
     },
-    'HIGH RISK': {
-        key: 'high', label: 'HIGH RISK', color: '#dc2626', boxKey: 'high',
-        icon: 'bi-exclamation-triangle-fill',
-        summary: 'You are at high risk. Early action can prevent diabetes.',
-        recommendation: 'Please consult your doctor soon. Diet control, weight management, and regular exercise are essential. Further tests such as HbA1c may be ordered by your doctor.',
-        alertHtml: '<div style="background:linear-gradient(135deg,#7f1d1d,#991b1b);border-radius:14px;padding:1.25rem;display:flex;gap:1rem;align-items:flex-start;">' +
-            '<i class="bi bi-exclamation-triangle-fill" style="color:#fca5a5;font-size:1.75rem;flex-shrink:0;"></i>' +
-            '<div><div style="font-weight:700;color:#fff;font-size:1rem;margin-bottom:.35rem;">High Risk — Please See a Doctor Soon</div>' +
-            '<div style="color:#fecaca;font-size:.875rem;line-height:1.6;">Your result shows a high diabetes risk. Early intervention significantly reduces your chance of developing diabetes. Please book an appointment with your doctor.</div>' +
-            '<div style="margin-top:.85rem;display:flex;gap:.6rem;flex-wrap:wrap;">' +
-            '<a href="/templates/patient/appointment.html?reason=High+Risk+Diabetes+Review" class="btn btn-sm" style="background:#fff;color:#991b1b;border:none;font-weight:700;">Book Doctor Appointment</a>' +
-            '<button onclick="downloadReport()" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fecaca;border:1px solid rgba(255,255,255,.3);">Download Report</button>' +
-            '</div></div></div>'
-    },
-    'VERY HIGH RISK': {
-        key: 'veryhigh', label: 'VERY HIGH RISK', color: '#991b1b', boxKey: 'high',
+    'DIABETIC': {
+        key: 'diabetic', label: 'DIABETIC', color: '#dc2626', boxKey: 'high',
         icon: 'bi-heart-pulse-fill',
-        summary: 'Immediate medical attention is strongly recommended.',
-        recommendation: 'Please see a doctor immediately. You may require diagnostic tests, medication, or a structured diabetes management program. Do not delay.',
+        summary: 'Your results indicate diabetes. Immediate medical attention is required.',
+        recommendation: 'Please see a doctor immediately. Confirmatory HbA1c and fasting glucose tests are needed. Begin a diabetes management plan.',
         alertHtml: '<div style="background:linear-gradient(135deg,#7f1d1d,#991b1b);border-radius:14px;padding:1.25rem;display:flex;gap:1rem;align-items:flex-start;animation:pulse-border 2s infinite;">' +
             '<i class="bi bi-heart-pulse-fill" style="color:#fca5a5;font-size:1.75rem;flex-shrink:0;"></i>' +
-            '<div><div style="font-weight:700;color:#fff;font-size:1rem;margin-bottom:.35rem;">Very High Risk — See a Doctor Immediately</div>' +
-            '<div style="color:#fecaca;font-size:.875rem;line-height:1.6;">Your result indicates a very high diabetes risk. Immediate medical consultation is required. You may need diagnostic tests, medication, or a diabetes management program.</div>' +
+            '<div><div style="font-weight:700;color:#fff;font-size:1rem;margin-bottom:.35rem;">🔴 Diabetic — See a Doctor Immediately</div>' +
+            '<div style="color:#fecaca;font-size:.875rem;line-height:1.6;">Your result indicates diabetes. Immediate medical consultation is required. You need confirmatory tests (HbA1c, fasting glucose) and a diabetes management plan. Do not delay.</div>' +
             '<div style="margin-top:.85rem;display:flex;gap:.6rem;flex-wrap:wrap;">' +
-            '<a href="/templates/patient/appointment.html?reason=Very+High+Risk+Diabetes+Urgent" class="btn btn-sm" style="background:#fff;color:#991b1b;border:none;font-weight:700;">Book Urgent Appointment</a>' +
+            '<a href="/templates/patient/appointment.html?reason=Diabetic+Urgent+Review" class="btn btn-sm" style="background:#fff;color:#991b1b;border:none;font-weight:700;">Book Urgent Appointment</a>' +
             '<button onclick="downloadReport()" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fecaca;border:1px solid rgba(255,255,255,.3);">Download Report</button>' +
             '</div></div></div>'
     }
 };
 
-const NEEDLE_POS = { 'LOW RISK': 12, 'MODERATE RISK': 37, 'HIGH RISK': 62, 'VERY HIGH RISK': 88 };
+const NEEDLE_POS = { 'NON-DIABETIC': 12, 'PRE-DIABETIC': 50, 'DIABETIC': 88 };
 
 function computeBreakdown(riskKey, pct) {
     const all = ['low', 'moderate', 'high', 'veryhigh'];
@@ -180,7 +166,7 @@ async function loadResult() {
         }
 
         const p   = data.prediction;
-        const cfg = RISK_CONFIG[p.risk_level] || RISK_CONFIG['LOW RISK'];
+        const cfg = RISK_CONFIG[p.risk_level] || RISK_CONFIG['NON-DIABETIC'];
         const pct = Math.round(p.probability_percent || 0);
         const confidencePct = p.confidence != null
             ? Math.round(p.confidence)
@@ -196,14 +182,19 @@ async function loadResult() {
         const card = document.getElementById('riskCard');
         if (card) card.style.borderTop = '4px solid ' + cfg.color;
 
-        moveNeedle(NEEDLE_POS[p.risk_level] || pct);
+        moveNeedle(NEEDLE_POS[p.risk_level] || 50);
         animateArc(confidencePct);
         animateCounter('confidencePct', confidencePct);
 
-        // ── 4-level breakdown boxes ───────────────────────────────────────────
-        const bd = computeBreakdown(cfg.key, pct);
-        ['low', 'moderate', 'high', 'veryhigh'].forEach(function(k) {
-            animateCounter('pct-' + k, bd[k] || 0);
+        // ── 3-class breakdown boxes ───────────────────────────────────────────
+        const probs = {
+            non_diabetic: Math.round(p.prob_non_diabetic || 0),
+            pre_diabetic: Math.round(p.prob_pre_diabetic || 0),
+            diabetic:     Math.round(p.prob_diabetic     || pct)
+        };
+        ['non_diabetic', 'pre_diabetic', 'diabetic'].forEach(function(k) {
+            const pctEl = document.getElementById('pct-' + k);
+            if (pctEl) animateCounter('pct-' + k, probs[k] || 0);
             if (k === cfg.key) {
                 const box = document.getElementById('box-' + k);
                 if (box) box.classList.add('active');

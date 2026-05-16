@@ -132,13 +132,12 @@
           <p style="color:#64748b;font-size:.875rem;margin-top:.4rem;" id="riskSummary"></p>
           <div class="risk-bar-wrapper my-4">
             <div class="risk-bar-track">
-              <div class="risk-segment seg-low"      title="Low (0–25%)">Low</div>
-              <div class="risk-segment seg-moderate" title="Moderate (26–50%)">Moderate</div>
-              <div class="risk-segment seg-medium"   title="High (51–75%)">High</div>
-              <div class="risk-segment seg-high"     title="Very High (76–100%)">Very High</div>
+              <div class="risk-segment seg-low"      title="Non-Diabetic" style="flex:1;background:#22c55e;">Non-Diabetic</div>
+              <div class="risk-segment seg-moderate" title="Pre-Diabetic"  style="flex:1;background:#eab308;">Pre-Diabetic</div>
+              <div class="risk-segment seg-high"     title="Diabetic"      style="flex:1;background:#ef4444;">Diabetic</div>
             </div>
             <div class="risk-needle" id="riskNeedle"></div>
-            <div class="risk-bar-labels"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+            <div class="risk-bar-labels"><span>0%</span><span>33%</span><span>66%</span><span>100%</span></div>
           </div>
           <div class="confidence-circle" id="confidenceCircle">
             <svg viewBox="0 0 120 120" class="conf-svg">
@@ -150,11 +149,20 @@
               <span class="conf-sub">confidence</span>
             </div>
           </div>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4" id="levelBreakdown">
-            <div class="level-box level-low"      id="box-low">      <div class="level-pct" id="pct-low">0%</div>      <div class="level-name">Low</div>      <div class="level-range">0 – 25%</div></div>
-            <div class="level-box level-moderate" id="box-moderate"> <div class="level-pct" id="pct-moderate">0%</div> <div class="level-name">Moderate</div> <div class="level-range">26 – 50%</div></div>
-            <div class="level-box level-medium"   id="box-high">     <div class="level-pct" id="pct-high">0%</div>     <div class="level-name">High</div>     <div class="level-range">51 – 75%</div></div>
-            <div class="level-box level-high"     id="box-veryhigh"> <div class="level-pct" id="pct-veryhigh">0%</div> <div class="level-name">Very High</div><div class="level-range">76 – 100%</div></div>
+          <!-- 3-class probability breakdown -->
+          <div class="grid grid-cols-3 gap-3 mt-4" id="levelBreakdown">
+            <div class="level-box" id="box-non_diabetic" style="background:#dcfce7;color:#166534;border:2px solid #86efac;border-radius:12px;padding:.85rem;text-align:center;">
+              <div class="level-pct" id="pct-non_diabetic" style="font-size:1.4rem;font-weight:800;">0%</div>
+              <div class="level-name" style="font-weight:700;font-size:.85rem;">Non-Diabetic</div>
+            </div>
+            <div class="level-box" id="box-pre_diabetic" style="background:#fef9c3;color:#854d0e;border:2px solid #fde68a;border-radius:12px;padding:.85rem;text-align:center;">
+              <div class="level-pct" id="pct-pre_diabetic" style="font-size:1.4rem;font-weight:800;">0%</div>
+              <div class="level-name" style="font-weight:700;font-size:.85rem;">Pre-Diabetic</div>
+            </div>
+            <div class="level-box" id="box-diabetic" style="background:#fee2e2;color:#991b1b;border:2px solid #fca5a5;border-radius:12px;padding:.85rem;text-align:center;">
+              <div class="level-pct" id="pct-diabetic" style="font-size:1.4rem;font-weight:800;">0%</div>
+              <div class="level-name" style="font-weight:700;font-size:.85rem;">Diabetic</div>
+            </div>
           </div>
         </div>
       </div>

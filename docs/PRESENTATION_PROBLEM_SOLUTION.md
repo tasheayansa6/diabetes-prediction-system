@@ -448,8 +448,7 @@ In addition to automated tests, the following flows were manually tested end-to-
 | Specificity | **93.08%** — correctly clears 93% of non-diabetics |
 | Clinical threshold analysis | Threshold 0.3 catches 93% of diabetics ✅ |
 
----
 
-*Diabetes Prediction System — Built with Flask, Python, SQLite/PostgreSQL, Gradient Boosting ML*  
-*GitHub: https://github.com/tasheayansa6/diabetes-prediction-system*
+
+
 

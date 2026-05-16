@@ -14,25 +14,20 @@ async function apiFetch(path) {
 }
 
 const RISK_CONFIG = {
-    'LOW RISK':       { label: 'Low Risk',       dotCls: 'low',      badgeCls: 'risk-low',      tips: [
-        { icon: '🥗', title: 'Eat Balanced Meals',       text: 'Reduce sugar and refined carbs. Eat more vegetables, fiber, and lean protein.' },
-        { icon: '🏃', title: '30 Min Exercise Daily',    text: 'Walking, cycling or swimming reduces diabetes risk by up to 58%.' },
-        { icon: '💧', title: 'Stay Hydrated',            text: 'Drink 8 glasses of water daily. Avoid sugary drinks and sodas.' }
+    'NON-DIABETIC': { label: 'Non-Diabetic', dotCls: 'low', badgeCls: 'risk-low', tips: [
+        { icon: '🥗', title: 'Eat Balanced Meals',    text: 'Maintain a diet low in sugar and refined carbs. Eat more vegetables, fiber, and lean protein.' },
+        { icon: '🏃', title: '30 Min Exercise Daily', text: 'Walking, cycling or swimming keeps your glucose levels healthy.' },
+        { icon: '💧', title: 'Stay Hydrated',         text: 'Drink 8 glasses of water daily. Avoid sugary drinks and sodas.' }
     ]},
-    'MODERATE RISK':  { label: 'Moderate Risk',  dotCls: 'moderate', badgeCls: 'risk-moderate', tips: [
-        { icon: '🩸', title: 'Track Blood Sugar',        text: 'Monitor fasting glucose weekly. Target: 70-99 mg/dL. Keep a log.' },
-        { icon: '⚖️', title: 'Manage Your Weight',       text: 'Losing 5-7% of body weight significantly reduces progression risk.' },
-        { icon: '🚶', title: 'Increase Activity',        text: 'Aim for 150 min/week of moderate exercise. Start with daily walks.' }
+    'PRE-DIABETIC': { label: 'Pre-Diabetic', dotCls: 'moderate', badgeCls: 'risk-moderate', tips: [
+        { icon: '🩸', title: 'Monitor Blood Sugar',   text: 'Check fasting glucose regularly. Target: 70–99 mg/dL. Keep a log.' },
+        { icon: '⚖️', title: 'Manage Your Weight',    text: 'Losing 5–7% of body weight can reverse pre-diabetes.' },
+        { icon: '🏥', title: 'See Your Doctor',       text: 'Ask for an HbA1c test. Follow-up every 6 months.' }
     ]},
-    'HIGH RISK':      { label: 'High Risk',       dotCls: 'high',     badgeCls: 'risk-high',     tips: [
-        { icon: '🏥', title: 'See a Doctor Soon',        text: 'Book an appointment. Your doctor may order HbA1c or glucose tolerance tests.' },
-        { icon: '💊', title: 'Follow Medical Advice',    text: 'If prescribed medication, take it as directed. Do not skip doses.' },
-        { icon: '📉', title: 'Reduce Sugar Intake',      text: 'Cut all sugary drinks, sweets, and white bread immediately.' }
-    ]},
-    'VERY HIGH RISK': { label: 'Very High Risk',  dotCls: 'veryhigh', badgeCls: 'risk-veryhigh', tips: [
-        { icon: '🚨', title: 'Urgent: See Doctor Now',   text: 'Do not delay. You may need immediate diagnostic tests or medication.' },
-        { icon: '🍽️', title: 'Strict Diet Control',      text: 'Eliminate all sugar, white rice, and processed foods immediately.' },
-        { icon: '📋', title: 'Diabetes Management Plan', text: 'Ask your doctor about a structured diabetes prevention or management program.' }
+    'DIABETIC': { label: 'Diabetic', dotCls: 'high', badgeCls: 'risk-high', tips: [
+        { icon: '🚨', title: 'See a Doctor Now',      text: 'Do not delay. You need confirmatory tests (HbA1c, fasting glucose) and a management plan.' },
+        { icon: '💊', title: 'Follow Medical Advice', text: 'If prescribed medication, take it as directed. Do not skip doses.' },
+        { icon: '📋', title: 'Diabetes Management',   text: 'Ask your doctor about a structured diabetes management program.' }
     ]}
 };
 
@@ -61,64 +56,62 @@ function renderStats(dashboard, predictions, prescriptions, appointments) {
     const heroRiskPct = document.getElementById('heroRiskPct');
 
     if (latest && heroRisk) {
-        const cfg = RISK_CONFIG[latest.risk_level] || RISK_CONFIG['LOW RISK'];
+        const cfg = RISK_CONFIG[latest.risk_level] || RISK_CONFIG['NON-DIABETIC'];
         heroRisk.textContent = cfg.label;
         heroRiskPct.textContent = latest.probability_percent
             ? latest.probability_percent.toFixed(1) + '% probability'
             : '';
 
-        const isHighRisk = latest.risk_level === 'HIGH RISK' || latest.risk_level === 'VERY HIGH RISK';
-        const isVH       = latest.risk_level === 'VERY HIGH RISK';
-        const hasScheduled = appointments.some(a => ['scheduled', 'confirmed', 'completed'].includes(a.status));
+        const isDiabetic    = latest.risk_level === 'DIABETIC';
+        const isPreDiabetic = latest.risk_level === 'PRE-DIABETIC';
+        const hasScheduled  = appointments.some(a => ['scheduled', 'confirmed', 'completed'].includes(a.status));
 
-        // ── Hero risk box pulse — stop if appointment already booked ──────────
         const heroRight = document.querySelector('.hero-right');
         if (heroRight) {
             heroRight.classList.remove('risk-urgent', 'risk-urgent-vh');
-            if (isHighRisk && !hasScheduled) {
-                heroRight.classList.add(isVH ? 'risk-urgent-vh' : 'risk-urgent');
-            }
+            if (isDiabetic && !hasScheduled) heroRight.classList.add('risk-urgent-vh');
+            else if (isPreDiabetic && !hasScheduled) heroRight.classList.add('risk-urgent');
         }
 
-        // ── Book Appointment card pulse — stop if appointment already booked ──
         const bookCard = document.getElementById('bookApptCard');
         if (bookCard) {
             bookCard.classList.remove('urgent-high', 'urgent-vh');
             const sub = bookCard.querySelector('.ac-sub');
-            if (isHighRisk && !hasScheduled) {
-                bookCard.classList.add(isVH ? 'urgent-vh' : 'urgent-high');
-                if (sub) sub.textContent = isVH ? 'See doctor immediately!' : 'Book now — high risk!';
-            } else if (isHighRisk && hasScheduled) {
-                // Appointment booked — show calm confirmation instead
+            if (isDiabetic && !hasScheduled) {
+                bookCard.classList.add('urgent-vh');
+                if (sub) sub.textContent = 'See doctor immediately!';
+            } else if (isPreDiabetic && !hasScheduled) {
+                bookCard.classList.add('urgent-high');
+                if (sub) sub.textContent = 'Book now — pre-diabetic!';
+            } else if ((isDiabetic || isPreDiabetic) && hasScheduled) {
                 if (sub) sub.textContent = '✅ Appointment booked';
                 bookCard.style.borderColor = '#10b981';
             }
         }
 
-        // ── Risk alert banner — hide if appointment already booked ────────────
         const banner = document.getElementById('riskAlertBanner');
         if (banner) {
-            if (isHighRisk && !hasScheduled) {
+            if (isDiabetic && !hasScheduled) {
                 banner.style.display = '';
-                banner.innerHTML = '<div class="risk-alert ' + (isVH ? 'veryhigh' : 'high') + '" style="margin-bottom:1.5rem;">' +
-                    '<i class="bi bi-exclamation-triangle-fill" style="font-size:1.5rem;color:' + (isVH ? '#7b1fa2' : '#c62828') + ';flex-shrink:0;"></i>' +
-                    '<div style="flex:1;">' +
-                    '<div style="font-weight:700;color:' + (isVH ? '#4a148c' : '#b71c1c') + ';font-size:.95rem;">' + (isVH ? 'Very High Risk — See a Doctor Immediately' : 'High Risk — Please Book a Doctor Appointment') + '</div>' +
-                    '<div style="font-size:.82rem;color:' + (isVH ? '#6a1b9a' : '#c62828') + ';margin-top:.2rem;">Your latest prediction shows ' + cfg.label + '. ' + (isVH ? 'Immediate medical attention is required.' : 'Early action can prevent diabetes.') + '</div>' +
-                    '</div>' +
-                    '<a href="/templates/patient/appointment.html" class="btn btn-sm" style="background:' + (isVH ? '#7b1fa2' : '#c62828') + ';color:#fff;border:none;white-space:nowrap;flex-shrink:0;">Book Now</a>' +
-                    '</div>';
-            } else if (isHighRisk && hasScheduled) {
-                // Show calm green confirmation — appointment taken care of
+                banner.innerHTML = '<div class="risk-alert high" style="margin-bottom:1.5rem;">' +
+                    '<i class="bi bi-heart-pulse-fill" style="font-size:1.5rem;color:#dc2626;flex-shrink:0;"></i>' +
+                    '<div style="flex:1;"><div style="font-weight:700;color:#991b1b;font-size:.95rem;">🔴 Diabetic — See a Doctor Immediately</div>' +
+                    '<div style="font-size:.82rem;color:#dc2626;margin-top:.2rem;">Your latest prediction indicates diabetes. Immediate medical consultation is required.</div></div>' +
+                    '<a href="/templates/patient/appointment.html" class="btn btn-sm" style="background:#dc2626;color:#fff;border:none;white-space:nowrap;flex-shrink:0;">Book Now</a></div>';
+            } else if (isPreDiabetic && !hasScheduled) {
+                banner.style.display = '';
+                banner.innerHTML = '<div class="risk-alert moderate" style="margin-bottom:1.5rem;">' +
+                    '<i class="bi bi-exclamation-circle-fill" style="font-size:1.5rem;color:#d97706;flex-shrink:0;"></i>' +
+                    '<div style="flex:1;"><div style="font-weight:700;color:#92400e;font-size:.95rem;">⚠️ Pre-Diabetic — Action Needed</div>' +
+                    '<div style="font-size:.82rem;color:#b45309;margin-top:.2rem;">Your glucose is in the pre-diabetic range. Lifestyle changes now can prevent diabetes.</div></div>' +
+                    '<a href="/templates/patient/appointment.html" class="btn btn-sm" style="background:#d97706;color:#fff;border:none;white-space:nowrap;flex-shrink:0;">Book Appointment</a></div>';
+            } else if ((isDiabetic || isPreDiabetic) && hasScheduled) {
                 banner.style.display = '';
                 banner.innerHTML = '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.9rem;margin-bottom:1.5rem;">' +
                     '<i class="bi bi-calendar-check-fill" style="font-size:1.4rem;color:#16a34a;flex-shrink:0;"></i>' +
-                    '<div style="flex:1;">' +
-                    '<div style="font-weight:700;color:#166534;font-size:.95rem;">Appointment Booked — Good Job!</div>' +
-                    '<div style="font-size:.82rem;color:#15803d;margin-top:.2rem;">You have a scheduled appointment with your doctor. Keep it and follow their advice.</div>' +
-                    '</div>' +
-                    '<a href="/templates/patient/appointment.html" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;white-space:nowrap;flex-shrink:0;">View Appointment</a>' +
-                    '</div>';
+                    '<div style="flex:1;"><div style="font-weight:700;color:#166534;font-size:.95rem;">Appointment Booked — Good Job!</div>' +
+                    '<div style="font-size:.82rem;color:#15803d;margin-top:.2rem;">You have a scheduled appointment. Keep it and follow your doctor\'s advice.</div></div>' +
+                    '<a href="/templates/patient/appointment.html" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;white-space:nowrap;flex-shrink:0;">View Appointment</a></div>';
             } else {
                 banner.style.display = 'none';
             }
@@ -160,10 +153,10 @@ function renderRecentPredictions(predictions) {
         container.innerHTML = '<div class="pred-item" style="justify-content:center;color:#90a4ae;font-size:.85rem;">No predictions yet. <a href="/templates/patient/health_data_form.html" style="color:#1565c0;margin-left:4px;">Create your first</a></div>';
         return;
     }
-    const dotClass  = { 'LOW RISK': 'low', 'MODERATE RISK': 'moderate', 'HIGH RISK': 'high', 'VERY HIGH RISK': 'veryhigh' };
-    const badgeClass = { 'LOW RISK': 'risk-low', 'MODERATE RISK': 'risk-moderate', 'HIGH RISK': 'risk-high', 'VERY HIGH RISK': 'risk-veryhigh' };
+    const dotClass   = { 'NON-DIABETIC': 'low', 'PRE-DIABETIC': 'moderate', 'DIABETIC': 'high' };
+    const badgeClass = { 'NON-DIABETIC': 'risk-low', 'PRE-DIABETIC': 'risk-moderate', 'DIABETIC': 'risk-high' };
     container.innerHTML = predictions.slice(0, 5).map(p => {
-        const cfg   = RISK_CONFIG[p.risk_level] || RISK_CONFIG['LOW RISK'];
+        const cfg   = RISK_CONFIG[p.risk_level] || RISK_CONFIG['NON-DIABETIC'];
         const dot   = dotClass[p.risk_level]   || 'low';
         const badge = badgeClass[p.risk_level] || 'risk-low';
         const date = new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -172,7 +165,7 @@ function renderRecentPredictions(predictions) {
             <div class="pred-dot ${dot}"></div>
             <div style="flex:1;">
                 <div style="font-weight:600;font-size:.85rem;color:#1a237e;">Diabetes Risk Assessment</div>
-                <div style="font-size:.75rem;color:#90a4ae;">${esc(date)} &bull; ${esc(pct)}% probability</div>
+                <div style="font-size:.75rem;color:#90a4ae;">${esc(date)} &bull; ${esc(pct)}% diabetic probability</div>
             </div>
             <span class="risk-badge ${badge}">${esc(cfg.label)}</span>
         </div>`;
@@ -202,18 +195,18 @@ function initCharts(predictions) {
 
     const riskCtx = document.getElementById('riskChart');
     if (riskCtx) {
-        const dist = { low: 0, moderate: 0, high: 0, veryHigh: 0 };
+        const dist = { nonDiabetic: 0, preDiabetic: 0, diabetic: 0 };
         predictions.forEach(p => {
-            if (p.risk_level === 'LOW RISK') dist.low++;
-            else if (p.risk_level === 'MODERATE RISK') dist.moderate++;
-            else if (p.risk_level === 'HIGH RISK') dist.high++;
-            else if (p.risk_level === 'VERY HIGH RISK') dist.veryHigh++;
+            if (p.risk_level === 'NON-DIABETIC')  dist.nonDiabetic++;
+            else if (p.risk_level === 'PRE-DIABETIC') dist.preDiabetic++;
+            else if (p.risk_level === 'DIABETIC')     dist.diabetic++;
         });
         new Chart(riskCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Low', 'Moderate', 'High', 'Very High'],
-                datasets: [{ data: [dist.low, dist.moderate, dist.high, dist.veryHigh], backgroundColor: ['#28a745', '#ffc107', '#fd7e14', '#dc3545'] }]
+                labels: ['Non-Diabetic', 'Pre-Diabetic', 'Diabetic'],
+                datasets: [{ data: [dist.nonDiabetic, dist.preDiabetic, dist.diabetic],
+                    backgroundColor: ['#22c55e', '#eab308', '#ef4444'] }]
             },
             options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
         });
